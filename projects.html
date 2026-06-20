@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projects â€” Rotaract Club of Kwanza</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kwanza.css">
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<nav id="navbar">
+  <a href="index.html#home" class="nav-brand">
+    <div class="nav-logo">RK</div>
+    <div class="nav-name">Rotaract Club of Kwanza<span>Service Above Self</span></div>
+  </a>
+  <ul class="nav-links" id="nav-links">
+    <li><a href="index.html#home">Home</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#events">Events</a></li>
+    <li><a href="index.html#projects">Projects</a></li>
+    <li><a href="index.html#team">Team</a></li>
+    <li><a href="index.html#gallery">Gallery</a></li>
+    <li><a href="index.html#join" class="nav-cta">Join Us</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+    <li><a href="/Rotaract_Kwanza/admin/login.php" class="nav-admin">⚙ Admin</a></li>
+  </ul>
+  <div class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu" role="button">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<section id="projects">
+  <div class="container">
+    <div class="projects-header">
+      <div>
+        <div class="section-eyebrow reveal">Our Impact</div>
+        <h2 class="section-title reveal reveal-delay-1">Featured <em>Projects</em></h2>
+      </div>
+      <a href="#" class="btn-secondary reveal" style="color:#fff; border-color: rgba(255,255,255,0.3);">All Projects</a>
+    </div>
+    <div class="projects-grid">
+      <div class="project-card reveal">
+        <div class="project-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/></svg>
+        </div>
+        <h3>Kwanza Literacy Initiative</h3>
+        <p>Providing books, tutoring, and school supplies to underprivileged children across 8 primary schools in the Kwanza region.</p>
+        <div class="project-impact">
+          <div class="impact-stat"><div class="impact-num">1,200+</div><div class="impact-label">Children reached</div></div>
+          <div class="impact-stat"><div class="impact-num">8</div><div class="impact-label">Schools served</div></div>
+          <div class="impact-stat"><div class="impact-num">3 yrs</div><div class="impact-label">Running</div></div>
+        </div>
+      </div>
+      <div class="project-card reveal reveal-delay-1">
+        <div class="project-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.8" stroke-linecap="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg>
+        </div>
+        <h3>Health &amp; Wellness Outreach</h3>
+        <p>Free medical check-ups, health screenings, and wellness education delivered directly to rural communities in partnership with local hospitals.</p>
+        <div class="project-impact">
+          <div class="impact-stat"><div class="impact-num">3,400+</div><div class="impact-label">People served</div></div>
+          <div class="impact-stat"><div class="impact-num">12</div><div class="impact-label">Villages visited</div></div>
+          <div class="impact-stat"><div class="impact-num">6 yrs</div><div class="impact-label">Running</div></div>
+        </div>
+      </div>
+      <div class="project-card reveal reveal-delay-2">
+        <div class="project-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h3>Youth Entrepreneurship Program</h3>
+        <p>Mentoring and funding aspiring young entrepreneurs with business training, seed grants, and market access support throughout the year.</p>
+        <div class="project-impact">
+          <div class="impact-stat"><div class="impact-num">85</div><div class="impact-label">Businesses launched</div></div>
+          <div class="impact-stat"><div class="impact-num">200+</div><div class="impact-label">Youths trained</div></div>
+          <div class="impact-stat"><div class="impact-num">4 yrs</div><div class="impact-label">Running</div></div>
+        </div>
+      </div>
+      <div class="project-card reveal reveal-delay-3">
+        <div class="project-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <h3>Clean Water for Kwanza</h3>
+        <p>Installing and maintaining clean water boreholes and sanitation facilities in areas with limited access to safe drinking water.</p>
+        <div class="project-impact">
+          <div class="impact-stat"><div class="impact-num">2,800+</div><div class="impact-label">Beneficiaries</div></div>
+          <div class="impact-stat"><div class="impact-num">7</div><div class="impact-label">Boreholes sunk</div></div>
+          <div class="impact-stat"><div class="impact-num">5 yrs</div><div class="impact-label">Running</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="index.html#home" class="logo">
+        <div class="logo-circle">RK</div>
+        <div class="logo-text">Rotaract Club of Kwanza<span>Service Above Self</span></div>
+      </a>
+      <p>A vibrant community of young leaders united by the spirit of service, fellowship, and positive change in Kwanza and beyond.</p>
+      <div class="socials" style="margin-top: 20px;">
+        <a href="#" class="social-btn" style="background: rgba(255,255,255,0.08);" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+        </a>
+        <a href="#" class="social-btn" style="background: rgba(255,255,255,0.08);" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="#" class="social-btn" style="background: rgba(255,255,255,0.08);" aria-label="Twitter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h5>Quick Links</h5>
+      <ul>
+        <li><a href="index.html#home">Home</a></li>
+        <li><a href="index.html#about">About Us</a></li>
+        <li><a href="index.html#events">Events</a></li>
+        <li><a href="index.html#projects">Projects</a></li>
+        <li><a href="index.html#gallery">Gallery</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Get Involved</h5>
+      <ul>
+        <li><a href="index.html#join">Join Rotaract</a></li>
+        <li><a href="index.html#team">Our Team</a></li>
+        <li><a href="index.html#contact">Contact Us</a></li>
+        <li><a href="#">Sponsor a Project</a></li>
+        <li><a href="#">Volunteer</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Rotary Family</h5>
+      <ul>
+        <li><a href="https://www.rotary.org" target="_blank">Rotary International</a></li>
+        <li><a href="#">Rotary Club of Kwanza</a></li>
+        <li><a href="#">Rotaract D9400</a></li>
+        <li><a href="#">Our Charter</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>Â© 2025 Rotaract Club of Kwanza. All rights reserved.</p>
+    <p>Made with <span class="heart">â™¥</span> for community &amp; service</p>
+  </div>
+</footer>
+
+<script src="scripts.js"></script>
+</body>
+</html>
+
+
