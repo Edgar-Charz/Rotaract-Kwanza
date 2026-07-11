@@ -2,6 +2,8 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
+require_role('super_admin');
+
 $page_title = 'DB Backup';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -82,7 +84,7 @@ while ($row = $res->fetch_assoc()) $table_stats[] = $row;
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+<div class="split-layout" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
 
   <div class="card">
     <div class="card-header"><span class="card-title">Download SQL Backup</span></div>

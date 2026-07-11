@@ -8,6 +8,7 @@ $page_title = 'Dues Tracking';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    require_role('editor');
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save') {
@@ -91,7 +92,9 @@ include __DIR__ . '/includes/header.php';
             <?php endif; ?>
           </td>
           <td>
-            <button class="btn btn-sm btn-info"
+            <?php if (has_role('editor')): ?>
+            <button class="btn btn-icon btn-sm btn-info"
+              title="<?= $m['dues_id'] ? 'Edit' : 'Add' ?>" aria-label="<?= $m['dues_id'] ? 'Edit' : 'Add' ?>"
               data-member-id="<?= $m['id'] ?>"
               data-name="<?= h($m['first_name'].' '.$m['last_name']) ?>"
               data-amount-due="<?= $m['amount_due'] ?? 0 ?>"
@@ -99,7 +102,9 @@ include __DIR__ . '/includes/header.php';
               data-payment-date="<?= $m['payment_date'] ?? '' ?>"
               data-notes="<?= h($m['notes'] ?? '') ?>"
               onclick="openDuesModalFromBtn(this)">
-              <?= $m['dues_id'] ? 'Edit' : 'Add' ?>
+              <?= $m['dues_id']
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>' ?>
             </button>
             <?php if ($m['dues_id']): ?>
             <form id="del-d-<?= $m['dues_id'] ?>" method="POST" style="display:inline">
@@ -108,7 +113,8 @@ include __DIR__ . '/includes/header.php';
               <input type="hidden" name="id" value="<?= $m['dues_id'] ?>">
               <input type="hidden" name="year" value="<?= $year ?>">
             </form>
-            <button class="btn btn-sm btn-danger" onclick="confirmDelete('del-d-<?= $m['dues_id'] ?>')">Del</button>
+            <button class="btn btn-icon btn-sm btn-danger" title="Delete" aria-label="Delete" onclick="confirmDelete('del-d-<?= $m['dues_id'] ?>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+            <?php endif; ?>
             <?php endif; ?>
           </td>
         </tr>
@@ -119,8 +125,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Dues Modal -->
-<div class="modal-overlay" id="dues-modal">
-  <div class="modal" style="max-width:460px">
+<div class="modal fade" id="dues-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:460px">
     <div class="modal-header">
       <span class="modal-title">Dues Record — <span id="dm_name"></span></span>
       <button class="modal-close" onclick="closeModal('dues-modal')">&times;</button>

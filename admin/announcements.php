@@ -7,6 +7,7 @@ $page_title = 'Announcements';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    require_role('editor');
     $action = $_POST['action'] ?? '';
     $ann = new Announcement($conn);
 
@@ -69,10 +70,12 @@ include __DIR__ . '/includes/header.php';
       <a href="?cat=<?= $cat ?>" class="btn btn-sm <?= $filter===$cat?'btn-primary':'btn-secondary' ?>"><?= ucfirst($cat) ?></a>
       <?php endforeach; ?>
     </div>
+    <?php if (has_role('editor')): ?>
     <button class="btn btn-primary" onclick="openModal('add-modal')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       New Post
     </button>
+    <?php endif; ?>
   </div>
   <div class="table-wrap">
     <table id="dt-announcements">
@@ -89,20 +92,24 @@ include __DIR__ . '/includes/header.php';
           <td class="text-muted"><?= date('d M Y', strtotime($p['created_at'])) ?></td>
           <td>
             <div class="table-actions">
-              <button class="btn btn-sm btn-secondary" onclick="openViewModal(<?= h(json_encode($p)) ?>)">View</button>
-              <button class="btn btn-sm btn-info" onclick="openEditModal(<?= h(json_encode($p)) ?>)">Edit</button>
+              <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <?php if (has_role('editor')): ?>
+              <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit" onclick="openEditModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               <form id="tog-a-<?= $p['id'] ?>" method="POST" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="toggle">
                 <input type="hidden" name="id" value="<?= $p['id'] ?>">
-                <button type="submit" class="btn btn-sm btn-secondary"><?= $p['is_published']?'Unpublish':'Publish' ?></button>
+                <button type="submit" class="btn btn-icon btn-sm btn-secondary" title="<?= $p['is_published']?'Unpublish':'Publish' ?>" aria-label="<?= $p['is_published']?'Unpublish':'Publish' ?>"><?= $p['is_published']
+                  ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                  : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' ?></button>
               </form>
               <form id="del-a-<?= $p['id'] ?>" method="POST" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?= $p['id'] ?>">
               </form>
-              <button class="btn btn-sm btn-danger" onclick="confirmDelete('del-a-<?= $p['id'] ?>')">Delete</button>
+              <button class="btn btn-icon btn-sm btn-danger" title="Delete" aria-label="Delete" onclick="confirmDelete('del-a-<?= $p['id'] ?>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              <?php endif; ?>
             </div>
           </td>
         </tr>
@@ -113,8 +120,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Add Modal -->
-<div class="modal-overlay" id="add-modal">
-  <div class="modal" style="max-width:700px">
+<div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:700px">
     <div class="modal-header">
       <span class="modal-title">New Announcement</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -139,7 +146,11 @@ include __DIR__ . '/includes/header.php';
             <label for="a_pub" style="font-weight:400">Publish immediately</label>
           </div>
         </div>
-        <div class="form-group mb-2"><label>Content *</label><textarea name="content" style="min-height:160px" required></textarea></div>
+        <div class="form-group mb-2">
+          <label>Content *</label>
+          <div id="add-quill-editor" style="min-height:160px;border:1.5px solid var(--border);border-radius:8px;background:#fff"></div>
+          <textarea name="content" id="add-content-hidden" style="display:none"></textarea>
+        </div>
         <div class="form-group">
           <label>Cover Image (optional)</label>
           <input type="file" name="image" accept="image/*" onchange="previewImage(this,'add-ann-prev')" style="padding:6px">
@@ -155,8 +166,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Edit Modal -->
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal" style="max-width:700px">
+<div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:700px">
     <div class="modal-header">
       <span class="modal-title">Edit Announcement</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -182,7 +193,11 @@ include __DIR__ . '/includes/header.php';
             <label for="ea_pub" style="font-weight:400">Published</label>
           </div>
         </div>
-        <div class="form-group mb-2"><label>Content *</label><textarea name="content" id="ea_content" style="min-height:160px" required></textarea></div>
+        <div class="form-group mb-2">
+          <label>Content *</label>
+          <div id="edit-quill-editor" style="min-height:160px;border:1.5px solid var(--border);border-radius:8px;background:#fff"></div>
+          <textarea name="content" id="ea_content" style="display:none"></textarea>
+        </div>
         <div class="form-group">
           <label>Replace Image (optional)</label>
           <div id="ea_img_preview" style="margin-bottom:8px"></div>
@@ -199,8 +214,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- View Modal -->
-<div class="modal-overlay" id="view-modal">
-  <div class="modal" style="max-width:620px">
+<div class="modal fade" id="view-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:620px">
     <div class="modal-header">
       <span class="modal-title">Announcement Details</span>
       <button class="modal-close" onclick="closeModal('view-modal')">&times;</button>
@@ -212,7 +227,63 @@ include __DIR__ . '/includes/header.php';
   </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script>
+// ── Quill editors ─────────────────────────────────────────────────────────────
+const quillToolbar = [
+  ['bold','italic','underline','strike'],
+  [{'list':'ordered'},{'list':'bullet'}],
+  [{'header':[2,3,false]}],
+  ['link'],
+  ['clean']
+];
+
+const addQuill = new Quill('#add-quill-editor', { theme:'snow', modules:{ toolbar: quillToolbar } });
+const editQuill = new Quill('#edit-quill-editor', { theme:'snow', modules:{ toolbar: quillToolbar } });
+
+function quillIsEmpty(q) {
+  return q.getText().trim().length === 0;
+}
+function showQuillError(editorId, msg) {
+  const el = document.getElementById(editorId);
+  el.style.borderColor = '#e74c3c';
+  let err = el.nextElementSibling;
+  if (!err || !err.classList.contains('quill-err')) {
+    err = document.createElement('div');
+    err.className = 'quill-err';
+    err.style.cssText = 'color:#e74c3c;font-size:12px;margin-top:4px';
+    el.insertAdjacentElement('afterend', err);
+  }
+  err.textContent = msg;
+}
+function clearQuillError(editorId) {
+  const el = document.getElementById(editorId);
+  el.style.borderColor = '';
+  const err = el.nextElementSibling;
+  if (err && err.classList.contains('quill-err')) err.remove();
+}
+
+// Sync + validate on submit
+document.querySelector('#add-modal form').addEventListener('submit', function(e) {
+  clearQuillError('add-quill-editor');
+  if (quillIsEmpty(addQuill)) {
+    e.preventDefault();
+    showQuillError('add-quill-editor', 'Content is required.');
+    return;
+  }
+  document.getElementById('add-content-hidden').value = addQuill.root.innerHTML;
+});
+document.querySelector('#edit-modal form').addEventListener('submit', function(e) {
+  clearQuillError('edit-quill-editor');
+  if (quillIsEmpty(editQuill)) {
+    e.preventDefault();
+    showQuillError('edit-quill-editor', 'Content is required.');
+    return;
+  }
+  document.getElementById('ea_content').value = editQuill.root.innerHTML;
+});
+
 function openViewModal(p) {
   document.getElementById('view-body').innerHTML = `
     ${p.image_path ? `<img src="${esc(p.image_path)}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:14px">` : ''}
@@ -251,6 +322,12 @@ function openEditModal(p) {
   document.getElementById('ea_pub').checked    = p.is_published == 1;
   const prev = document.getElementById('ea_img_preview');
   prev.innerHTML = p.image_path ? '<img src="'+p.image_path+'" style="max-height:80px;border-radius:6px">' : '';
+  // Load content into Quill (treat as HTML if it looks like HTML, else plain text)
+  if (p.content && p.content.trim().startsWith('<')) {
+    editQuill.root.innerHTML = p.content;
+  } else {
+    editQuill.setText(p.content || '');
+  }
   openModal('edit-modal');
 }
 </script>

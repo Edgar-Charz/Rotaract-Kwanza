@@ -7,6 +7,7 @@ $page_title = 'Activity Log';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    require_role('editor');
     if (($_POST['action'] ?? '') === 'clear') {
         (new ActivityLog($conn))->deleteOlderThanDays((int)($_POST['days'] ?? 30));
         flash('success', 'Old log entries cleared.');
@@ -52,10 +53,12 @@ include __DIR__ . '/includes/header.php';
       <?php if ($admin_f): ?><a href="?" class="btn btn-sm btn-secondary">Clear</a><?php endif; ?>
     </form>
 
+    <?php if (has_role('editor')): ?>
     <button class="btn btn-danger btn-sm" onclick="openModal('clear-modal')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       Clear Old Logs
     </button>
+    <?php endif; ?>
   </div>
 
   <div class="table-wrap">
@@ -88,8 +91,8 @@ $(document).ready(function() {
 </script>
 
 <!-- Clear Modal -->
-<div class="modal-overlay" id="clear-modal">
-  <div class="modal" style="max-width:380px">
+<div class="modal fade" id="clear-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:380px">
     <div class="modal-header">
       <span class="modal-title">Clear Old Log Entries</span>
       <button class="modal-close" onclick="closeModal('clear-modal')">&times;</button>

@@ -7,6 +7,7 @@ $page_title = 'Gallery';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    require_role('editor');
     $action = $_POST['action'] ?? '';
     $gal = new Gallery($conn);
 
@@ -53,27 +54,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Visibility updated.');
     }
 
+    if ($action === 'bulk_hide' || $action === 'bulk_show') {
+        $ids    = array_map('intval', $_POST['ids'] ?? []);
+        $active = $action === 'bulk_show' ? 1 : 0;
+        $count  = 0;
+        foreach ($ids as $pid) {
+            $p = $gal->findById($pid);
+            if (!$p) continue;
+            $gal->update($pid, $p['title'], $p['description'] ?? '', $p['image_path'], $p['category'] ?? '', (int)$p['display_order'], $active);
+            $count++;
+        }
+        log_activity('bulk_update_gallery', "Bulk set $count photo(s) " . ($active ? 'visible' : 'hidden'));
+        flash('success', "$count photo(s) updated.");
+    }
+
+    if ($action === 'bulk_delete') {
+        $ids   = array_map('intval', $_POST['ids'] ?? []);
+        $count = 0;
+        foreach ($ids as $pid) {
+            $path = $gal->getImagePathById($pid);
+            if (!$path) continue;
+            delete_image($path);
+            $gal->delete($pid);
+            $count++;
+        }
+        log_activity('bulk_delete_gallery', "Bulk deleted $count photo(s)");
+        flash('success', "$count photo(s) deleted.");
+    }
+
     header('Location: ' . ADMIN_URL . '/gallery.php');
     exit;
 }
 
-$photos = (new Gallery($conn))->getAll();
+$gal_obj    = new Gallery($conn);
+$category   = $_GET['category'] ?? '';
+$page       = max(1, (int)($_GET['page'] ?? 1));
+$per_page   = 24;
+$total      = $gal_obj->count($category);
+$pg         = paginate($total, $per_page, $page);
+$photos     = $gal_obj->getPage($per_page, $pg['offset'], $category);
+$categories = $gal_obj->getCategories();
+
+$qs = fn(int $p) => '?' . http_build_query(array_filter(['category' => $category, 'page' => $p]));
 
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div class="card-header" style="background:#fff;border-radius:10px;padding:14px 20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center">
-  <span class="card-title"><?= count($photos) ?> Photo<?= count($photos) !== 1 ? 's':'' ?></span>
+<div class="card-header" style="background:#fff;border-radius:10px;padding:14px 20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+  <div class="flex align-center gap-2 flex-wrap">
+    <span class="card-title"><?= $total ?> Photo<?= $total !== 1 ? 's':'' ?></span>
+    <a href="?" class="btn btn-sm <?= !$category ? 'btn-primary':'btn-secondary' ?>">All</a>
+    <?php foreach ($categories as $cat): ?>
+    <a href="?category=<?= urlencode($cat) ?>" class="btn btn-sm <?= $category===$cat ? 'btn-primary':'btn-secondary' ?>"><?= h($cat) ?></a>
+    <?php endforeach; ?>
+  </div>
+  <?php if (has_role('editor')): ?>
   <button class="btn btn-primary" onclick="openModal('add-modal')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Upload Photo
   </button>
+  <?php endif; ?>
 </div>
+
+<?php if (has_role('editor')): ?>
+<div class="card-header" id="bulk-bar" style="display:none;background:#fef6f0;border-radius:10px;margin-bottom:16px;box-shadow:var(--shadow)">
+  <span id="bulk-count" class="text-muted" style="font-size:13px;font-weight:600"></span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button type="button" class="btn btn-sm btn-secondary" onclick="submitGalleryBulk('bulk_show')">Show Selected</button>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="submitGalleryBulk('bulk_hide')">Hide Selected</button>
+    <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeletePhotos()">Delete Selected</button>
+  </div>
+</div>
+<form id="bulk-form" method="POST" style="display:none">
+  <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+  <input type="hidden" name="action" id="bulk-action-field" value="">
+  <div id="bulk-ids-container"></div>
+</form>
+<?php endif; ?>
 
 <?php if ($photos): ?>
 <div class="gallery-admin-grid">
   <?php foreach ($photos as $p): ?>
   <div class="gallery-item-admin">
+    <?php if (has_role('editor')): ?>
+    <input type="checkbox" class="row-check" value="<?= $p['id'] ?>" onchange="updateGalleryBulkBar()"
+           style="position:absolute;top:8px;left:8px;width:18px;height:18px;z-index:2">
+    <?php endif; ?>
     <?php if ($p['image_path']): ?>
     <img src="<?= h($p['image_path']) ?>" alt="<?= h($p['title']) ?>">
     <?php else: ?>
@@ -90,25 +156,40 @@ include __DIR__ . '/includes/header.php';
       <div class="text-muted" style="font-size:11px;margin-bottom:6px"><?= h($p['category']) ?></div>
       <?php endif; ?>
       <div class="gallery-item-actions">
-        <button class="btn btn-sm btn-secondary" onclick="openViewModal(<?= h(json_encode($p)) ?>)">View</button>
-        <button class="btn btn-sm btn-info" onclick="openEditModal(<?= h(json_encode($p)) ?>)">Edit</button>
+        <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <?php if (has_role('editor')): ?>
+        <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit" onclick="openEditModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
         <form id="tog-<?= $p['id'] ?>" method="POST" style="display:inline">
           <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
           <input type="hidden" name="action" value="toggle">
           <input type="hidden" name="id" value="<?= $p['id'] ?>">
-          <button type="submit" class="btn btn-sm btn-secondary"><?= $p['is_active'] ? 'Hide':'Show' ?></button>
+          <button type="submit" class="btn btn-icon btn-sm btn-secondary" title="<?= $p['is_active'] ? 'Hide':'Show' ?>" aria-label="<?= $p['is_active'] ? 'Hide':'Show' ?>"><?= $p['is_active']
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' ?></button>
         </form>
         <form id="del-g-<?= $p['id'] ?>" method="POST" style="display:inline">
           <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="<?= $p['id'] ?>">
         </form>
-        <button class="btn btn-sm btn-danger" onclick="confirmDelete('del-g-<?= $p['id'] ?>')">Del</button>
+        <button class="btn btn-icon btn-sm btn-danger" title="Delete" aria-label="Delete" onclick="confirmDelete('del-g-<?= $p['id'] ?>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        <?php endif; ?>
       </div>
     </div>
   </div>
   <?php endforeach; ?>
 </div>
+
+<?php if ($pg['pages'] > 1): ?>
+<div class="pagination">
+  <a href="<?= $qs(max(1, $page - 1)) ?>" class="page-link <?= $page <= 1 ? 'disabled' : '' ?>">&#8249; Prev</a>
+  <?php for ($i = 1; $i <= $pg['pages']; $i++): ?>
+  <a href="<?= $qs($i) ?>" class="page-link <?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
+  <?php endfor; ?>
+  <a href="<?= $qs(min($pg['pages'], $page + 1)) ?>" class="page-link <?= $page >= $pg['pages'] ? 'disabled' : '' ?>">Next &#8250;</a>
+</div>
+<?php endif; ?>
+
 <?php else: ?>
 <div class="empty-state">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -117,8 +198,8 @@ include __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <!-- Add Modal -->
-<div class="modal-overlay" id="add-modal">
-  <div class="modal">
+<div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content">
     <div class="modal-header">
       <span class="modal-title">Upload New Photo</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -153,8 +234,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Edit Modal -->
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal">
+<div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content">
     <div class="modal-header">
       <span class="modal-title">Edit Photo</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -190,8 +271,8 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- View Modal -->
-<div class="modal-overlay" id="view-modal">
-  <div class="modal" style="max-width:540px">
+<div class="modal fade" id="view-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:540px">
     <div class="modal-header">
       <span class="modal-title">Photo Details</span>
       <button class="modal-close" onclick="closeModal('view-modal')">&times;</button>
@@ -232,8 +313,36 @@ function openEditModal(p) {
   document.getElementById('eg_description').value   = p.description || '';
   document.getElementById('eg_active').checked      = p.is_active == 1;
   const ci = document.getElementById('eg_current_img');
-  ci.innerHTML = p.image_path ? '<img src="' + p.image_path + '" style="max-height:80px;border-radius:6px">' : '';
+  ci.innerHTML = p.image_path ? '<img src="' + esc(p.image_path) + '" style="max-height:80px;border-radius:6px">' : '';
   openModal('edit-modal');
+}
+
+function getCheckedGalleryIds() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(function(c) { return c.value; });
+}
+function updateGalleryBulkBar() {
+  var ids = getCheckedGalleryIds();
+  document.getElementById('bulk-bar').style.display = ids.length ? 'flex' : 'none';
+  document.getElementById('bulk-count').textContent = ids.length + ' selected';
+}
+function submitGalleryBulk(action) {
+  var ids = getCheckedGalleryIds();
+  if (!ids.length) return;
+  document.getElementById('bulk-action-field').value = action;
+  var container = document.getElementById('bulk-ids-container');
+  container.innerHTML = '';
+  ids.forEach(function(id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+function bulkDeletePhotos() {
+  var ids = getCheckedGalleryIds();
+  if (ids.length && confirm('Permanently delete ' + ids.length + ' selected photo(s)? This cannot be undone.')) {
+    submitGalleryBulk('bulk_delete');
+  }
 }
 </script>
 

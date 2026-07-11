@@ -7,6 +7,7 @@ $page_title = 'Messages';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    require_role('editor');
     $action = $_POST['action'] ?? '';
     $id     = (int)($_POST['id'] ?? 0);
     $cm     = new ContactMessage($conn);
@@ -54,7 +55,7 @@ if (isset($_GET['view'])) {
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div style="display:grid;grid-template-columns:<?= $view_msg ? '1fr 1.2fr' : '1fr' ?>;gap:20px;align-items:start">
+<div class="split-layout" style="display:grid;grid-template-columns:<?= $view_msg ? '1fr 1.2fr' : '1fr' ?>;gap:20px;align-items:start">
 
   <div class="card">
     <div class="card-header" style="flex-wrap:wrap;gap:8px">
@@ -83,13 +84,15 @@ include __DIR__ . '/includes/header.php';
             <td class="text-muted" style="white-space:nowrap"><?= date('d M Y', strtotime($msg['created_at'])) ?></td>
             <td>
               <div class="table-actions">
-                <a href="?view=<?= $msg['id'] ?>" class="btn btn-sm btn-info">View</a>
+                <a href="?view=<?= $msg['id'] ?>" class="btn btn-icon btn-sm btn-info" title="View" aria-label="View"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                <?php if (has_role('editor')): ?>
                 <form id="del-msg-<?= $msg['id'] ?>" method="POST" style="display:inline">
                   <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="id" value="<?= $msg['id'] ?>">
                 </form>
-                <button class="btn btn-sm btn-danger" onclick="confirmDelete('del-msg-<?= $msg['id'] ?>')">Del</button>
+                <button class="btn btn-icon btn-sm btn-danger" title="Delete" aria-label="Delete" onclick="confirmDelete('del-msg-<?= $msg['id'] ?>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+                <?php endif; ?>
               </div>
             </td>
           </tr>
@@ -126,6 +129,7 @@ include __DIR__ . '/includes/header.php';
 
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
         <a href="mailto:<?= h($view_msg['email']) ?>?subject=Re: <?= urlencode($view_msg['subject'] ?? '') ?>" class="btn btn-primary btn-sm">Reply via Email</a>
+        <?php if (has_role('editor')): ?>
         <form method="POST" style="display:inline">
           <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
           <input type="hidden" name="action" value="status">
@@ -133,8 +137,10 @@ include __DIR__ . '/includes/header.php';
           <input type="hidden" name="status" value="<?= $view_msg['status'] === 'unread' ? 'read' : 'unread' ?>">
           <button type="submit" class="btn btn-secondary btn-sm">Mark <?= $view_msg['status'] === 'unread' ? 'Read' : 'Unread' ?></button>
         </form>
+        <?php endif; ?>
       </div>
 
+      <?php if (has_role('editor')): ?>
       <form method="POST">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="notes">
@@ -145,6 +151,12 @@ include __DIR__ . '/includes/header.php';
         </div>
         <button type="submit" class="btn btn-success btn-sm">Save Notes</button>
       </form>
+      <?php elseif ($view_msg['admin_notes'] ?? ''): ?>
+      <div class="form-group">
+        <label>Admin Notes</label>
+        <div class="text-muted"><?= nl2br(h($view_msg['admin_notes'])) ?></div>
+      </div>
+      <?php endif; ?>
     </div>
   </div>
   <?php endif; ?>
