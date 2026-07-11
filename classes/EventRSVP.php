@@ -68,6 +68,16 @@ class EventRSVP
         return $rows;
     }
 
+    public function count(): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM event_rsvps');
+        $stmt->execute();
+        $stmt->bind_result($n);
+        $stmt->fetch();
+        $stmt->close();
+        return (int) $n;
+    }
+
     public function getSummaryByEvent(): array
     {
         $stmt = $this->db->prepare(
@@ -79,6 +89,27 @@ class EventRSVP
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $rows;
+    }
+
+    public function markAttended(int $id, int $attended): bool
+    {
+        $stmt = $this->db->prepare('UPDATE event_rsvps SET attended=? WHERE id=?');
+        $stmt->bind_param('ii', $attended, $id);
+        $stmt->execute();
+        $stmt->close();
+        return true;
+    }
+
+    public function getAttendanceSummary(int $event_id): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) AS total, SUM(attended) AS attended FROM event_rsvps WHERE event_id = ?'
+        );
+        $stmt->bind_param('i', $event_id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: ['total' => 0, 'attended' => 0];
     }
 
     public function delete(int $id): bool

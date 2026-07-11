@@ -15,13 +15,17 @@ class TeamMember
         string $image_path,
         string $email,
         int $display_order = 0,
-        int $is_active = 1
+        int $is_active = 1,
+        string $term = '',
+        string $linkedin_url = '',
+        int $tier = 3,
+        string $instagram_url = ''
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO team_members (full_name, role, description, image_path, email, display_order, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO team_members (full_name, role, tier, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('sssssii', $full_name, $role, $description, $image_path, $email, $display_order, $is_active);
+        $stmt->bind_param('ssissssssii', $full_name, $role, $tier, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -63,7 +67,7 @@ class TeamMember
     public function getActive(): array
     {
         $stmt = $this->db->prepare(
-            'SELECT * FROM team_members WHERE is_active = 1 ORDER BY display_order ASC, created_at ASC'
+            'SELECT * FROM team_members WHERE is_active = 1 ORDER BY tier ASC, display_order ASC, created_at ASC'
         );
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -74,7 +78,7 @@ class TeamMember
     public function getAll(): array
     {
         $stmt = $this->db->prepare(
-            'SELECT * FROM team_members ORDER BY display_order ASC, created_at ASC'
+            'SELECT * FROM team_members ORDER BY tier ASC, display_order ASC, created_at ASC'
         );
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -90,13 +94,17 @@ class TeamMember
         string $image_path,
         string $email,
         int $display_order,
-        int $is_active
+        int $is_active,
+        string $term = '',
+        string $linkedin_url = '',
+        int $tier = 3,
+        string $instagram_url = ''
     ): bool {
         $stmt = $this->db->prepare(
-            'UPDATE team_members SET full_name=?, role=?, description=?, image_path=?,
-             email=?, display_order=?, is_active=? WHERE id=?'
+            'UPDATE team_members SET full_name=?, role=?, tier=?, term=?, description=?, image_path=?,
+             email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
         );
-        $stmt->bind_param('sssssiii', $full_name, $role, $description, $image_path, $email, $display_order, $is_active, $id);
+        $stmt->bind_param('ssissssssiii', $full_name, $role, $tier, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
         $stmt->execute();
         $ok = $stmt->affected_rows >= 0;
         $stmt->close();

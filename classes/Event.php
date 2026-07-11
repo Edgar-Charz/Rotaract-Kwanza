@@ -16,13 +16,16 @@ class Event
         string $description,
         string $category,
         string $status = 'upcoming',
-        int $is_featured = 0
+        int $is_featured = 0,
+        string $image_path = '',
+        string $instagram_url = '',
+        string $tiktok_url = ''
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO events (title, event_date, event_time, location, description, category, status, is_featured)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events (title, event_date, event_time, location, description, category, status, is_featured, image_path, instagram_url, tiktok_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('sssssssi', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured);
+        $stmt->bind_param('sssssssisss', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -91,6 +94,15 @@ class Event
         return $rows;
     }
 
+    public function getAllTitles(): array
+    {
+        $stmt = $this->db->prepare('SELECT id, title, event_date FROM events ORDER BY event_date DESC');
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
     public function getFeaturedUpcoming(int $limit = 3): array
     {
         $stmt = $this->db->prepare(
@@ -104,11 +116,16 @@ class Event
         return $rows;
     }
 
-    public function getUpcoming(): array
+    public function getUpcoming(int $limit = 0): array
     {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM events WHERE status = 'upcoming' ORDER BY event_date ASC"
-        );
+        $sql = "SELECT * FROM events WHERE status = 'upcoming' ORDER BY event_date ASC";
+        if ($limit > 0) {
+            $sql .= ' LIMIT ?';
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param('i', $limit);
+        } else {
+            $stmt = $this->db->prepare($sql);
+        }
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -148,17 +165,30 @@ class Event
         string $description,
         string $category,
         string $status,
-        int $is_featured
+        int $is_featured,
+        string $image_path = '',
+        string $instagram_url = '',
+        string $tiktok_url = ''
     ): bool {
         $stmt = $this->db->prepare(
             'UPDATE events SET title=?, event_date=?, event_time=?, location=?, description=?,
-             category=?, status=?, is_featured=? WHERE id=?'
+             category=?, status=?, is_featured=?, image_path=?, instagram_url=?, tiktok_url=? WHERE id=?'
         );
-        $stmt->bind_param('sssssssii', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $id);
+        $stmt->bind_param('sssssssisssi', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $id);
         $stmt->execute();
-        $ok = $stmt->affected_rows >= 0;
         $stmt->close();
-        return $ok;
+        return true;
+    }
+
+    public function getImagePathById(int $id): string
+    {
+        $stmt = $this->db->prepare('SELECT image_path FROM events WHERE id = ?');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $stmt->bind_result($path);
+        $stmt->fetch();
+        $stmt->close();
+        return (string) $path;
     }
 
     public function delete(int $id): bool

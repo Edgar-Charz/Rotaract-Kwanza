@@ -59,6 +59,19 @@ class MemberDues
         return $rows;
     }
 
+    public function getYearTotals(int $year): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COALESCE(SUM(amount_due),0) AS total_due, COALESCE(SUM(amount_paid),0) AS total_paid
+             FROM member_dues WHERE year = ?'
+        );
+        $stmt->bind_param('i', $year);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: ['total_due' => 0, 'total_paid' => 0];
+    }
+
     public function delete(int $id): bool
     {
         $stmt = $this->db->prepare('DELETE FROM member_dues WHERE id=?');

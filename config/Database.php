@@ -2,9 +2,10 @@
 class Database
 {
     private string $servername = "localhost";
-    private string $username   = "root";
-    private string $password   = "";
-    private string $dbname     = "rotaract_kwanza";
+    private string $username = "root";
+    private string $password = "";
+    private string $dbname = "rotaract_kwanza";
+
     public mysqli $conn;
 
     public function connect(): mysqli

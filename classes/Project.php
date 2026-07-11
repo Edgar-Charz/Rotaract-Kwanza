@@ -15,13 +15,16 @@ class Project
         string $impact_label,
         string $icon_type,
         string $status = 'active',
-        int $is_featured = 0
+        int $is_featured = 0,
+        string $image_path = '',
+        string $instagram_url = '',
+        string $tiktok_url = ''
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO projects (title, description, impact_stat, impact_label, icon_type, status, is_featured)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO projects (title, description, impact_stat, impact_label, icon_type, status, is_featured, image_path, instagram_url, tiktok_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('ssssssi', $title, $description, $impact_stat, $impact_label, $icon_type, $status, $is_featured);
+        $stmt->bind_param('ssssssisss', $title, $description, $impact_stat, $impact_label, $icon_type, $status, $is_featured, $image_path, $instagram_url, $tiktok_url);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -90,17 +93,30 @@ class Project
         string $impact_label,
         string $icon_type,
         string $status,
-        int $is_featured
+        int $is_featured,
+        string $image_path = '',
+        string $instagram_url = '',
+        string $tiktok_url = ''
     ): bool {
         $stmt = $this->db->prepare(
             'UPDATE projects SET title=?, description=?, impact_stat=?, impact_label=?,
-             icon_type=?, status=?, is_featured=? WHERE id=?'
+             icon_type=?, status=?, is_featured=?, image_path=?, instagram_url=?, tiktok_url=? WHERE id=?'
         );
-        $stmt->bind_param('ssssssii', $title, $description, $impact_stat, $impact_label, $icon_type, $status, $is_featured, $id);
+        $stmt->bind_param('ssssssisssi', $title, $description, $impact_stat, $impact_label, $icon_type, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $id);
         $stmt->execute();
-        $ok = $stmt->affected_rows >= 0;
         $stmt->close();
-        return $ok;
+        return true;
+    }
+
+    public function getImagePathById(int $id): string
+    {
+        $stmt = $this->db->prepare('SELECT image_path FROM projects WHERE id = ?');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $stmt->bind_result($path);
+        $stmt->fetch();
+        $stmt->close();
+        return (string) $path;
     }
 
     public function delete(int $id): bool

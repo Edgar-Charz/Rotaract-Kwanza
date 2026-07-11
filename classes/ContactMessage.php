@@ -35,6 +35,16 @@ class ContactMessage
         return $row ?: false;
     }
 
+    public function getRecent(int $limit): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT ?');
+        $stmt->bind_param('i', $limit);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
     public function count(string $status = ''): int
     {
         if ($status !== '') {

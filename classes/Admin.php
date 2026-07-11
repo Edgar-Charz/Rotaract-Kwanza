@@ -14,7 +14,8 @@ class Admin
     public function login(string $username, string $password): array|false
     {
         $stmt = $this->db->prepare(
-            'SELECT id, username, full_name, password_hash
+            'SELECT id, username, full_name, password_hash,
+                    COALESCE(role, \'super_admin\') AS role
              FROM admins WHERE username = ? LIMIT 1'
         );
         $stmt->bind_param('s', $username);

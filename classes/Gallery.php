@@ -79,6 +79,51 @@ class Gallery
         return $rows;
     }
 
+    public function count(string $category = ''): int
+    {
+        if ($category !== '') {
+            $stmt = $this->db->prepare('SELECT COUNT(*) FROM gallery WHERE category = ?');
+            $stmt->bind_param('s', $category);
+        } else {
+            $stmt = $this->db->prepare('SELECT COUNT(*) FROM gallery');
+        }
+        $stmt->execute();
+        $stmt->bind_result($n);
+        $stmt->fetch();
+        $stmt->close();
+        return (int) $n;
+    }
+
+    public function getPage(int $limit, int $offset, string $category = ''): array
+    {
+        if ($category !== '') {
+            $stmt = $this->db->prepare(
+                'SELECT * FROM gallery WHERE category = ? ORDER BY display_order ASC, created_at DESC LIMIT ? OFFSET ?'
+            );
+            $stmt->bind_param('sii', $category, $limit, $offset);
+        } else {
+            $stmt = $this->db->prepare(
+                'SELECT * FROM gallery ORDER BY display_order ASC, created_at DESC LIMIT ? OFFSET ?'
+            );
+            $stmt->bind_param('ii', $limit, $offset);
+        }
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getCategories(): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DISTINCT category FROM gallery WHERE category IS NOT NULL AND category != '' ORDER BY category"
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return array_column($rows, 'category');
+    }
+
     public function update(
         int $id,
         string $title,

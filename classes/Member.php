@@ -16,17 +16,42 @@ class Member
         string $occupation,
         string $why_join,
         string $status = 'pending',
-        string $notes = ''
+        string $notes = '',
+        string $photo_path = '',
+        string $bio = '',
+        string $linkedin_url = '',
+        string $instagram_url = ''
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO members (first_name, last_name, email, phone, occupation, why_join, status, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO members (first_name, last_name, email, phone, occupation, bio, linkedin_url, instagram_url, why_join, status, notes, photo_path)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('ssssssss', $first_name, $last_name, $email, $phone, $occupation, $why_join, $status, $notes);
+        $stmt->bind_param('ssssssssssss', $first_name, $last_name, $email, $phone, $occupation, $bio, $linkedin_url, $instagram_url, $why_join, $status, $notes, $photo_path);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
         return $id;
+    }
+
+    public function updatePhoto(int $id, string $path): bool
+    {
+        $stmt = $this->db->prepare('UPDATE members SET photo_path=? WHERE id=?');
+        $stmt->bind_param('si', $path, $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows >= 0;
+        $stmt->close();
+        return $ok;
+    }
+
+    public function getPhotoById(int $id): string
+    {
+        $stmt = $this->db->prepare('SELECT COALESCE(photo_path,"") FROM members WHERE id=? LIMIT 1');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $stmt->bind_result($path);
+        $stmt->fetch();
+        $stmt->close();
+        return (string) $path;
     }
 
     public function findById(int $id): array|false
@@ -74,6 +99,16 @@ class Member
         return $rows;
     }
 
+    public function getRecent(int $limit): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM members ORDER BY created_at DESC LIMIT ?');
+        $stmt->bind_param('i', $limit);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
     public function count(string $status = ''): int
     {
         if ($status !== '') {
@@ -109,17 +144,19 @@ class Member
         string $occupation,
         string $why_join,
         string $status,
-        string $notes
+        string $notes,
+        string $bio = '',
+        string $linkedin_url = '',
+        string $instagram_url = ''
     ): bool {
         $stmt = $this->db->prepare(
-            'UPDATE members SET first_name=?, last_name=?, email=?, phone=?, occupation=?,
+            'UPDATE members SET first_name=?, last_name=?, email=?, phone=?, occupation=?, bio=?, linkedin_url=?, instagram_url=?,
              why_join=?, status=?, notes=? WHERE id=?'
         );
-        $stmt->bind_param('ssssssssi', $first_name, $last_name, $email, $phone, $occupation, $why_join, $status, $notes, $id);
+        $stmt->bind_param('sssssssssssi', $first_name, $last_name, $email, $phone, $occupation, $bio, $linkedin_url, $instagram_url, $why_join, $status, $notes, $id);
         $stmt->execute();
-        $ok = $stmt->affected_rows >= 0;
         $stmt->close();
-        return $ok;
+        return true;
     }
 
     public function updateStatus(int $id, string $status): bool
@@ -140,6 +177,20 @@ class Member
         $ok = $stmt->affected_rows > 0;
         $stmt->close();
         return $ok;
+    }
+
+    public function getApprovedForDirectory(): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT id, first_name, last_name, occupation, bio, linkedin_url, instagram_url, created_at, COALESCE(photo_path,'') AS photo_path
+             FROM members
+             WHERE status = 'approved' AND show_in_directory = 1
+             ORDER BY first_name, last_name"
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
     }
 
     public function getWithDues(int $year): array
