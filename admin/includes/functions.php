@@ -6,10 +6,17 @@ require_once dirname(__DIR__, 2) . '/includes/csrf.php';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-define('ADMIN_URL',   '/Rotaract_Kwanza/admin');
-define('UPLOAD_DIR',  dirname(__DIR__, 2) . '/admin/uploads/');
-define('UPLOAD_URL',  '/Rotaract_Kwanza/admin/uploads/');
-define('SITE_ROOT',   dirname(__DIR__, 2));
+// Compute site root URL from the current request — works on any server, no hardcoding
+$_s   = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/admin/index.php');
+$_dir = dirname($_s);
+if (basename($_dir) === 'includes') $_dir = dirname($_dir); // admin/includes → admin
+if (basename($_dir) === 'admin')    $_dir = dirname($_dir); // admin → project root
+$_base = rtrim($_dir, '/') === '/' ? '' : rtrim($_dir, '/');
+define('ADMIN_URL',  $_base . '/admin');
+define('UPLOAD_URL', $_base . '/admin/uploads/');
+define('UPLOAD_DIR', dirname(__DIR__, 2) . '/admin/uploads/');
+define('SITE_ROOT',  dirname(__DIR__, 2));
+unset($_s, $_dir, $_base);
 
 // ── Database connection ───────────────────────────────────────────────────────
 
@@ -96,9 +103,36 @@ function upload_image(string $input_name, string $subdir): string|false {
     $dir  = UPLOAD_DIR . $subdir . '/';
     if (!is_dir($dir)) mkdir($dir, 0755, true);
 
-    $dest = $dir . $name;
+    $dest = "$dir$name";
     if (!move_uploaded_file($file['tmp_name'], $dest)) return false;
     return UPLOAD_URL . $subdir . '/' . $name;
+}
+
+function upload_multi_images(string $input_name, string $subdir): array {
+    if (empty($_FILES[$input_name]['name'][0])) return [];
+
+    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $files   = $_FILES[$input_name];
+    $saved   = [];
+
+    foreach ($files['name'] as $i => $name) {
+        if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
+
+        $tmp  = $files['tmp_name'][$i];
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
+        if (!in_array($mime, $allowed)) continue;
+        if ($files['size'][$i] > 5 * 1024 * 1024) continue;
+
+        $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $fn   = uniqid('img_', true) . '.' . $ext;
+        $dir  = UPLOAD_DIR . $subdir . '/';
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+
+        if (move_uploaded_file($tmp, "$dir$fn")) {
+            $saved[] = UPLOAD_URL . $subdir . '/' . $fn;
+        }
+    }
+    return $saved;
 }
 
 function delete_image(string $path): void {
@@ -118,6 +152,32 @@ function paginate(int $total, int $per_page, int $current): array {
         'per_page' => $per_page,
         'offset'   => ($current - 1) * $per_page,
     ];
+}
+
+// ── Reporting ─────────────────────────────────────────────────────────────────
+
+/**
+ * Monthly counts for the trailing $months months, one grouped query instead of
+ * one query per month. $table/$date_col are always literals passed by callers,
+ * never user input.
+ */
+function monthly_counts(mysqli $db, string $table, int $months, string $date_col = 'created_at'): array {
+    $rows = db_rows(
+        $db,
+        "SELECT DATE_FORMAT($date_col, '%Y-%m') AS ym, COUNT(*) AS n
+         FROM $table
+         WHERE $date_col >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
+         GROUP BY ym",
+        [$months - 1]
+    );
+    $counts = array_column($rows, 'n', 'ym');
+
+    $series = [];
+    for ($i = $months - 1; $i >= 0; $i--) {
+        $ym = date('Y-m', strtotime("-$i months"));
+        $series[] = ['label' => date('M Y', strtotime("-$i months")), 'value' => (int) ($counts[$ym] ?? 0)];
+    }
+    return $series;
 }
 
 // ── Misc ──────────────────────────────────────────────────────────────────────
