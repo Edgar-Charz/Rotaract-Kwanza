@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Gallery.php';
 require_once __DIR__ . '/includes/helpers.php';
@@ -7,6 +7,8 @@ require_once __DIR__ . '/includes/helpers.php';
 $db     = new Database();
 $conn   = $db->connect();
 $photos = (new Gallery($conn))->getActive();
+
+$categories = array_values(array_unique(array_filter(array_map(fn($p) => $p['category'], $photos))));
 
 // Cycle: tall, reg, reg, wide, reg, reg
 // With grid-auto-flow:dense this fills beautifully into a 4-col grid
@@ -18,11 +20,17 @@ $patterns = ['tall', '', '', 'wide', '', ''];
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gallery &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="/Rotaract_Kwanza/assets/img/logo1.jpg">
+  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/Rotaract_Kwanza/assets/css/kwanza.css">
+  <link rel="stylesheet" href="assets/css/kwanza.css">
+  <style>
+    .gal-filters { display:flex; gap:10px; flex-wrap:wrap; margin:28px 0 8px; }
+    .gal-filter-btn { padding:7px 18px; border-radius:20px; font-size:13px; font-weight:600; border:1.5px solid var(--border); background:#fff; color:var(--text); cursor:pointer; font-family:inherit; transition:all .2s; }
+    .gal-filter-btn.active, .gal-filter-btn:hover { background:var(--pink-700); color:#fff; border-color:var(--pink-700); }
+    .gallery-item.gal-hidden { display:none; }
+  </style>
 </head>
 <body>
 
@@ -39,23 +47,33 @@ $patterns = ['tall', '', '', 'wide', '', ''];
       <span class="btn-secondary" style="opacity:.6"><?= count($photos) ?> Photo<?= count($photos) !== 1 ? 's' : '' ?></span>
     </div>
 
+    <?php if ($categories): ?>
+      <div class="gal-filters">
+        <button class="gal-filter-btn active" data-filter="">All</button>
+        <?php foreach ($categories as $cat): ?>
+          <button class="gal-filter-btn" data-filter="<?= e($cat) ?>"><?= e($cat) ?></button>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
     <?php if ($photos): ?>
       <div class="gallery-grid">
         <?php foreach ($photos as $gi => $photo):
           $gc  = $patterns[$gi % count($patterns)];
           $cls = 'gallery-item reveal' . ($gc ? ' ' . $gc : '');
         ?>
-        <div class="<?= $cls ?>"
+        <div class="<?= $cls ?>" data-category="<?= e($photo['category'] ?? '') ?>"
           <?php if ($photo['image_path']): ?>
-            data-src="<?= e($photo['image_path']) ?>"
+            data-src="<?= e(img_url($photo['image_path'])) ?>"
             data-title="<?= e($photo['title']) ?>"
+            data-desc="<?= e($photo['description'] ?? '') ?>"
             tabindex="0"
             role="button"
             aria-label="View <?= e($photo['title']) ?>"
           <?php endif; ?>>
           <?php if ($photo['image_path']): ?>
             <div class="gallery-inner">
-              <img src="<?= e($photo['image_path']) ?>" alt="<?= e($photo['title']) ?>"
+              <img src="<?= e(img_url($photo['image_path'])) ?>" alt="<?= e($photo['title']) ?>"
                    style="width:100%;height:100%;object-fit:cover;display:block">
             </div>
           <?php else: ?>
@@ -100,7 +118,7 @@ $patterns = ['tall', '', '', 'wide', '', ''];
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<script src="/Rotaract_Kwanza/assets/js/scripts.js"></script>
+<script src="assets/js/scripts.js"></script>
 <script>
 (function () {
   var photos  = [];
@@ -111,7 +129,7 @@ $patterns = ['tall', '', '', 'wide', '', ''];
   var counter = document.getElementById('lb-counter');
 
   document.querySelectorAll('.gallery-item[data-src]').forEach(function (el, i) {
-    photos.push({ src: el.dataset.src, title: el.dataset.title || '' });
+    photos.push({ src: el.dataset.src, title: el.dataset.title || '', desc: el.dataset.desc || '' });
     el.addEventListener('click', function () { openLb(i); });
     el.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLb(i); }
@@ -122,7 +140,7 @@ $patterns = ['tall', '', '', 'wide', '', ''];
     current   = i;
     img.src   = photos[i].src;
     img.alt   = photos[i].title;
-    cap.textContent     = photos[i].title;
+    cap.textContent     = photos[i].desc ? photos[i].title + ' — ' + photos[i].desc : photos[i].title;
     counter.textContent = (i + 1) + ' / ' + photos.length;
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -149,6 +167,18 @@ $patterns = ['tall', '', '', 'wide', '', ''];
     if (e.key === 'Escape')     closeLb();
     if (e.key === 'ArrowLeft')  prevImg();
     if (e.key === 'ArrowRight') nextImg();
+  });
+
+  document.querySelectorAll('.gal-filter-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.gal-filter-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var filter = btn.dataset.filter;
+      document.querySelectorAll('.gallery-item').forEach(function (item) {
+        var show = !filter || item.dataset.category === filter;
+        item.classList.toggle('gal-hidden', !show);
+      });
+    });
   });
 })();
 </script>

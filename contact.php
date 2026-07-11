@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/ContactMessage.php';
 require_once __DIR__ . '/classes/SiteSettings.php';
@@ -26,7 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             (new ContactMessage($conn))->create($full_name, $email, $subject, $msg);
-            $message = 'Message sent! We will get back to you soon.';
+            $_SESSION['flash_message'] = 'Message sent! We will get back to you soon.';
+            header('Location: contact.php');
+            exit;
         } catch (mysqli_sql_exception $e) {
             $error = 'Server error. Please try again later.';
         }
@@ -48,11 +50,11 @@ $li   = $settings->get('linkedin_url',    '#');
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contact &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="/Rotaract_Kwanza/assets/img/logo1.jpg">
+  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/Rotaract_Kwanza/assets/css/kwanza.css">
+  <link rel="stylesheet" href="assets/css/kwanza.css">
 </head>
 <body>
 
@@ -127,6 +129,6 @@ $li   = $settings->get('linkedin_url',    '#');
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<script src="/Rotaract_Kwanza/assets/js/scripts.js"></script>
+<script src="assets/js/scripts.js"></script>
 </body>
 </html>

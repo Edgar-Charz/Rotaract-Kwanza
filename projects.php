@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Project.php';
 require_once __DIR__ . '/includes/helpers.php';
@@ -14,11 +14,11 @@ $projects = (new Project($conn))->getAll();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Projects &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="/Rotaract_Kwanza/assets/img/logo1.jpg">
+  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/Rotaract_Kwanza/assets/css/kwanza.css">
+  <link rel="stylesheet" href="assets/css/kwanza.css">
 </head>
 <body>
 
@@ -37,10 +37,14 @@ $projects = (new Project($conn))->getAll();
     <?php if ($projects): ?>
       <div class="projects-grid">
         <?php foreach ($projects as $i => $pj): ?>
-          <div class="project-card reveal<?= $i > 0 ? ' reveal-delay-' . ($i % 4) : '' ?>">
-            <div class="project-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.8" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
+          <a href="project.php?id=<?= $pj['id'] ?>" class="project-card reveal<?= $i > 0 ? ' reveal-delay-' . ($i % 4) : '' ?>" style="display:block;color:inherit;text-decoration:none">
+            <?php if ($pj['image_path'] ?? ''): ?>
+              <div class="project-icon" style="width:100%;height:140px;border-radius:12px;overflow:hidden;margin-bottom:20px">
+                <img src="<?= e(img_url($pj['image_path'])) ?>" alt="<?= e($pj['title']) ?>" style="width:100%;height:100%;object-fit:cover">
+              </div>
+            <?php else: ?>
+              <div class="project-icon"><?= icon_svg($pj['icon_type'] ?: 'heart', 'var(--gold-light)') ?></div>
+            <?php endif; ?>
             <?php if ($pj['is_featured']): ?>
               <span style="display:inline-block;background:rgba(212,136,42,0.25);color:var(--gold-light);border:1px solid rgba(212,136,42,0.4);border-radius:20px;font-size:11px;font-weight:700;padding:2px 10px;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Featured</span>
             <?php endif; ?>
@@ -58,7 +62,7 @@ $projects = (new Project($conn))->getAll();
                 <div class="impact-label">Status</div>
               </div>
             </div>
-          </div>
+          </a>
         <?php endforeach; ?>
       </div>
     <?php else: ?>
@@ -72,6 +76,6 @@ $projects = (new Project($conn))->getAll();
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<script src="/Rotaract_Kwanza/assets/js/scripts.js"></script>
+<script src="assets/js/scripts.js"></script>
 </body>
 </html>

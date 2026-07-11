@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Announcement.php';
 require_once __DIR__ . '/includes/helpers.php';
@@ -43,11 +43,11 @@ $cat_labels = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= $slug && $post ? e($post['title']) . ' &mdash; ' : '' ?>News &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="/Rotaract_Kwanza/assets/img/logo1.jpg">
+  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/Rotaract_Kwanza/assets/css/kwanza.css">
+  <link rel="stylesheet" href="assets/css/kwanza.css">
   <style>
     .news-section { padding-top:100px; padding-bottom:60px; }
     .news-hero { background:linear-gradient(135deg,var(--pink-800),var(--pink-900)); padding:60px 0 40px; margin-top:60px; color:#fff; }
@@ -96,37 +96,37 @@ $cat_labels = [
 <div class="container news-section" style="padding-top:32px">
   <?php if ($slug): ?>
     <?php if (!$post): ?>
-      <p style="text-align:center;color:var(--text-soft);padding:60px 0">Post not found. <a href="/Rotaract_Kwanza/news.php">Back to News</a></p>
+      <p style="text-align:center;color:var(--text-soft);padding:60px 0">Post not found. <a href="news.php">Back to News</a></p>
     <?php else: ?>
-      <a href="/Rotaract_Kwanza/news.php<?= $cat ? '?cat=' . $cat : '' ?>" class="back-link">&#8592; Back to News</a>
+      <a href="news.php<?= $cat ? '?cat=' . $cat : '' ?>" class="back-link">&#8592; Back to News</a>
       <div class="single-post">
         <?php if ($post['image_path']): ?>
-          <div class="single-post-img"><img src="<?= e($post['image_path']) ?>" alt="<?= e($post['title']) ?>"></div>
+          <div class="single-post-img"><img src="<?= e(img_url($post['image_path'])) ?>" alt="<?= e($post['title']) ?>"></div>
         <?php endif; ?>
         <div class="single-post-body">
           <span class="news-cat-tag <?= e($post['category']) ?>"><?= e($cat_labels[$post['category']] ?? $post['category']) ?></span>
           <h1><?= e($post['title']) ?></h1>
           <p style="font-size:13px;color:#b2bec3;margin-bottom:24px"><?= date('l, d F Y', strtotime($post['created_at'])) ?></p>
-          <div class="post-content"><?= e($post['content']) ?></div>
+          <div class="post-content"><?= strip_tags($post['content'], '<p><br><b><i><u><s><strong><em><ul><ol><li><h2><h3><a><blockquote>') ?></div>
         </div>
       </div>
     <?php endif; ?>
 
   <?php else: ?>
     <div class="cat-filters">
-      <a href="/Rotaract_Kwanza/news.php" class="cat-btn <?= !$cat ? 'active' : '' ?>">All</a>
+      <a href="news.php" class="cat-btn <?= !$cat ? 'active' : '' ?>">All</a>
       <?php foreach ($cat_labels as $k => $label): ?>
-        <a href="/Rotaract_Kwanza/news.php?cat=<?= $k ?>" class="cat-btn <?= $cat === $k ? 'active' : '' ?>"><?= $label ?></a>
+        <a href="news.php?cat=<?= $k ?>" class="cat-btn <?= $cat === $k ? 'active' : '' ?>"><?= $label ?></a>
       <?php endforeach; ?>
     </div>
 
     <?php if ($posts): ?>
       <div class="news-grid">
         <?php foreach ($posts as $item): ?>
-          <a href="/Rotaract_Kwanza/news.php?slug=<?= e($item['slug']) ?>" class="news-card">
+          <a href="news.php?slug=<?= e($item['slug']) ?>" class="news-card">
             <div class="news-card-img">
               <?php if ($item['image_path']): ?>
-                <img src="<?= e($item['image_path']) ?>" alt="<?= e($item['title']) ?>">
+                <img src="<?= e(img_url($item['image_path'])) ?>" alt="<?= e($item['title']) ?>">
               <?php else: ?>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <?php endif; ?>
@@ -162,6 +162,6 @@ $cat_labels = [
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<script src="/Rotaract_Kwanza/assets/js/scripts.js"></script>
+<script src="assets/js/scripts.js"></script>
 </body>
 </html>

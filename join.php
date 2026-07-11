@@ -1,16 +1,18 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Member.php';
 require_once __DIR__ . '/classes/SiteSettings.php';
+require_once __DIR__ . '/classes/MembershipPerk.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db   = new Database();
 $conn = $db->connect();
 
-$message = $error = '';
-$submitted = false;
+$submitted = isset($_GET['success']) && $_GET['success'] === '1';
+$message   = $submitted ? 'Application submitted! Our team will review it and get back to you soon.' : '';
+$error     = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -20,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email       = trim($_POST['email']       ?? '');
     $phone       = trim($_POST['phone']       ?? '');
     $occupation  = trim($_POST['occupation']  ?? '');
+    $linkedin    = trim($_POST['linkedin_url'] ?? '');
+    $instagram   = trim($_POST['instagram_url'] ?? '');
     $why_join    = trim($_POST['why_join']    ?? '');
 
     if (!$first_name || !$last_name || !$email || !$why_join) {
@@ -32,9 +36,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'This email address is already registered. Please use a different email.';
         } else {
             try {
-                $member->create($first_name, $last_name, $email, $phone, $occupation, $why_join);
-                $message   = 'Application submitted! Our team will review it and get back to you soon.';
-                $submitted = true;
+                $new_id = $member->create($first_name, $last_name, $email, $phone, $occupation, $why_join, 'pending', '', '', '', $linkedin, $instagram);
+
+                // Optional profile photo
+                $photo = upload_member_photo('photo');
+                if ($photo) $member->updatePhoto($new_id, $photo);
+
+                // Confirmation email to applicant (non-fatal)
+                try {
+                    require_once __DIR__ . '/classes/Mailer.php';
+                    $club = (new SiteSettings($conn))->get('site_name', 'Rotaract Kwanza');
+                    Mailer::fromSettings($conn)->applicationReceived($email, "$first_name $last_name", $club);
+                } catch (Throwable $e) {}
+
+                // Redirect (PRG) so refreshing the confirmation page doesn't resubmit the form
+                header('Location: join.php?success=1');
+                exit;
             } catch (mysqli_sql_exception $e) {
                 $error = 'Server error. Please try again later.';
             }
@@ -47,6 +64,7 @@ $fb = $settings->get('facebook_url',  '#');
 $ig = $settings->get('instagram_url', '#');
 $tw = $settings->get('twitter_url',   '#');
 $li = $settings->get('linkedin_url',  '#');
+$perks = (new MembershipPerk($conn))->getActive();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -54,11 +72,11 @@ $li = $settings->get('linkedin_url',  '#');
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Join Us &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="/Rotaract_Kwanza/assets/img/logo1.jpg">
+  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/Rotaract_Kwanza/assets/css/kwanza.css">
+  <link rel="stylesheet" href="assets/css/kwanza.css">
 </head>
 <body>
 
@@ -74,44 +92,19 @@ $li = $settings->get('linkedin_url',  '#');
         <h2 class="section-title reveal reveal-delay-1">Make a <em>Difference</em> in Your Community</h2>
         <p class="section-lead reveal reveal-delay-2">Join a global network of young leaders committed to creating positive change through service, fellowship, and professional development.</p>
 
+        <?php if ($perks): ?>
         <div class="perks reveal reveal-delay-3">
-          <div class="perk-item">
-            <div class="perk-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <?php foreach ($perks as $perk): ?>
+            <div class="perk-item">
+              <div class="perk-icon" style="color:var(--pink-700)"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
+              <div>
+                <h4><?= e($perk['title']) ?></h4>
+                <?php if ($perk['description']): ?><p><?= e($perk['description']) ?></p><?php endif; ?>
+              </div>
             </div>
-            <div>
-              <h4>Global Network</h4>
-              <p>Connect with over 220,000 Rotaractors in 9,600+ clubs worldwide.</p>
-            </div>
-          </div>
-          <div class="perk-item">
-            <div class="perk-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div>
-              <h4>Leadership Growth</h4>
-              <p>Develop practical leadership and professional skills through hands-on experience.</p>
-            </div>
-          </div>
-          <div class="perk-item">
-            <div class="perk-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div>
-              <h4>Community Impact</h4>
-              <p>Lead and participate in meaningful service projects that transform lives.</p>
-            </div>
-          </div>
-          <div class="perk-item">
-            <div class="perk-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div>
-              <h4>Exciting Events</h4>
-              <p>Attend social gatherings, workshops, conferences, and cultural events.</p>
-            </div>
-          </div>
+          <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
         <div class="socials reveal">
           <a href="<?= e($fb) ?>" class="social-btn" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
@@ -129,13 +122,13 @@ $li = $settings->get('linkedin_url',  '#');
             </div>
             <h3>Application Submitted!</h3>
             <p><?= e($message) ?></p>
-            <a href="/Rotaract_Kwanza/" class="btn-submit" style="display:inline-block;margin-top:1rem; text-decoration: none;">Back to Home &rarr;</a>
+            <a href="index.php" class="btn-submit" style="display:inline-block;margin-top:1rem; text-decoration: none;">Back to Home &rarr;</a>
           </div>
         <?php else: ?>
           <h3>Membership Application</h3>
           <p>Fill out the form below and our team will review your application.</p>
 
-          <form action="" method="POST">
+          <form action="" method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <div class="form-row">
               <div class="form-group">
@@ -161,9 +154,30 @@ $li = $settings->get('linkedin_url',  '#');
               <label>Occupation / Field of Study</label>
               <input type="text" name="occupation" value="<?= e($_POST['occupation'] ?? '') ?>" placeholder="e.g. Software Engineer, Medical Student">
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>LinkedIn <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
+                <input type="text" name="linkedin_url" value="<?= e($_POST['linkedin_url'] ?? '') ?>" placeholder="https://linkedin.com/in/yourname">
+              </div>
+              <div class="form-group">
+                <label>Instagram <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
+                <input type="text" name="instagram_url" value="<?= e($_POST['instagram_url'] ?? '') ?>" placeholder="https://instagram.com/yourname">
+              </div>
+            </div>
             <div class="form-group">
               <label>Why do you want to join? <span style="color:var(--pink-700)">*</span></label>
               <textarea name="why_join" placeholder="Tell us about yourself and what motivates you to become a Rotaractor..." style="min-height:130px" required><?= e($_POST['why_join'] ?? '') ?></textarea>
+            </div>
+            <div class="form-group" style="margin-top:4px">
+              <label>Profile Photo <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
+              <input type="file" name="photo" accept="image/*" id="join-photo-input"
+                     style="padding:6px;border:1.5px solid var(--border);border-radius:8px;width:100%;font-family:inherit;font-size:13px"
+                     onchange="joinPhotoPreview(this)">
+              <div id="join-photo-preview" style="display:none;margin-top:10px;text-align:center">
+                <img id="join-photo-img" src="" alt="Preview"
+                     style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--pink-200)">
+              </div>
+              <p style="font-size:11.5px;color:var(--text-soft);margin-top:5px">JPG, PNG or WEBP · max 3 MB. Shown in the member directory if your profile is listed.</p>
             </div>
             <button type="submit" name="submitJoinBTN" class="btn-submit">Submit Application &rarr;</button>
           </form>
@@ -176,6 +190,18 @@ $li = $settings->get('linkedin_url',  '#');
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<script src="/Rotaract_Kwanza/assets/js/scripts.js"></script>
+<script src="assets/js/scripts.js"></script>
+<script>
+function joinPhotoPreview(input) {
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('join-photo-img').src = e.target.result;
+      document.getElementById('join-photo-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
 </body>
 </html>
