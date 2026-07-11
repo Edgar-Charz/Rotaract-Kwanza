@@ -119,6 +119,14 @@ body {
 .logout-link { color: var(--sidebar-text); font-size: 12px; text-decoration: none; }
 .logout-link:hover { color: var(--danger); }
 
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,8,24,0.55);
+  z-index: 99;
+}
+
 /* ── Main wrapper ────────────────────────── */
 .main-wrapper {
   margin-left: var(--sidebar-w);
@@ -150,9 +158,101 @@ body {
 .sidebar-toggle:hover { background: var(--content-bg); }
 .sidebar-toggle svg { width: 20px; height: 20px; display: block; }
 
-.topbar-title { font-size: 17px; font-weight: 700; flex: 1; color: var(--text); }
+.topbar-title { font-size: 17px; font-weight: 700; color: var(--text); flex: 1; }
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 .topbar-date { color: var(--text-muted); font-size: 13px; }
+
+/* Topbar search */
+.topbar-search {
+  width: 280px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.topbar-search .search-icon {
+  position: absolute;
+  left: 10px;
+  width: 16px; height: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.topbar-search input {
+  width: 100%;
+  padding: 7px 12px 7px 34px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  background: var(--content-bg);
+  color: var(--text);
+  transition: border-color .2s;
+}
+.topbar-search input:focus { border-color: var(--primary); background: #fff; }
+
+/* ── Live search dropdown ────────────────── */
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.14);
+  z-index: 300;
+  overflow: hidden;
+  max-height: 440px;
+  overflow-y: auto;
+}
+.search-dropdown.open { display: block; }
+.sd-section { border-bottom: 1px solid var(--border); }
+.sd-section:last-child { border-bottom: none; }
+.sd-section-title {
+  padding: 8px 14px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-muted, #999);
+}
+.sd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 13px;
+  transition: background .12s;
+  cursor: pointer;
+}
+.sd-item:hover { background: var(--content-bg, #f8f8f8); }
+.sd-item-main { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd-item-sub  { color: var(--text-muted, #888); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.sd-empty  { padding: 18px 14px; color: var(--text-muted, #999); font-size: 13px; text-align: center; }
+.sd-footer {
+  display: block;
+  padding: 10px 14px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--primary, #C0396B);
+  background: var(--content-bg, #fafafa);
+  text-decoration: none;
+  border-top: 1px solid var(--border);
+}
+.sd-footer:hover { background: var(--border); }
+.sd-spinner { display: flex; align-items: center; justify-content: center; padding: 18px; }
+.sd-spinner::after {
+  content: '';
+  width: 18px; height: 18px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--primary, #C0396B);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Content ─────────────────────────────── */
 .content { flex: 1; padding: 24px; }
@@ -201,6 +301,21 @@ body {
   overflow: hidden;
 }
 
+.dash-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  text-align: left;
+}
+.dash-welcome-text { text-align: left; }
+.dash-welcome-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .dash-welcome-actions { width: 100%; }
+  .dash-welcome-actions .btn { flex: 1 1 auto; justify-content: center; }
+}
+
 .card-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
@@ -243,6 +358,10 @@ body {
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 .btn-gold { background: var(--gold); color: #fff; }
 .btn-gold:hover { background: #b8731f; }
+
+.btn-icon { padding: 0; width: 30px; height: 30px; justify-content: center; flex-shrink: 0; }
+.btn-icon.btn-sm { width: 28px; height: 28px; }
+.btn-icon svg { width: 15px; height: 15px; }
 
 /* ── Table ───────────────────────────────── */
 .table-wrap { overflow-x: auto; }
@@ -345,33 +464,28 @@ textarea { resize: vertical; min-height: 90px; }
 .search-bar input { max-width: 280px; }
 .filter-select { max-width: 160px; }
 
-/* ── Modal ───────────────────────────────── */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(10,8,24,0.55);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.modal-overlay.open { display: flex; }
+/* ── Modal (Bootstrap-powered) ──────────── */
+.modal-backdrop { background: rgba(10,8,24,0.55); }
+.modal-backdrop.show { opacity: 1; }
 
-.modal {
+.modal-dialog.modal-content {
   background: var(--card-bg);
+  border: none;
   border-radius: 14px;
   width: 100%;
   max-width: 620px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-  animation: modal-in 0.2s ease;
 }
-
-@keyframes modal-in {
-  from { opacity:0; transform: scale(0.95) translateY(-10px); }
-  to   { opacity:1; transform: scale(1) translateY(0); }
+/* Add/Edit modals wrap .modal-body + .modal-footer in a <form>. Make the form
+   transparent to layout so its children become flex items of the dialog
+   directly (same as the form-less View modals), instead of the form itself
+   being an unconstrained flex item that swallows the scroll area. */
+.modal-dialog.modal-content > form {
+  display: contents;
 }
 
 .modal-header {
@@ -380,6 +494,7 @@ textarea { resize: vertical; min-height: 90px; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
 }
 .modal-title { font-size: 16px; font-weight: 700; }
 .modal-close {
@@ -388,8 +503,21 @@ textarea { resize: vertical; min-height: 90px; }
   padding: 2px 6px; border-radius: 4px;
 }
 .modal-close:hover { background: var(--content-bg); color: var(--danger); }
-.modal-body   { padding: 22px; }
-.modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+.modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex: 0 0 auto; }
 
 /* ── Alerts ──────────────────────────────── */
 .alert {
@@ -547,16 +675,33 @@ textarea { resize: vertical; min-height: 90px; }
     transform: translateX(0);
     box-shadow: 4px 0 30px rgba(0,0,0,0.3);
   }
+  .sidebar.open + .sidebar-backdrop {
+    display: block;
+  }
   .main-wrapper { margin-left: 0; }
   .sidebar-toggle { display: flex; }
   .dash-grid { grid-template-columns: 1fr; }
+  .split-layout { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 600px) {
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .content { padding: 16px; }
-  .modal { max-width: 100%; }
+  .modal-dialog.modal-content { max-width: 100%; }
   .form-row { grid-template-columns: 1fr; }
+  div.dataTables_wrapper .dataTables_filter input { width: 100%; }
+  div.dataTables_wrapper .dt-top-bar { justify-content: stretch; }
+  div.dataTables_wrapper .dataTables_filter { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .topbar { padding: 0 14px; gap: 10px; }
+  .topbar-date { display: none; }
+  .topbar-title { font-size: 15px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .card-header { padding: 14px 16px; }
+  .content { padding: 12px; }
+  .login-card { padding: 26px 22px; }
 }
 
 /* ── Login page ──────────────────────────── */
@@ -565,6 +710,7 @@ textarea { resize: vertical; min-height: 90px; }
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
   background: linear-gradient(135deg, #1a1730 0%, #2d2352 50%, #1a1730 100%);
 }
 

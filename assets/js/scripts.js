@@ -1,3 +1,5 @@
+document.body.classList.add("js");
+
 // Progress Bar + Scroll Spy
 window.addEventListener("scroll", () => {
   const h = document.documentElement;
