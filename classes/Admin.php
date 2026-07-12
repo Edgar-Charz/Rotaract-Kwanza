@@ -62,4 +62,33 @@ class Admin
         $stmt->close();
         return $ok;
     }
+
+    public function usernameExists(string $username): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM admins WHERE username = ? LIMIT 1');
+        $stmt->bind_param('s', $username);
+        $stmt->execute();
+        $ok = (bool) $stmt->get_result()->fetch_row();
+        $stmt->close();
+        return $ok;
+    }
+
+    public function create(string $username, string $password, string $full_name, string $role = 'editor'): int|false
+    {
+        if ($this->usernameExists($username)) {
+            return false;
+        }
+        if (!in_array($role, ['super_admin', 'editor', 'viewer'], true)) {
+            $role = 'editor';
+        }
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $this->db->prepare(
+            'INSERT INTO admins (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)'
+        );
+        $stmt->bind_param('ssss', $username, $hash, $full_name, $role);
+        $stmt->execute();
+        $id = (int) $this->db->insert_id;
+        $stmt->close();
+        return $id;
+    }
 }

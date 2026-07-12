@@ -12,9 +12,10 @@ class Mailer
 
     public function __construct(string $fromEmail = '', string $fromName = '', string $siteName = 'Rotaract Kwanza')
     {
-        $this->fromEmail = $fromEmail ?: 'noreply@rotaractkwanza.org';
-        $this->fromName  = $fromName  ?: $siteName;
-        $this->siteName  = $siteName;
+        $strip = fn(string $v): string => str_replace(["\r", "\n"], '', $v);
+        $this->fromEmail = $strip($fromEmail ?: 'noreply@rotaractkwanza.org');
+        $this->fromName  = $strip($fromName  ?: $siteName);
+        $this->siteName  = $strip($siteName);
     }
 
     public function send(string $to, string $toName, string $subject, string $htmlBody): bool
@@ -130,13 +131,15 @@ HTML;
     {
         try {
             require_once dirname(__FILE__) . '/../classes/SiteSettings.php';
-            $ss       = new SiteSettings($conn);
-            $email    = $ss->get('contact_email', 'noreply@rotaractkwanza.org');
-            $siteName = $ss->get('site_name', 'Rotaract Kwanza');
+            $ss        = new SiteSettings($conn);
+            $siteName  = $ss->get('site_name', 'Rotaract Kwanza');
+            $fromEmail = $ss->get('mail_from_email', '') ?: $ss->get('contact_email', 'noreply@rotaractkwanza.org');
+            $fromName  = $ss->get('mail_from_name', '') ?: $siteName;
         } catch (Throwable $e) {
-            $email    = 'noreply@rotaractkwanza.org';
-            $siteName = 'Rotaract Kwanza';
+            $siteName  = 'Rotaract Kwanza';
+            $fromEmail = 'noreply@rotaractkwanza.org';
+            $fromName  = $siteName;
         }
-        return new self($email, $siteName, $siteName);
+        return new self($fromEmail, $fromName, $siteName);
     }
 }

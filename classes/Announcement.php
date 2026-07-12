@@ -60,7 +60,7 @@ class Announcement
         return (string) $path;
     }
 
-    public function getPublished(int $limit = 0, string $category = ''): array
+    public function getPublished(int $limit = 0, string $category = '', int $offset = 0): array
     {
         $where = "WHERE is_published = 1";
         $params = [];
@@ -72,8 +72,13 @@ class Announcement
             $params[] = $category;
         }
 
-        $limitClause = $limit > 0 ? " LIMIT $limit" : '';
-        $sql = "SELECT * FROM announcements $where ORDER BY created_at DESC$limitClause";
+        $sql = "SELECT * FROM announcements $where ORDER BY created_at DESC";
+        if ($limit > 0) {
+            $sql .= ' LIMIT ? OFFSET ?';
+            $types .= 'ii';
+            $params[] = $limit;
+            $params[] = max(0, $offset);
+        }
 
         $stmt = $this->db->prepare($sql);
         if ($types !== '') {
