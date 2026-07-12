@@ -5,6 +5,7 @@ require_once __DIR__ . '/classes/Member.php';
 require_once __DIR__ . '/classes/SiteSettings.php';
 require_once __DIR__ . '/classes/MembershipPerk.php';
 require_once __DIR__ . '/includes/csrf.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db   = new Database();
@@ -17,6 +18,9 @@ $error     = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 
+    if (!rate_limit_allow('join', 3, 3600)) {
+        $error = rate_limit_message(3600);
+    } else {
     $first_name  = trim($_POST['first_name']  ?? '');
     $last_name   = trim($_POST['last_name']   ?? '');
     $email       = trim($_POST['email']       ?? '');
@@ -56,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Server error. Please try again later.';
             }
         }
+    }
     }
 }
 

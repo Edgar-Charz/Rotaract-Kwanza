@@ -41,6 +41,17 @@ $about_image = $settings->get('about_image', '');
 $founding_year = $settings->get('founding_year', '2012');
 $hero_badge_year  = $settings->get('hero_badge_year', '2025');
 $hero_badge_label = $settings->get('hero_badge_label', 'Outstanding Club Award');
+$brand_initials          = $settings->get('brand_initials', 'RK');
+$contact_hours           = $settings->get('contact_hours', 'Mon – Fri, 8:00 AM – 5:00 PM');
+$hero_eyebrow            = $settings->get('hero_eyebrow', 'Rotaract International · Kwanza');
+$hero_title              = $settings->get('hero_title', 'Serving Communities, Changing Lives');
+$hero_subtitle           = $settings->get('hero_subtitle', 'Together we make a difference');
+$hero_description        = $settings->get('hero_description', 'The Rotaract Club of Kwanza is a vibrant community of young leaders committed to fellowship, professional development, and meaningful service to our community and beyond.');
+$home_about_highlight    = $settings->get('home_about_highlight', 'Over a decade of community service and fellowship in Kwanza');
+$home_about_description  = $settings->get('home_about_description', 'The Rotaract Club of Kwanza is a Rotary International-sponsored organization bringing together young professionals and leaders aged 18–30 to create lasting change in our community.');
+$home_events_description = $settings->get('home_events_description', 'Discover our next service days, leadership forums, and fellowship celebrations. Join Rotaract Kwanza for meaningful impact.');
+$home_team_description   = $settings->get('home_team_description', 'Passionate, driven young leaders who dedicate their time to making a difference in Kwanza.');
+$home_join_description   = $settings->get('home_join_description', 'Join a community of passionate young leaders making real change in Kwanza. Membership is open to all aged 18–30.');
 
 $event_colors = ['', 'gold', 'rose'];
 $gallery_classes = [
@@ -58,7 +69,7 @@ $gallery_classes = [
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rotaract Club of Kwanza</title>
+  <title><?= e(site_title($conn)) ?></title>
   <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -81,11 +92,10 @@ $gallery_classes = [
     </div>
     <div class="hero-grid container">
       <div class="hero-content">
-        <div class="hero-eyebrow"><span class="dot"></span>Rotaract International &middot; Kwanza</div>
-        <h1 class="hero-title">Serving <em>Communities,</em><br>Changing Lives</h1>
-        <p class="hero-subtitle">Together we make a difference</p>
-        <p class="hero-desc">The Rotaract Club of Kwanza is a vibrant community of young leaders committed to
-          fellowship, professional development, and meaningful service to our community and beyond.</p>
+        <div class="hero-eyebrow"><span class="dot"></span><?= e($hero_eyebrow) ?></div>
+        <h1 class="hero-title"><?= e($hero_title) ?></h1>
+        <p class="hero-subtitle"><?= e($hero_subtitle) ?></p>
+        <p class="hero-desc"><?= e($hero_description) ?></p>
         <div class="hero-actions">
           <a href="join.php" class="btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -181,15 +191,13 @@ $gallery_classes = [
           </div>
           <div class="about-card-float">
             <div class="about-card-float-title">Est. <?= e($founding_year) ?></div>
-            <div class="about-card-float-sub">Over a decade of community service and fellowship in Kwanza</div>
+            <div class="about-card-float-sub"><?= e($home_about_highlight) ?></div>
           </div>
         </div>
         <div class="about-content">
           <div class="section-eyebrow reveal">About Us</div>
           <h2 class="section-title reveal reveal-delay-1">Who We <em>Are</em></h2>
-          <p class="section-lead reveal reveal-delay-2">The Rotaract Club of Kwanza is a Rotary International-sponsored
-            organization bringing together young professionals and leaders aged 18&ndash;30 to create lasting change in
-            our community.</p>
+          <p class="section-lead reveal reveal-delay-2"><?= e($home_about_description) ?></p>
           <?php if ($club_values): ?>
           <div class="about-values reveal reveal-delay-3">
             <?php foreach ($club_values as $val): ?>
@@ -265,8 +273,7 @@ $gallery_classes = [
         <div>
           <div class="section-eyebrow reveal">Events &amp; Activities</div>
           <h2 class="section-title reveal reveal-delay-1">Upcoming <em>Events</em></h2>
-          <p class="section-lead reveal reveal-delay-2">Discover our next service days, leadership forums, and
-            fellowship celebrations. Join Rotaract Kwanza for meaningful impact.</p>
+          <p class="section-lead reveal reveal-delay-2"><?= e($home_events_description) ?></p>
         </div>
         <a href="events.php" class="btn-secondary reveal">View All Events</a>
       </div>
@@ -330,8 +337,7 @@ $gallery_classes = [
       <div style="text-align:center;max-width:600px;margin:0 auto 12px">
         <div class="section-eyebrow reveal" style="justify-content:center">Our Leadership</div>
         <h2 class="section-title reveal reveal-delay-1">Meet the <em>Team</em></h2>
-        <p class="section-lead reveal reveal-delay-2" style="margin:0 auto">Passionate, driven young leaders who
-          dedicate their time to making a difference in Kwanza.</p>
+        <p class="section-lead reveal reveal-delay-2" style="margin:0 auto"><?= e($home_team_description) ?></p>
       </div>
       <div class="team-grid">
         <?php if ($team):
@@ -365,8 +371,9 @@ $gallery_classes = [
         <?php endif; ?>
       </div>
       <?php if ($team): ?>
-      <div style="text-align:center;margin-top:40px">
+      <div style="text-align:center;margin-top:40px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
         <a href="team.php" class="btn-secondary reveal">Meet the Full Team</a>
+        <a href="leadership_history.php" class="btn-secondary reveal">Leadership History</a>
       </div>
       <?php endif; ?>
     </div>
@@ -523,8 +530,7 @@ $gallery_classes = [
         <div>
           <div class="section-eyebrow reveal">Membership</div>
           <h2 class="section-title reveal reveal-delay-1">Be Part of <em>Something</em> Greater</h2>
-          <p class="section-lead reveal reveal-delay-2">Join a community of passionate young leaders making real change
-            in Kwanza. Membership is open to all aged 18&ndash;30.</p>
+          <p class="section-lead reveal reveal-delay-2"><?= e($home_join_description) ?></p>
           <?php if ($perks): ?>
           <div class="join-perks reveal reveal-delay-3">
             <?php foreach ($perks as $perk): ?>
@@ -577,7 +583,7 @@ $gallery_classes = [
                 </svg></div>
               <div>
                 <h4>Call Us</h4>
-                <p><?= e($tel) ?><br>Mon &ndash; Fri, 8:00 AM &ndash; 5:00 PM</p>
+                <p><?= e($tel) ?><br><?= e($contact_hours) ?></p>
               </div>
             </div>
             <div class="contact-item">

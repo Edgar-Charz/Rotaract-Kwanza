@@ -4,6 +4,7 @@ require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Event.php';
 require_once __DIR__ . '/classes/EventRSVP.php';
 require_once __DIR__ . '/includes/csrf.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db = new Database();
@@ -22,6 +23,9 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $event) {
   csrf_verify();
 
+  if (!rate_limit_allow('rsvp', 10, 900)) {
+    $error = rate_limit_message();
+  } else {
   $name = trim($_POST['name'] ?? '');
   $email = trim($_POST['email'] ?? '');
   $phone = trim($_POST['phone'] ?? '');
@@ -54,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $event) {
     } catch (mysqli_sql_exception $e) {
       $error = 'Could not save your RSVP. Please try again later.';
     }
+  }
   }
 }
 ?>

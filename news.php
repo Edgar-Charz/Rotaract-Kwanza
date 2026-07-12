@@ -26,8 +26,7 @@ if ($slug) {
     $total  = $announcement->countPublished($cat);
     $pages  = (int) ceil($total / $limit);
     $offset = ($page - 1) * $limit;
-    $all    = $announcement->getPublished(0, $cat);
-    $posts  = array_slice($all, $offset, $limit);
+    $posts  = $announcement->getPublished($limit, $cat, $offset);
 }
 
 $cat_labels = [

@@ -8,12 +8,13 @@ $db = new Database();
 $conn = $db->connect();
 $team = (new TeamMember($conn))->getActive();
 
-$tier_labels = team_tiers();
+// team.php's getActive() already orders members by their role's display_order, so grouping
+// into sections just means detecting where tier_label changes as we walk the ordered list —
+// no numeric tier needed, the DB-managed role list (admin/roles.php) drives both order and grouping.
 $tiers = [];
 foreach ($team as $tm) {
-  $tiers[(int) ($tm['tier'] ?? 3)][] = $tm;
+  $tiers[$tm['tier_label']][] = $tm;
 }
-ksort($tiers);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -72,7 +73,7 @@ ksort($tiers);
 
       <?php if ($team): ?>
         <div style="margin-top:48px">
-          <?php $tier_i = 0; foreach ($tiers as $tier_num => $members): $tier_i++; ?>
+          <?php $tier_i = 0; foreach ($tiers as $tier_label => $members): $tier_i++; ?>
             <?php if ($tier_i > 1): ?>
               <div class="team-connector">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -80,9 +81,9 @@ ksort($tiers);
             <?php endif; ?>
 
             <div class="team-tier">
-              <div class="team-tier-label"><?= e($tier_labels[$tier_num] ?? 'Team Members') ?></div>
+              <div class="team-tier-label"><?= e($tier_label) ?></div>
 
-              <div class="<?= $tier_num <= 2 ? 'team-row tier-' . $tier_num : 'team-grid' ?>">
+              <div class="<?= $tier_i <= 2 ? 'team-row tier-' . $tier_i : 'team-grid' ?>">
                 <?php foreach ($members as $i => $tm):
                   $pal = avatar_palette($i);
                   $words = array_filter(explode(' ', $tm['full_name']));
@@ -144,6 +145,10 @@ ksort($tiers);
           <p style="margin-top:8px">Team members will appear here once added through the admin dashboard.</p>
         </div>
       <?php endif; ?>
+
+      <div style="text-align:center;margin-top:48px">
+        <a href="leadership_history.php" class="btn-secondary reveal">View Leadership History</a>
+      </div>
     </div>
   </section>
 

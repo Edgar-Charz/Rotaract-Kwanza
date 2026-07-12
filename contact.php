@@ -4,6 +4,7 @@ require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/ContactMessage.php';
 require_once __DIR__ . '/classes/SiteSettings.php';
 require_once __DIR__ . '/includes/csrf.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db   = new Database();
@@ -14,6 +15,9 @@ $message = $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 
+    if (!rate_limit_allow('contact', 5, 900)) {
+        $error = rate_limit_message();
+    } else {
     $full_name = trim($_POST['full_name'] ?? '');
     $email     = trim($_POST['email']     ?? '');
     $subject   = trim($_POST['subject']   ?? '');
@@ -33,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Server error. Please try again later.';
         }
     }
+    }
 }
 
 $settings = new SiteSettings($conn);
@@ -43,18 +48,12 @@ $fb   = $settings->get('facebook_url',    '#');
 $ig   = $settings->get('instagram_url',   '#');
 $tw   = $settings->get('twitter_url',     '#');
 $li   = $settings->get('linkedin_url',    '#');
+$page_title = site_title($conn, 'Contact');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contact &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/kwanza.css">
+  <?php require __DIR__ . '/includes/public_head.php'; ?>
 </head>
 <body>
 
