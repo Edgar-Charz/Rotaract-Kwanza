@@ -1,7 +1,27 @@
 <?php
+require_once __DIR__ . '/upload.php';
+
 function e(string $s): string
 {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+}
+
+/** Retrieve a public site setting while keeping a single settings instance per request. */
+function site_setting(mysqli $conn, string $key, string $default = ''): string
+{
+    static $settings = null;
+    if ($settings === null) {
+        require_once dirname(__DIR__) . '/classes/SiteSettings.php';
+        $settings = new SiteSettings($conn);
+    }
+    return $settings->get($key, $default);
+}
+
+/** Build a consistent, database-backed browser title for public pages. */
+function site_title(mysqli $conn, string $page = ''): string
+{
+    $siteName = site_setting($conn, 'site_name', 'Rotaract Club of Kwanza');
+    return $page === '' ? $siteName : $page . ' — ' . $siteName;
 }
 
 // Returns the URL to an uploaded image, regardless of which server the site runs on.
@@ -26,19 +46,10 @@ function img_url(string $path): string {
 
 function upload_member_photo(string $input_name): string
 {
-    if (!isset($_FILES[$input_name]) || $_FILES[$input_name]['error'] !== UPLOAD_ERR_OK) return '';
-    $file = $_FILES[$input_name];
-    if ($file['size'] > 3 * 1024 * 1024) return '';
-    $finfo   = finfo_open(FILEINFO_MIME_TYPE);
-    $mime    = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
-    if (!isset($allowed[$mime])) return '';
-    $dir  = dirname(__DIR__) . '/admin/uploads/members/';
-    if (!is_dir($dir)) mkdir($dir, 0755, true);
-    $fname = uniqid('mp_', true) . '.' . $allowed[$mime];
-    if (!move_uploaded_file($file['tmp_name'], $dir . $fname)) return '';
-    return 'admin/uploads/members/' . $fname;
+    $saved = save_uploaded_image_from_input($input_name, 'members', 'mp_');
+    if (!$saved) return '';
+    $pos = strpos($saved, '/admin/uploads/');
+    return $pos !== false ? 'admin/uploads/' . substr($saved, $pos + 15) : ltrim($saved, '/');
 }
 
 function delete_member_photo(string $path): void
@@ -80,23 +91,6 @@ function icon_svg(string $key, string $stroke = 'currentColor'): string
     ];
     $inner = $paths[$key] ?? $paths['heart'];
     return '<svg viewBox="0 0 24 24" fill="none" stroke="' . e($stroke) . '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $inner . '</svg>';
-}
-
-// Team hierarchy tiers — lower number = higher rank. Shared between admin/team.php
-// (dropdown) and team.php (public grouping) so the two never drift out of sync.
-function team_tiers(): array
-{
-    return [
-        1 => 'Leadership (President)',
-        2 => 'Executive Committee',
-        3 => 'Directors & Coordinators',
-        4 => 'Team Members',
-    ];
-}
-
-function team_tier_label(int $tier): string
-{
-    return team_tiers()[$tier] ?? 'Team Members';
 }
 
 function avatar_palette(int $i): array

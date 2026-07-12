@@ -3,6 +3,7 @@ require_once dirname(__DIR__, 2) . '/config/Database.php';
 require_once dirname(__DIR__, 2) . '/classes/ActivityLog.php';
 require_once dirname(__DIR__, 2) . '/classes/SiteSettings.php';
 require_once dirname(__DIR__, 2) . '/includes/csrf.php';
+require_once dirname(__DIR__, 2) . '/includes/upload.php';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -87,50 +88,26 @@ function h(string $s): string {
 // ── File upload ───────────────────────────────────────────────────────────────
 
 function upload_image(string $input_name, string $subdir): string|false {
-    if (!isset($_FILES[$input_name]) || $_FILES[$input_name]['error'] === UPLOAD_ERR_NO_FILE) {
-        return false;
-    }
-    $file = $_FILES[$input_name];
-    if ($file['error'] !== UPLOAD_ERR_OK) return false;
-
-    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    $mime    = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-    if (!in_array($mime, $allowed)) return false;
-    if ($file['size'] > 5 * 1024 * 1024) return false;
-
-    $ext  = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $name = uniqid('img_', true) . '.' . $ext;
-    $dir  = UPLOAD_DIR . $subdir . '/';
-    if (!is_dir($dir)) mkdir($dir, 0755, true);
-
-    $dest = "$dir$name";
-    if (!move_uploaded_file($file['tmp_name'], $dest)) return false;
-    return UPLOAD_URL . $subdir . '/' . $name;
+    return save_uploaded_image_from_input($input_name, $subdir);
 }
 
 function upload_multi_images(string $input_name, string $subdir): array {
     if (empty($_FILES[$input_name]['name'][0])) return [];
 
-    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    $files   = $_FILES[$input_name];
-    $saved   = [];
+    $files = $_FILES[$input_name];
+    $saved = [];
 
     foreach ($files['name'] as $i => $name) {
         if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-
-        $tmp  = $files['tmp_name'][$i];
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
-        if (!in_array($mime, $allowed)) continue;
-        if ($files['size'][$i] > 5 * 1024 * 1024) continue;
-
-        $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-        $fn   = uniqid('img_', true) . '.' . $ext;
-        $dir  = UPLOAD_DIR . $subdir . '/';
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
-
-        if (move_uploaded_file($tmp, "$dir$fn")) {
-            $saved[] = UPLOAD_URL . $subdir . '/' . $fn;
-        }
+        $file = [
+            'name'     => $files['name'][$i],
+            'type'     => $files['type'][$i],
+            'tmp_name' => $files['tmp_name'][$i],
+            'error'    => $files['error'][$i],
+            'size'     => $files['size'][$i],
+        ];
+        $url = save_uploaded_image($file, $subdir);
+        if ($url) $saved[] = $url;
     }
     return $saved;
 }
@@ -152,6 +129,79 @@ function paginate(int $total, int $per_page, int $current): array {
         'per_page' => $per_page,
         'offset'   => ($current - 1) * $per_page,
     ];
+}
+
+// ── Rich text sanitization ───────────────────────────────────────────────────
+
+/**
+ * Sanitize a Quill-authored HTML fragment before storage: strips any tag not
+ * in $allowedTags (unwrapping its contents rather than dropping them) and
+ * strips every attribute except a safe `href` on `<a>` (http/https/mailto/
+ * relative only — blocks `javascript:` etc). The client-side Quill toolbar
+ * already limits what an editor can produce through the UI, but the POST
+ * body itself is not a trusted boundary — this is what actually stops a
+ * crafted request from storing a stored-XSS payload that gets rendered
+ * unescaped to public visitors on pages like news.php.
+ */
+function sanitize_html_fragment(string $html, array $allowedTags): string
+{
+    if (trim($html) === '') return '';
+
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $doc->loadHTML(
+        '<?xml encoding="utf-8" ?><div>' . $html . '</div>',
+        LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+    );
+    libxml_clear_errors();
+
+    $root = $doc->getElementsByTagName('div')->item(0);
+    if (!$root) return '';
+
+    sanitize_html_node($root, $allowedTags);
+
+    $out = '';
+    foreach (iterator_to_array($root->childNodes) as $child) {
+        $out .= $doc->saveHTML($child);
+    }
+    return $out;
+}
+
+function sanitize_html_node(DOMNode $node, array $allowedTags): void
+{
+    foreach (iterator_to_array($node->childNodes) as $child) {
+        if ($child->nodeType === XML_COMMENT_NODE) {
+            $node->removeChild($child);
+            continue;
+        }
+        if ($child->nodeType !== XML_ELEMENT_NODE) {
+            continue;
+        }
+
+        $tag = strtolower($child->nodeName);
+        if (!in_array($tag, $allowedTags, true)) {
+            while ($child->firstChild) {
+                $node->insertBefore($child->firstChild, $child);
+            }
+            $node->removeChild($child);
+            continue;
+        }
+
+        foreach (iterator_to_array($child->attributes) as $attr) {
+            if ($tag === 'a' && strtolower($attr->nodeName) === 'href') {
+                if (preg_match('~^(https?:|mailto:|/|#)~i', trim($attr->nodeValue))) {
+                    continue;
+                }
+            }
+            $child->removeAttribute($attr->nodeName);
+        }
+        if ($tag === 'a') {
+            $child->setAttribute('rel', 'noopener noreferrer');
+            $child->setAttribute('target', '_blank');
+        }
+
+        sanitize_html_node($child, $allowedTags);
+    }
 }
 
 // ── Reporting ─────────────────────────────────────────────────────────────────

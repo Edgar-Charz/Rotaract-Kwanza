@@ -46,6 +46,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
       Team
     </a>
+    <a href="leadership_history.php" class="nav-item <?= in_array(basename($_SERVER['PHP_SELF']), ['leadership_history.php', 'leadership_term.php'], true) ? 'active' : '' ?>">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3L2 9l10 6 10-6-10-6z"/><path d="M2 15l10 6 10-6"/><path d="M2 12l10 6 10-6"/></svg>
+      Leadership History
+    </a>
+    <a href="roles.php" class="nav-item <?= active_nav('roles.php') ?>">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Team Roles
+    </a>
     <a href="messages.php" class="nav-item <?= active_nav('messages.php') ?>">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Messages

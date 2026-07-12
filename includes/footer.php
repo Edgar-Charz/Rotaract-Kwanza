@@ -67,6 +67,6 @@ $_sponsor_url   = isset($conn) ? (new SiteSettings($conn))->get('sponsor_club_ur
   </div>
   <div class="footer-bottom">
     <p>&copy; <?= date('Y') ?> <?= htmlspecialchars($_site_name, ENT_QUOTES, 'UTF-8') ?>. All rights reserved.</p>
-    <p>Made with <span class="heart">&#9829;</span> for community &amp; service</p>
+    <p>Made with <span class="heart">&#9829;</span> for community &amp; service &middot; <a href="admin/login.php" style="color:rgba(255,255,255,.45);text-decoration:none;font-size:12px">Admin</a></p>
   </div>
 </footer>
