@@ -12,6 +12,16 @@ window.addEventListener("scroll", () => {
 });
 
 function scrollSpy() {
+  const nav = document.getElementById("navbar");
+  const pinned = nav?.dataset.activeNav;
+  if (pinned) {
+    document.querySelectorAll("#nav-links a").forEach((a) => {
+      const href = a.getAttribute("href") || "";
+      a.classList.toggle("active", href.endsWith("#" + pinned));
+    });
+    return;
+  }
+
   const sections = document.querySelectorAll("section[id]");
   if (!sections.length) return;
   let activeId = sections[0].id;
