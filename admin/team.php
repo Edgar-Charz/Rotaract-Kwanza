@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/TeamMember.php';
-require_once dirname(__DIR__) . '/includes/helpers.php';
+require_once dirname(__DIR__) . '/classes/TeamRole.php';
 
 $page_title = 'Team Members';
 
@@ -13,33 +13,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tm = new TeamMember($conn);
 
     if ($action === 'add') {
-        $img = upload_image('image', 'team') ?: '';
-        $tm->create(
-            trim($_POST['full_name']), trim($_POST['role']), trim($_POST['description']),
-            $img, trim($_POST['email']), (int)($_POST['display_order'] ?? 0),
-            isset($_POST['is_active']) ? 1 : 0,
-            trim($_POST['term'] ?? ''), trim($_POST['linkedin_url'] ?? ''),
-            (int)($_POST['tier'] ?? 3), trim($_POST['instagram_url'] ?? '')
-        );
-        log_activity('add_team', "Added team member: " . trim($_POST['full_name']) . " — " . trim($_POST['role']));
-        flash('success', 'Team member added.');
+        $full_name = trim($_POST['full_name']);
+        $role_id   = (int)($_POST['role_id'] ?? 0);
+        if ($full_name === '') {
+            flash('error', 'Full name is required.');
+        } elseif ($role_id <= 0 || !(new TeamRole($conn))->getNameById($role_id)) {
+            flash('error', 'Please select a valid role.');
+        } else {
+            try {
+                $img = upload_image('image', 'team') ?: '';
+                $tm->create(
+                    $full_name, $role_id, trim($_POST['description']),
+                    $img, trim($_POST['email']), (int)($_POST['display_order'] ?? 0),
+                    isset($_POST['is_active']) ? 1 : 0,
+                    trim($_POST['term'] ?? ''), trim($_POST['linkedin_url'] ?? ''), trim($_POST['instagram_url'] ?? '')
+                );
+                log_activity('add_team', "Added team member: $full_name");
+                flash('success', 'Team member added.');
+            } catch (mysqli_sql_exception $e) {
+                flash('error', 'Could not add team member.');
+            }
+        }
     }
 
     if ($action === 'edit') {
-        $id     = (int)$_POST['id'];
-        $oldImg = $tm->getImagePathById($id);
-        $img    = upload_image('image', 'team') ?: $oldImg;
-        $tm->update(
-            $id,
-            trim($_POST['full_name']), trim($_POST['role']), trim($_POST['description']),
-            $img, trim($_POST['email']), (int)($_POST['display_order'] ?? 0),
-            isset($_POST['is_active']) ? 1 : 0,
-            trim($_POST['term'] ?? ''), trim($_POST['linkedin_url'] ?? ''),
-            (int)($_POST['tier'] ?? 3), trim($_POST['instagram_url'] ?? '')
-        );
-        if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
-        log_activity('edit_team', "Edited team member ID $id: " . trim($_POST['full_name']));
-        flash('success', 'Team member updated.');
+        $id        = (int)$_POST['id'];
+        $full_name = trim($_POST['full_name']);
+        $role_id   = (int)($_POST['role_id'] ?? 0);
+        if ($full_name === '') {
+            flash('error', 'Full name is required.');
+        } elseif ($role_id <= 0 || !(new TeamRole($conn))->getNameById($role_id)) {
+            flash('error', 'Please select a valid role.');
+        } else {
+            try {
+                $oldImg = $tm->getImagePathById($id);
+                $img    = upload_image('image', 'team') ?: $oldImg;
+                $tm->update(
+                    $id,
+                    $full_name, $role_id, trim($_POST['description']),
+                    $img, trim($_POST['email']), (int)($_POST['display_order'] ?? 0),
+                    isset($_POST['is_active']) ? 1 : 0,
+                    trim($_POST['term'] ?? ''), trim($_POST['linkedin_url'] ?? ''), trim($_POST['instagram_url'] ?? '')
+                );
+                if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
+                log_activity('edit_team', "Edited team member ID $id: $full_name");
+                flash('success', 'Team member updated.');
+            } catch (mysqli_sql_exception $e) {
+                flash('error', 'Could not update team member.');
+            }
+        }
     }
 
     if ($action === 'delete') {
@@ -52,12 +74,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Team member removed.');
     }
 
+    if ($action === 'bulk_active') {
+        $active = $_POST['bulk_active'] === '1' ? 1 : 0;
+        $ids    = array_map('intval', $_POST['ids'] ?? []);
+        $count  = 0;
+        foreach ($ids as $tid) {
+            $t = $tm->findById($tid);
+            if (!$t) continue;
+            $tm->update(
+                $tid, $t['full_name'], (int)$t['role_id'], $t['description'] ?? '', $t['image_path'] ?? '',
+                $t['email'] ?? '', (int)$t['display_order'], $active,
+                $t['term'] ?? '', $t['linkedin_url'] ?? '', $t['instagram_url'] ?? ''
+            );
+            $count++;
+        }
+        log_activity('bulk_update_team', "Bulk set $count team member(s) " . ($active ? 'visible' : 'hidden'));
+        flash('success', "$count team member(s) updated.");
+    }
+
+    if ($action === 'bulk_delete') {
+        $ids   = array_map('intval', $_POST['ids'] ?? []);
+        $count = 0;
+        foreach ($ids as $tid) {
+            $name = $tm->getFullNameById($tid);
+            if (!$name) continue;
+            $path = $tm->getImagePathById($tid);
+            if ($path) delete_image($path);
+            $tm->delete($tid);
+            $count++;
+        }
+        log_activity('bulk_delete_team', "Bulk removed $count team member(s)");
+        flash('success', "$count team member(s) removed.");
+    }
+
     header('Location: ' . ADMIN_URL . '/team.php');
     exit;
 }
 
 $team  = (new TeamMember($conn))->getAll();
-$tiers = team_tiers();
+$roles = (new TeamRole($conn))->getActive();
+
+// Group roles by tier_label (in display_order) so the <select> can render <optgroup>s.
+$roles_by_tier = [];
+foreach ($roles as $r) {
+    $roles_by_tier[$r['tier_label']][] = $r;
+}
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -65,21 +126,54 @@ include __DIR__ . '/includes/header.php';
 <div class="card">
   <div class="card-header">
     <span class="card-title"><?= count($team) ?> Team Member<?= count($team) !== 1 ? 's':'' ?></span>
-    <?php if (has_role('editor')): ?>
-    <button class="btn btn-primary" onclick="openModal('add-modal')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add Member
-    </button>
-    <?php endif; ?>
+    <div style="display:flex;gap:8px">
+      <a href="roles.php" class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Manage Roles
+      </a>
+      <?php if (has_role('editor')): ?>
+      <button class="btn btn-primary" onclick="openModal('add-modal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Member
+      </button>
+      <?php endif; ?>
+    </div>
   </div>
+  <?php if (!$roles): ?>
+    <p class="text-muted" style="font-size:12.5px;padding:0 16px 12px">
+      No roles have been created yet. <a href="roles.php">Add a role</a> before adding team members.
+    </p>
+  <?php endif; ?>
+
+  <?php if (has_role('editor')): ?>
+  <div class="card-header" id="bulk-bar" style="display:none;background:#fef6f0">
+    <span id="bulk-count" class="text-muted" style="font-size:13px;font-weight:600"></span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn btn-sm btn-secondary" onclick="submitTeamBulk('bulk_active','1')">Show Selected</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="submitTeamBulk('bulk_active','0')">Hide Selected</button>
+      <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeleteTeam()">Delete Selected</button>
+    </div>
+  </div>
+  <form id="bulk-form" method="POST" style="display:none">
+    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+    <input type="hidden" name="action" id="bulk-action-field" value="">
+    <input type="hidden" name="bulk_active" id="bulk-active-field" value="">
+    <div id="bulk-ids-container"></div>
+  </form>
+  <?php endif; ?>
+
   <div class="table-wrap">
     <table id="dt-team">
       <thead>
-        <tr><th>Photo</th><th>Name</th><th>Role</th><th>Tier</th><th>Term</th><th>Email</th><th>Order</th><th>Visible</th><th>Actions</th></tr>
+        <tr>
+          <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
+          <th>Photo</th><th>Name</th><th>Role</th><th>Tier</th><th>Term</th><th>Email</th><th>Order</th><th>Visible</th><th>Actions</th>
+        </tr>
       </thead>
       <tbody>
         <?php if ($team): foreach ($team as $t): ?>
         <tr>
+          <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $t['id'] ?>" onchange="updateTeamBulkBar()"></td><?php endif; ?>
           <td>
             <?php if ($t['image_path']): ?>
             <img src="<?= h($t['image_path']) ?>" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
@@ -91,7 +185,7 @@ include __DIR__ . '/includes/header.php';
           </td>
           <td class="fw-bold"><?= h($t['full_name']) ?></td>
           <td><?= h($t['role']) ?></td>
-          <td class="text-muted" style="font-size:12px"><?= h($tiers[(int)($t['tier'] ?? 3)] ?? '') ?></td>
+          <td class="text-muted" style="font-size:12px"><?= h($t['tier_label']) ?></td>
           <td class="text-muted"><?= h($t['term'] ?? '') ?: '—' ?></td>
           <td class="text-muted"><?= h($t['email'] ?? '—') ?></td>
           <td><?= $t['display_order'] ?></td>
@@ -139,18 +233,22 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-row">
           <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" required></div>
-          <div class="form-group"><label>Role / Position *</label><input type="text" name="role" required></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Hierarchy Tier</label>
-            <select name="tier">
-              <?php foreach ($tiers as $tk => $tlabel): ?><option value="<?= $tk ?>" <?= $tk === 3 ? 'selected' : '' ?>><?= h($tlabel) ?></option><?php endforeach; ?>
+          <div class="form-group"><label>Role *</label>
+            <select name="role_id" required>
+              <option value="">Select a role&hellip;</option>
+              <?php foreach ($roles_by_tier as $tier_label => $tier_roles): ?>
+                <optgroup label="<?= h($tier_label) ?>">
+                  <?php foreach ($tier_roles as $r): ?><option value="<?= $r['id'] ?>"><?= h($r['name']) ?></option><?php endforeach; ?>
+                </optgroup>
+              <?php endforeach; ?>
             </select>
           </div>
-          <div class="form-group"><label>Term <span class="text-muted" style="font-weight:400">(e.g. 2025&ndash;2026)</span></label><input type="text" name="term" placeholder="2025–2026"></div>
         </div>
         <div class="form-row">
+          <div class="form-group"><label>Term <span class="text-muted" style="font-weight:400">(e.g. 2025&ndash;2026)</span></label><input type="text" name="term" placeholder="2025–2026"></div>
           <div class="form-group"><label>Display Order</label><input type="number" name="display_order" value="0" min="0"></div>
+        </div>
+        <div class="form-row">
           <div class="form-group"><label>Email</label><input type="email" name="email"></div>
         </div>
         <div class="form-row">
@@ -191,18 +289,22 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-row">
           <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" id="et_name" required></div>
-          <div class="form-group"><label>Role *</label><input type="text" name="role" id="et_role" required></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Hierarchy Tier</label>
-            <select name="tier" id="et_tier">
-              <?php foreach ($tiers as $tk => $tlabel): ?><option value="<?= $tk ?>"><?= h($tlabel) ?></option><?php endforeach; ?>
+          <div class="form-group"><label>Role *</label>
+            <select name="role_id" id="et_role" required>
+              <option value="">Select a role&hellip;</option>
+              <?php foreach ($roles_by_tier as $tier_label => $tier_roles): ?>
+                <optgroup label="<?= h($tier_label) ?>">
+                  <?php foreach ($tier_roles as $r): ?><option value="<?= $r['id'] ?>"><?= h($r['name']) ?></option><?php endforeach; ?>
+                </optgroup>
+              <?php endforeach; ?>
             </select>
           </div>
-          <div class="form-group"><label>Term <span class="text-muted" style="font-weight:400">(e.g. 2025&ndash;2026)</span></label><input type="text" name="term" id="et_term" placeholder="2025–2026"></div>
         </div>
         <div class="form-row">
+          <div class="form-group"><label>Term <span class="text-muted" style="font-weight:400">(e.g. 2025&ndash;2026)</span></label><input type="text" name="term" id="et_term" placeholder="2025–2026"></div>
           <div class="form-group"><label>Display Order</label><input type="number" name="display_order" id="et_order" min="0"></div>
+        </div>
+        <div class="form-row">
           <div class="form-group"><label>Email</label><input type="email" name="email" id="et_email"></div>
         </div>
         <div class="form-row">
@@ -238,10 +340,6 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script>
-var TEAM_TIERS = <?= json_encode($tiers, JSON_FORCE_OBJECT) ?>;
-function tierLabel(tier) {
-  return TEAM_TIERS[tier] || TEAM_TIERS[3] || 'Team Members';
-}
 function openViewModal(t) {
   const photoHtml = t.image_path
     ? `<img src="${esc(t.image_path)}" class="view-avatar">`
@@ -258,7 +356,7 @@ function openViewModal(t) {
       </div>
     </div>
     <div class="view-dl">
-      <div><div class="view-dt">Tier</div><div class="view-dd">${esc(tierLabel(t.tier))}</div></div>
+      <div><div class="view-dt">Tier</div><div class="view-dd">${esc(t.tier_label)}</div></div>
       <div><div class="view-dt">Term</div><div class="view-dd">${esc(t.term) || '—'}</div></div>
       <div><div class="view-dt">Email</div><div class="view-dd">${t.email ? `<a href="mailto:${esc(t.email)}">${esc(t.email)}</a>` : '—'}</div></div>
       <div><div class="view-dt">LinkedIn</div><div class="view-dd">${t.linkedin_url ? `<a href="${esc(t.linkedin_url)}" target="_blank" rel="noopener">${esc(t.linkedin_url)}</a>` : '—'}</div></div>
@@ -275,25 +373,57 @@ function openViewModal(t) {
 $(document).ready(function() {
   $('#dt-team').DataTable({
     pageLength: 25,
-    order: [[3, 'asc'], [6, 'asc']],
-    columnDefs: [{ orderable: false, targets: [0, 7] }]
+    order: [[<?= has_role('editor') ? 7 : 6 ?>, 'asc']],
+    columnDefs: [{ orderable: false, targets: <?= has_role('editor') ? '[0, 1, 9]' : '[0, 8]' ?> }]
   });
 });
 function openEditModal(t) {
   document.getElementById('et_id').value    = t.id;
   document.getElementById('et_name').value  = t.full_name;
-  document.getElementById('et_role').value  = t.role;
+  document.getElementById('et_role').value  = t.role_id || '';
   document.getElementById('et_email').value = t.email || '';
   document.getElementById('et_term').value  = t.term || '';
-  document.getElementById('et_tier').value  = t.tier || 3;
   document.getElementById('et_linkedin').value  = t.linkedin_url || '';
   document.getElementById('et_instagram').value = t.instagram_url || '';
   document.getElementById('et_order').value = t.display_order || 0;
   document.getElementById('et_desc').value  = t.description || '';
   document.getElementById('et_active').checked = t.is_active == 1;
   const ph = document.getElementById('et_current_photo');
-  ph.innerHTML = t.image_path ? '<img src="' + t.image_path + '" style="width:50px;height:50px;border-radius:50%;object-fit:cover">' : '';
+  ph.innerHTML = t.image_path ? '<img src="' + esc(t.image_path) + '" style="width:50px;height:50px;border-radius:50%;object-fit:cover">' : '';
   openModal('edit-modal');
+}
+
+function getCheckedTeamIds() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(function(c) { return c.value; });
+}
+function toggleAll(cb) {
+  document.querySelectorAll('.row-check').forEach(function(c) { c.checked = cb.checked; });
+  updateTeamBulkBar();
+}
+function updateTeamBulkBar() {
+  var ids = getCheckedTeamIds();
+  document.getElementById('bulk-bar').style.display = ids.length ? 'flex' : 'none';
+  document.getElementById('bulk-count').textContent = ids.length + ' selected';
+}
+function submitTeamBulk(action, activeVal) {
+  var ids = getCheckedTeamIds();
+  if (!ids.length) return;
+  document.getElementById('bulk-action-field').value = action;
+  document.getElementById('bulk-active-field').value = activeVal || '';
+  var container = document.getElementById('bulk-ids-container');
+  container.innerHTML = '';
+  ids.forEach(function(id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+function bulkDeleteTeam() {
+  var ids = getCheckedTeamIds();
+  if (ids.length && confirm('Permanently remove ' + ids.length + ' selected team member(s)? This cannot be undone.')) {
+    submitTeamBulk('bulk_delete');
+  }
 }
 </script>
 

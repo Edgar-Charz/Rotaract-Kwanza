@@ -22,12 +22,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = $_POST['status'] ?? 'read';
         if (in_array($status, ['unread','read','replied'])) {
             $cm->updateStatus($id, $status);
+            flash('success', 'Marked as ' . $status . '.');
         }
     }
 
     if ($action === 'notes') {
         $cm->markReplied($id, trim($_POST['admin_notes']));
         flash('success', 'Notes saved and message marked as replied.');
+    }
+
+    if ($action === 'bulk_status') {
+        $status = $_POST['bulk_status'] ?? '';
+        $ids    = array_map('intval', $_POST['ids'] ?? []);
+        if (in_array($status, ['unread', 'read', 'replied'], true) && $ids) {
+            $count = 0;
+            foreach ($ids as $mid) {
+                $cm->updateStatus($mid, $status);
+                $count++;
+            }
+            log_activity('bulk_update_message_status', "Bulk set $count message(s) to $status");
+            flash('success', "$count message(s) marked as $status.");
+        }
+    }
+
+    if ($action === 'bulk_delete') {
+        $ids   = array_map('intval', $_POST['ids'] ?? []);
+        $count = 0;
+        foreach ($ids as $mid) {
+            $cm->delete($mid);
+            $count++;
+        }
+        log_activity('bulk_delete_message', "Bulk deleted $count message(s)");
+        flash('success', "$count message(s) deleted.");
     }
 
     $view_param = isset($_GET['view']) ? '?view=' . (int)$_GET['view'] : '';
@@ -65,14 +91,39 @@ include __DIR__ . '/includes/header.php';
         <a href="?status=unread"  class="btn btn-sm <?= $filter==='unread'  ? 'btn-primary':'btn-secondary' ?>">Unread</a>
         <a href="?status=read"    class="btn btn-sm <?= $filter==='read'    ? 'btn-primary':'btn-secondary' ?>">Read</a>
         <a href="?status=replied" class="btn btn-sm <?= $filter==='replied' ? 'btn-primary':'btn-secondary' ?>">Replied</a>
+        <a href="export_messages.php?status=<?= urlencode($filter) ?>" class="btn btn-sm btn-secondary">Export CSV</a>
       </div>
     </div>
+
+    <?php if (has_role('editor')): ?>
+    <div class="card-header" id="bulk-bar" style="display:none;background:#fef6f0">
+      <span id="bulk-count" class="text-muted" style="font-size:13px;font-weight:600"></span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn btn-sm btn-secondary" onclick="submitMsgBulk('bulk_status','read')">Mark Read</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="submitMsgBulk('bulk_status','unread')">Mark Unread</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeleteMessages()">Delete Selected</button>
+      </div>
+    </div>
+    <form id="bulk-form" method="POST" style="display:none">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" id="bulk-action-field" value="">
+      <input type="hidden" name="bulk_status" id="bulk-status-field" value="">
+      <div id="bulk-ids-container"></div>
+    </form>
+    <?php endif; ?>
+
     <div class="table-wrap">
       <table id="dt-messages">
-        <thead><tr><th>From</th><th>Subject</th><th>Status</th><th>Date</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
+            <th>From</th><th>Subject</th><th>Status</th><th>Date</th><th></th>
+          </tr>
+        </thead>
         <tbody>
           <?php if ($messages): foreach ($messages as $msg): ?>
           <tr style="<?= ($view_msg && $view_msg['id'] == $msg['id']) ? 'background:#f0f2ff' : '' ?>">
+            <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $msg['id'] ?>" onchange="updateMsgBulkBar()"></td><?php endif; ?>
             <td>
               <div class="fw-bold" style="white-space:nowrap"><?= h($msg['full_name']) ?></div>
               <div class="text-muted" style="font-size:11.5px"><?= h($msg['email']) ?></div>
@@ -81,7 +132,7 @@ include __DIR__ . '/includes/header.php';
               <?= h($msg['subject'] ?? '(no subject)') ?>
             </td>
             <td><span class="badge badge-<?= h($msg['status']) ?>"><?= h($msg['status']) ?></span></td>
-            <td class="text-muted" style="white-space:nowrap"><?= date('d M Y', strtotime($msg['created_at'])) ?></td>
+            <td class="text-muted" style="white-space:nowrap"><?= $msg['created_at'] ? date('d M Y', strtotime($msg['created_at'])) : '—' ?></td>
             <td>
               <div class="table-actions">
                 <a href="?view=<?= $msg['id'] ?>" class="btn btn-icon btn-sm btn-info" title="View" aria-label="View"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
@@ -120,7 +171,7 @@ include __DIR__ . '/includes/header.php';
       </div>
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">DATE</div>
-        <div><?= date('d M Y, H:i', strtotime($view_msg['created_at'])) ?></div>
+        <div><?= $view_msg['created_at'] ? date('d M Y, H:i', strtotime($view_msg['created_at'])) : '—' ?></div>
       </div>
       <div style="margin-bottom:20px">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">MESSAGE</div>
@@ -166,10 +217,43 @@ include __DIR__ . '/includes/header.php';
 $(document).ready(function() {
   $('#dt-messages').DataTable({
     pageLength: 25,
-    order: [[3, 'desc']],
-    columnDefs: [{ orderable: false, targets: 4 }]
+    order: [[<?= has_role('editor') ? 4 : 3 ?>, 'desc']],
+    columnDefs: [{ orderable: false, targets: <?= has_role('editor') ? '[0, 5]' : '[4]' ?> }]
   });
 });
+
+function getCheckedMsgIds() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(function(c) { return c.value; });
+}
+function toggleAll(cb) {
+  document.querySelectorAll('.row-check').forEach(function(c) { c.checked = cb.checked; });
+  updateMsgBulkBar();
+}
+function updateMsgBulkBar() {
+  var ids = getCheckedMsgIds();
+  document.getElementById('bulk-bar').style.display = ids.length ? 'flex' : 'none';
+  document.getElementById('bulk-count').textContent = ids.length + ' selected';
+}
+function submitMsgBulk(action, status) {
+  var ids = getCheckedMsgIds();
+  if (!ids.length) return;
+  document.getElementById('bulk-action-field').value = action;
+  document.getElementById('bulk-status-field').value = status || '';
+  var container = document.getElementById('bulk-ids-container');
+  container.innerHTML = '';
+  ids.forEach(function(id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+function bulkDeleteMessages() {
+  var ids = getCheckedMsgIds();
+  if (ids.length && confirm('Permanently delete ' + ids.length + ' selected message(s)? This cannot be undone.')) {
+    submitMsgBulk('bulk_delete');
+  }
+}
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -5,6 +5,10 @@ require_once dirname(__DIR__) . '/classes/Announcement.php';
 
 $page_title = 'Announcements';
 
+// Must match the whitelist news.php uses when rendering — sanitizing at save
+// time means every consumer of `content` gets an already-safe value.
+const ANNOUNCEMENT_ALLOWED_TAGS = ['p','br','b','i','u','s','strong','em','ul','ol','li','h2','h3','a','blockquote'];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     require_role('editor');
@@ -13,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'add') {
         $title   = trim($_POST['title']);
-        $content = trim($_POST['content']);
+        $content = sanitize_html_fragment(trim($_POST['content']), ANNOUNCEMENT_ALLOWED_TAGS);
         $slug    = slugify($title) . '-' . substr(uniqid(), -4);
         $img     = upload_image('image', 'announcements') ?: '';
         $ann->create($title, $slug, $content, $img,
@@ -25,11 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'edit') {
-        $id     = (int)$_POST['id'];
-        $title  = trim($_POST['title']);
-        $oldImg = $ann->getImagePathById($id);
-        $img    = upload_image('image', 'announcements') ?: $oldImg;
-        $ann->update($id, $title, trim($_POST['content']), $img,
+        $id      = (int)$_POST['id'];
+        $title   = trim($_POST['title']);
+        $content = sanitize_html_fragment(trim($_POST['content']), ANNOUNCEMENT_ALLOWED_TAGS);
+        $oldImg  = $ann->getImagePathById($id);
+        $img     = upload_image('image', 'announcements') ?: $oldImg;
+        $ann->update($id, $title, $content, $img,
             $_POST['category'] ?? 'news',
             isset($_POST['is_published']) ? 1 : 0
         );
@@ -50,6 +55,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'toggle') {
         $ann->togglePublished((int)$_POST['id']);
         flash('success', 'Visibility toggled.');
+    }
+
+    if ($action === 'bulk_publish' || $action === 'bulk_unpublish') {
+        $published = $action === 'bulk_publish' ? 1 : 0;
+        $ids       = array_map('intval', $_POST['ids'] ?? []);
+        $count     = 0;
+        foreach ($ids as $pid) {
+            $p = $ann->findById($pid);
+            if (!$p) continue;
+            $ann->update($pid, $p['title'], $p['content'], $p['image_path'] ?? '', $p['category'], $published);
+            $count++;
+        }
+        log_activity('bulk_update_announcement', "Bulk set $count post(s) " . ($published ? 'published' : 'unpublished'));
+        flash('success', "$count post(s) updated.");
+    }
+
+    if ($action === 'bulk_delete') {
+        $ids   = array_map('intval', $_POST['ids'] ?? []);
+        $count = 0;
+        foreach ($ids as $pid) {
+            $p = $ann->findById($pid);
+            if (!$p) continue;
+            if ($p['image_path']) delete_image($p['image_path']);
+            $ann->delete($pid);
+            $count++;
+        }
+        log_activity('bulk_delete_announcement', "Bulk deleted $count post(s)");
+        flash('success', "$count post(s) deleted.");
     }
 
     header('Location: ' . ADMIN_URL . '/announcements.php');
@@ -77,19 +110,42 @@ include __DIR__ . '/includes/header.php';
     </button>
     <?php endif; ?>
   </div>
+
+  <?php if (has_role('editor')): ?>
+  <div class="card-header" id="bulk-bar" style="display:none;background:#fef6f0">
+    <span id="bulk-count" class="text-muted" style="font-size:13px;font-weight:600"></span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn btn-sm btn-secondary" onclick="submitAnnBulk('bulk_publish')">Publish Selected</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="submitAnnBulk('bulk_unpublish')">Unpublish Selected</button>
+      <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeleteAnn()">Delete Selected</button>
+    </div>
+  </div>
+  <form id="bulk-form" method="POST" style="display:none">
+    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+    <input type="hidden" name="action" id="bulk-action-field" value="">
+    <div id="bulk-ids-container"></div>
+  </form>
+  <?php endif; ?>
+
   <div class="table-wrap">
     <table id="dt-announcements">
-      <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+      <thead>
+        <tr>
+          <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
+          <th>Title</th><th>Category</th><th>Status</th><th>Date</th><th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
         <?php if ($posts): foreach ($posts as $p): ?>
         <tr>
+          <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $p['id'] ?>" onchange="updateAnnBulkBar()"></td><?php endif; ?>
           <td>
             <div class="fw-bold"><?= h($p['title']) ?></div>
             <div class="text-muted" style="font-size:12px;max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= h(strip_tags($p['content'])) ?></div>
           </td>
           <td><span class="badge badge-info" style="background:#d6eaff;color:#1a5fb4"><?= h($p['category']) ?></span></td>
           <td><?= $p['is_published'] ? '<span class="badge badge-approved">Published</span>' : '<span class="badge badge-pending">Draft</span>' ?></td>
-          <td class="text-muted"><?= date('d M Y', strtotime($p['created_at'])) ?></td>
+          <td class="text-muted"><?= $p['created_at'] ? date('d M Y', strtotime($p['created_at'])) : '—' ?></td>
           <td>
             <div class="table-actions">
               <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -302,7 +358,7 @@ function openViewModal(p) {
     </div>
     <div class="view-full">
       <div class="view-dt">Content</div>
-      <div class="view-dd">${esc(p.content)}</div>
+      <div class="view-dd">${p.content || ''}</div>
     </div>`;
   openModal('view-modal');
 }
@@ -310,8 +366,8 @@ function openViewModal(p) {
 $(document).ready(function() {
   $('#dt-announcements').DataTable({
     pageLength: 25,
-    order: [[3, 'desc']],
-    columnDefs: [{ orderable: false, targets: 4 }]
+    order: [[<?= has_role('editor') ? 4 : 3 ?>, 'desc']],
+    columnDefs: [{ orderable: false, targets: <?= has_role('editor') ? '[0, 5]' : '[4]' ?> }]
   });
 });
 function openEditModal(p) {
@@ -321,7 +377,7 @@ function openEditModal(p) {
   document.getElementById('ea_content').value  = p.content;
   document.getElementById('ea_pub').checked    = p.is_published == 1;
   const prev = document.getElementById('ea_img_preview');
-  prev.innerHTML = p.image_path ? '<img src="'+p.image_path+'" style="max-height:80px;border-radius:6px">' : '';
+  prev.innerHTML = p.image_path ? '<img src="'+esc(p.image_path)+'" style="max-height:80px;border-radius:6px">' : '';
   // Load content into Quill (treat as HTML if it looks like HTML, else plain text)
   if (p.content && p.content.trim().startsWith('<')) {
     editQuill.root.innerHTML = p.content;
@@ -329,6 +385,38 @@ function openEditModal(p) {
     editQuill.setText(p.content || '');
   }
   openModal('edit-modal');
+}
+
+function getCheckedAnnIds() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(function(c) { return c.value; });
+}
+function toggleAll(cb) {
+  document.querySelectorAll('.row-check').forEach(function(c) { c.checked = cb.checked; });
+  updateAnnBulkBar();
+}
+function updateAnnBulkBar() {
+  var ids = getCheckedAnnIds();
+  document.getElementById('bulk-bar').style.display = ids.length ? 'flex' : 'none';
+  document.getElementById('bulk-count').textContent = ids.length + ' selected';
+}
+function submitAnnBulk(action) {
+  var ids = getCheckedAnnIds();
+  if (!ids.length) return;
+  document.getElementById('bulk-action-field').value = action;
+  var container = document.getElementById('bulk-ids-container');
+  container.innerHTML = '';
+  ids.forEach(function(id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+function bulkDeleteAnn() {
+  var ids = getCheckedAnnIds();
+  if (ids.length && confirm('Permanently delete ' + ids.length + ' selected post(s)? This cannot be undone.')) {
+    submitAnnBulk('bulk_delete');
+  }
 }
 </script>
 

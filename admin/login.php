@@ -7,7 +7,7 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
-require_once dirname(__DIR__) . '/config/Database.php';
+require_once dirname(__DIR__) . '/includes/csrf.php';
 require_once dirname(__DIR__) . '/classes/Admin.php';
 
 $db   = new Database();
@@ -47,6 +47,7 @@ if ($locked) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
+    csrf_verify();
     $username = $posted_username;
     $password = $_POST['password'] ?? '';
 
@@ -124,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
     <?php endif; ?>
 
     <form method="POST">
+      <?= csrf_field() ?>
       <div class="form-group">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" required <?= $locked ? 'disabled' : 'autofocus' ?>

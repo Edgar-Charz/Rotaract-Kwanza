@@ -10,13 +10,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'update_role' && has_role('super_admin')) {
+    if ($action === 'update_role') {
+        require_role('super_admin');
         $target_id = (int)$_POST['target_id'];
         $new_role  = $_POST['role'] ?? 'viewer';
-        if (in_array($new_role, ['super_admin','editor','viewer']) && $target_id !== (int)$_SESSION['admin_id']) {
+        if ($target_id === (int)$_SESSION['admin_id']) {
+            flash('error', 'You cannot change your own role.');
+        } elseif (!in_array($new_role, ['super_admin','editor','viewer'], true)) {
+            flash('error', 'Invalid role.');
+        } else {
             db_exec($conn, 'UPDATE admins SET role=? WHERE id=?', [$new_role, $target_id]);
             log_activity('update_role', "Set admin ID $target_id role to $new_role");
             flash('success', 'Admin role updated.');
+        }
+        header('Location: ' . ADMIN_URL . '/settings.php');
+        exit;
+    }
+
+    if ($action === 'create_admin') {
+        require_role('super_admin');
+        $username  = trim($_POST['username'] ?? '');
+        $full_name = trim($_POST['full_name'] ?? '');
+        $password  = $_POST['password'] ?? '';
+        $role      = $_POST['role'] ?? 'editor';
+        $adm       = new Admin($conn);
+
+        if ($username === '' || $password === '') {
+            flash('error', 'Username and password are required.');
+        } elseif (strlen($password) < 8) {
+            flash('error', 'Password must be at least 8 characters.');
+        } elseif (!preg_match('/^[a-zA-Z0-9_.-]+$/', $username)) {
+            flash('error', 'Username may only contain letters, numbers, dots, dashes, and underscores.');
+        } elseif ($adm->usernameExists($username)) {
+            flash('error', 'That username is already taken.');
+        } else {
+            $id = $adm->create($username, $password, $full_name, $role);
+            if ($id) {
+                log_activity('create_admin', "Created admin account: $username ($role)");
+                flash('success', 'Admin account created.');
+            } else {
+                flash('error', 'Could not create admin account.');
+            }
         }
         header('Location: ' . ADMIN_URL . '/settings.php');
         exit;
@@ -31,7 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  'founding_year','motto_text','mission_text','sponsor_club','sponsor_club_url',
                  'meeting_day','meeting_time','meeting_location',
                  'hero_badge_year','hero_badge_label',
-                 'mail_from_name','mail_from_email'];
+                 'mail_from_name','mail_from_email',
+                 'brand_initials','footer_description','footer_tagline','contact_hours',
+                 'hero_eyebrow','hero_title','hero_subtitle','hero_description',
+                 'home_about_highlight','home_about_description','home_events_description',
+                 'home_team_description','home_join_description','contact_intro'];
         $ss = new SiteSettings($conn);
         foreach ($keys as $key) {
             if (isset($_POST[$key])) {
@@ -84,10 +122,30 @@ $s_keys = ['site_name','contact_email','contact_phone','contact_address',
            'meeting_day','meeting_time','meeting_location',
            'hero_badge_year','hero_badge_label',
            'mail_from_name','mail_from_email',
+           'brand_initials','footer_description','footer_tagline','contact_hours',
+           'hero_eyebrow','hero_title','hero_subtitle','hero_description',
+           'home_about_highlight','home_about_description','home_events_description',
+           'home_team_description','home_join_description','contact_intro',
            'hero_image','about_image'];
+$setting_defaults = [
+    'brand_initials'          => 'RK',
+    'footer_description'      => 'A vibrant community of young leaders united by the spirit of service, fellowship, and positive change in Kwanza and beyond.',
+    'footer_tagline'          => 'Made with ♥ for community & service',
+    'contact_hours'           => 'Mon – Fri, 8:00 AM – 5:00 PM',
+    'hero_eyebrow'            => 'Rotaract International · Kwanza',
+    'hero_title'              => 'Serving Communities, Changing Lives',
+    'hero_subtitle'           => 'Together we make a difference',
+    'hero_description'        => 'The Rotaract Club of Kwanza is a vibrant community of young leaders committed to fellowship, professional development, and meaningful service to our community and beyond.',
+    'home_about_highlight'    => 'Over a decade of community service and fellowship in Kwanza',
+    'home_about_description'  => 'The Rotaract Club of Kwanza is a Rotary International-sponsored organization bringing together young professionals and leaders aged 18–30 to create lasting change in our community.',
+    'home_events_description' => 'Discover our next service days, leadership forums, and fellowship celebrations. Join Rotaract Kwanza for meaningful impact.',
+    'home_team_description'   => 'Passionate, driven young leaders who dedicate their time to making a difference in Kwanza.',
+    'home_join_description'   => 'Join a community of passionate young leaders making real change in Kwanza. Membership is open to all aged 18–30.',
+    'contact_intro'           => 'Whether you have a question, partnership opportunity, or just want to say hello — our doors are always open.',
+];
 $settings = [];
 foreach ($s_keys as $k) {
-    $settings[$k] = get_setting($k);
+    $settings[$k] = get_setting($k, $setting_defaults[$k] ?? '');
 }
 
 $all_admins = has_role('super_admin')
@@ -124,6 +182,36 @@ include __DIR__ . '/includes/header.php';
           <label>About Text <span class="text-muted" style="font-weight:400">(club history / story — shown on the About page)</span></label>
           <textarea name="about_text" style="min-height:100px"><?= h($settings['about_text']) ?></textarea>
         </div>
+      </div>
+    </div>
+
+    <div class="card mb-2">
+      <div class="card-header"><span class="card-title">Branding, Footer &amp; Contact Copy</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group"><label>Logo Initials</label><input type="text" name="brand_initials" value="<?= h($settings['brand_initials']) ?>" maxlength="4" placeholder="RK"></div>
+          <div class="form-group"><label>Contact Hours</label><input type="text" name="contact_hours" value="<?= h($settings['contact_hours']) ?>" placeholder="Mon – Fri, 8:00 AM – 5:00 PM"></div>
+        </div>
+        <div class="form-group mb-2"><label>Footer Description</label><textarea name="footer_description" style="min-height:72px"><?= h($settings['footer_description']) ?></textarea></div>
+        <div class="form-group"><label>Footer Tagline</label><input type="text" name="footer_tagline" value="<?= h($settings['footer_tagline']) ?>" placeholder="Made with ♥ for community &amp; service"></div>
+      </div>
+    </div>
+
+    <div class="card mb-2">
+      <div class="card-header"><span class="card-title">Homepage &amp; Contact Copy</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group"><label>Hero Eyebrow</label><input type="text" name="hero_eyebrow" value="<?= h($settings['hero_eyebrow']) ?>"></div>
+          <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="<?= h($settings['hero_title']) ?>"></div>
+        </div>
+        <div class="form-group mb-2"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="<?= h($settings['hero_subtitle']) ?>"></div>
+        <div class="form-group mb-2"><label>Hero Description</label><textarea name="hero_description" style="min-height:72px"><?= h($settings['hero_description']) ?></textarea></div>
+        <div class="form-group mb-2"><label>About Highlight</label><input type="text" name="home_about_highlight" value="<?= h($settings['home_about_highlight']) ?>"></div>
+        <div class="form-group mb-2"><label>Homepage About Description</label><textarea name="home_about_description" style="min-height:72px"><?= h($settings['home_about_description']) ?></textarea></div>
+        <div class="form-group mb-2"><label>Homepage Events Description</label><textarea name="home_events_description" style="min-height:72px"><?= h($settings['home_events_description']) ?></textarea></div>
+        <div class="form-group mb-2"><label>Homepage Team Description</label><textarea name="home_team_description" style="min-height:72px"><?= h($settings['home_team_description']) ?></textarea></div>
+        <div class="form-group mb-2"><label>Homepage Join Description</label><textarea name="home_join_description" style="min-height:72px"><?= h($settings['home_join_description']) ?></textarea></div>
+        <div class="form-group"><label>Contact Intro</label><textarea name="contact_intro" style="min-height:72px"><?= h($settings['contact_intro']) ?></textarea></div>
       </div>
     </div>
 
@@ -297,6 +385,40 @@ include __DIR__ . '/includes/header.php';
         <a href="logout.php" class="btn btn-danger btn-sm mt-1">Logout</a>
       </div>
     </div>
+
+    <?php if (has_role('super_admin')): ?>
+    <div class="card mt-2">
+      <div class="card-header"><span class="card-title">Create Admin</span></div>
+      <div class="card-body">
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+          <input type="hidden" name="action" value="create_admin">
+          <div class="form-group mb-2">
+            <label>Username *</label>
+            <input type="text" name="username" required pattern="[A-Za-z0-9_.-]+" autocomplete="off">
+          </div>
+          <div class="form-group mb-2">
+            <label>Full Name</label>
+            <input type="text" name="full_name" autocomplete="off">
+          </div>
+          <div class="form-group mb-2">
+            <label>Password *</label>
+            <input type="password" name="password" required minlength="8" autocomplete="new-password">
+            <span class="form-hint">At least 8 characters</span>
+          </div>
+          <div class="form-group mb-2">
+            <label>Role</label>
+            <select name="role">
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Create Account</button>
+        </form>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <?php if ($all_admins): ?>
     <div class="card mt-2">
