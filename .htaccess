@@ -1,0 +1,14 @@
+# Route any request that doesn't map to a real file or directory to the
+# branded 404 page. Uses a relative RewriteRule (resolved against this
+# .htaccess's own directory) instead of ErrorDocument's docroot-relative
+# path, so it works whether the site is deployed at the domain root or in
+# a subdirectory.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ 404.php [L]
+
+# Block direct web access to non-public application code, database
+# migrations/backups, and cron scripts (the PHP files guard themselves with
+# a CLI-only check, but raw files like .sql backups have no such guard).
+RewriteRule ^(config|classes|includes|assets/database|cron)/ - [F,L]

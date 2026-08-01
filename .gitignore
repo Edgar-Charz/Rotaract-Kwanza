@@ -9,3 +9,7 @@ Thumbs.db
 # Logs
 *.log
 error_log
+
+# User-uploaded content and DB backups — not source, shouldn't be in history
+admin/uploads/
+assets/database/backups/
