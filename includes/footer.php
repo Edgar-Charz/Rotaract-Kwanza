@@ -4,19 +4,22 @@ $_fb   = isset($conn) ? (new SiteSettings($conn))->get('facebook_url',  '#') : '
 $_ig   = isset($conn) ? (new SiteSettings($conn))->get('instagram_url', '#') : '#';
 $_tw   = isset($conn) ? (new SiteSettings($conn))->get('twitter_url',   '#') : '#';
 $_li   = isset($conn) ? (new SiteSettings($conn))->get('linkedin_url',  '#') : '#';
-$_site_name     = isset($conn) ? (new SiteSettings($conn))->get('site_name', 'Rotaract Club of Kwanza') : 'Rotaract Club of Kwanza';
-$_motto_text    = isset($conn) ? (new SiteSettings($conn))->get('motto_text', 'Service Above Self') : 'Service Above Self';
-$_sponsor_club  = isset($conn) ? (new SiteSettings($conn))->get('sponsor_club', 'Rotary Club of Kwanza') : 'Rotary Club of Kwanza';
-$_sponsor_url   = isset($conn) ? (new SiteSettings($conn))->get('sponsor_club_url', '') : '';
+$_site_name          = isset($conn) ? (new SiteSettings($conn))->get('site_name', 'Rotaract Club of Kwanza') : 'Rotaract Club of Kwanza';
+$_motto_text         = isset($conn) ? (new SiteSettings($conn))->get('motto_text', 'Service Above Self') : 'Service Above Self';
+$_sponsor_club       = isset($conn) ? (new SiteSettings($conn))->get('sponsor_club', 'Rotary Club of Kwanza') : 'Rotary Club of Kwanza';
+$_sponsor_url        = isset($conn) ? (new SiteSettings($conn))->get('sponsor_club_url', '') : '';
+$_brand_initials     = isset($conn) ? (new SiteSettings($conn))->get('brand_initials', 'RK') : 'RK';
+$_footer_description = isset($conn) ? (new SiteSettings($conn))->get('footer_description', 'A vibrant community of young leaders united by the spirit of service, fellowship, and positive change in Kwanza and beyond.') : 'A vibrant community of young leaders united by the spirit of service, fellowship, and positive change in Kwanza and beyond.';
+$_footer_tagline     = isset($conn) ? (new SiteSettings($conn))->get('footer_tagline', 'Made with ♥ for community & service') : 'Made with ♥ for community & service';
 ?>
 <footer>
   <div class="footer-grid">
     <div class="footer-brand">
       <a href="index.php#home" class="logo">
-        <div class="logo-circle">RK</div>
+        <div class="logo-circle"><?= htmlspecialchars($_brand_initials, ENT_QUOTES, 'UTF-8') ?></div>
         <div class="logo-text"><?= htmlspecialchars($_site_name, ENT_QUOTES, 'UTF-8') ?><span><?= htmlspecialchars($_motto_text, ENT_QUOTES, 'UTF-8') ?></span></div>
       </a>
-      <p>A vibrant community of young leaders united by the spirit of service, fellowship, and positive change in Kwanza and beyond.</p>
+      <p><?= htmlspecialchars($_footer_description, ENT_QUOTES, 'UTF-8') ?></p>
       <div class="socials" style="margin-top:20px">
         <a href="<?= htmlspecialchars($_fb, ENT_QUOTES, 'UTF-8') ?>" class="social-btn" style="background:rgba(255,255,255,0.08)" aria-label="Facebook">
           <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
@@ -67,6 +70,13 @@ $_sponsor_url   = isset($conn) ? (new SiteSettings($conn))->get('sponsor_club_ur
   </div>
   <div class="footer-bottom">
     <p>&copy; <?= date('Y') ?> <?= htmlspecialchars($_site_name, ENT_QUOTES, 'UTF-8') ?>. All rights reserved.</p>
-    <p>Made with <span class="heart">&#9829;</span> for community &amp; service &middot; <a href="admin/login.php" style="color:rgba(255,255,255,.45);text-decoration:none;font-size:12px">Admin</a></p>
+    <p><?= htmlspecialchars($_footer_tagline, ENT_QUOTES, 'UTF-8') ?> &middot; <a href="admin/login.php" style="color:rgba(255,255,255,.45);text-decoration:none;font-size:12px">Admin</a></p>
   </div>
 </footer>
+
+<button type="button" id="back-to-top" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="19" x2="12" y2="5" />
+    <polyline points="5 12 12 5 19 12" />
+  </svg>
+</button>

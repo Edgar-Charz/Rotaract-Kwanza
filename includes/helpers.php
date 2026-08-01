@@ -46,7 +46,8 @@ function img_url(string $path): string {
 
 function upload_member_photo(string $input_name): string
 {
-    $saved = save_uploaded_image_from_input($input_name, 'members', 'mp_');
+    // 3 MB cap matches the limit shown to applicants on join.php.
+    $saved = save_uploaded_image_from_input($input_name, 'members', 'mp_', 3 * 1024 * 1024);
     if (!$saved) return '';
     $pos = strpos($saved, '/admin/uploads/');
     return $pos !== false ? 'admin/uploads/' . substr($saved, $pos + 15) : ltrim($saved, '/');
@@ -91,6 +92,115 @@ function icon_svg(string $key, string $stroke = 'currentColor'): string
     ];
     $inner = $paths[$key] ?? $paths['heart'];
     return '<svg viewBox="0 0 24 24" fill="none" stroke="' . e($stroke) . '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $inner . '</svg>';
+}
+
+// Maps an event's free-text category to one of the curated icon_svg() keys,
+// so event cards show a relevant glyph instead of one fixed icon for every card.
+function event_category_icon(?string $category): string
+{
+    $category = strtolower(trim($category ?? ''));
+    $map = [
+        'community service' => 'heart',
+        'service'            => 'heart',
+        'environment'        => 'heart',
+        'professional dev'   => 'book',
+        'professional dev.'  => 'book',
+        'professional development' => 'book',
+        'workshop'           => 'book',
+        'training'           => 'book',
+        'fellowship'         => 'people',
+        'social'             => 'people',
+        'networking'         => 'people',
+        'meeting'            => 'calendar',
+        'installation'       => 'award',
+        'fundraiser'         => 'chart',
+        'fundraising'        => 'chart',
+    ];
+    foreach ($map as $needle => $icon) {
+        if ($category !== '' && str_contains($category, $needle)) return $icon;
+    }
+    return 'calendar';
+}
+
+// Renders a self-contained group-photo slider (prev/next + dots) from a flat
+// list of image paths. Falls back to a single plain image for one photo, and
+// renders nothing for an empty list. Shared by team.php and leadership_history.php,
+// each of which may place more than one slider on the page (JS auto-inits all of them).
+function render_photo_slider(array $image_paths, string $alt): string
+{
+    $image_paths = array_values(array_filter($image_paths));
+    if (!$image_paths) return '';
+
+    if (count($image_paths) === 1) {
+        return '<div class="photo-slider"><img src="' . e(img_url($image_paths[0])) . '" alt="' . e($alt) . '" style="width:100%;height:100%;object-fit:cover;display:block"></div>';
+    }
+
+    $slides = '';
+    $dots   = '';
+    foreach ($image_paths as $i => $path) {
+        $slides .= '<div class="photo-slider-slide"><img src="' . e(img_url($path)) . '" alt="' . e($alt) . '"></div>';
+        $dots   .= '<button type="button" class="photo-slider-dot' . ($i === 0 ? ' active' : '') . '" aria-label="Go to photo ' . ($i + 1) . '"></button>';
+    }
+
+    return '<div class="photo-slider">'
+        . '<div class="photo-slider-track">' . $slides . '</div>'
+        . '<button type="button" class="photo-slider-btn prev" aria-label="Previous photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>'
+        . '<button type="button" class="photo-slider-btn next" aria-label="Next photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>'
+        . '<div class="photo-slider-dots">' . $dots . '</div>'
+        . '</div>';
+}
+
+// Renders admin-authored rich text (announcements) safely: keeps a small
+// allowlist of formatting tags, but — unlike a bare strip_tags() call —
+// also strips every attribute except a validated <a href>, so a stored
+// onclick=/onmouseover=/javascript: URL can't ride along on an otherwise
+// "safe" allowed tag.
+function sanitize_rich_text(string $html): string
+{
+    $allowed = '<p><br><b><i><u><s><strong><em><ul><ol><li><h2><h3><a><blockquote>';
+    $html = strip_tags($html, $allowed);
+    if ($html === '') return '';
+
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="utf-8"?><div>' . $html . '</div>', LIBXML_NOERROR | LIBXML_NOWARNING);
+    libxml_clear_errors();
+
+    $body = $doc->getElementsByTagName('div')->item(0);
+    if (!$body) return e(strip_tags($html));
+
+    $walk = function (DOMNode $node) use (&$walk) {
+        if ($node->hasChildNodes()) {
+            foreach (iterator_to_array($node->childNodes) as $child) {
+                $walk($child);
+            }
+        }
+        if (!($node instanceof DOMElement)) return;
+
+        // Capture href before stripping attributes below wipes it out too.
+        $isLink = strtolower($node->tagName) === 'a';
+        $href   = $isLink ? $node->getAttribute('href') : null;
+
+        foreach (iterator_to_array($node->attributes ?? []) as $attr) {
+            $node->removeAttribute($attr->name);
+        }
+
+        if ($isLink) {
+            $safe = preg_match('~^(https?://|mailto:|/|#)~i', $href ?? '') === 1;
+            $node->setAttribute('href', $safe ? $href : '#');
+            $node->setAttribute('rel', 'noopener noreferrer');
+            $node->setAttribute('target', '_blank');
+        }
+    };
+    foreach (iterator_to_array($body->childNodes) as $child) {
+        $walk($child);
+    }
+
+    $out = '';
+    foreach (iterator_to_array($body->childNodes) as $child) {
+        $out .= $doc->saveHTML($child);
+    }
+    return $out;
 }
 
 function avatar_palette(int $i): array

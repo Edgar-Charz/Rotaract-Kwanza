@@ -26,9 +26,9 @@ function validate_image_upload(array $file, int $max_bytes = 5242880): ?string
 }
 
 /** Save uploaded image to admin/uploads/{subdir}/; returns web URL or false. */
-function save_uploaded_image(array $file, string $subdir, string $prefix = 'img_'): string|false
+function save_uploaded_image(array $file, string $subdir, string $prefix = 'img_', int $max_bytes = 5242880): string|false
 {
-    $ext = validate_image_upload($file);
+    $ext = validate_image_upload($file, $max_bytes);
     if (!$ext) {
         return false;
     }
@@ -55,10 +55,10 @@ function save_uploaded_image(array $file, string $subdir, string $prefix = 'img_
     return $base . '/admin/uploads/' . trim($subdir, '/') . '/' . $name;
 }
 
-function save_uploaded_image_from_input(string $input_name, string $subdir, string $prefix = 'img_'): string|false
+function save_uploaded_image_from_input(string $input_name, string $subdir, string $prefix = 'img_', int $max_bytes = 5242880): string|false
 {
     if (!isset($_FILES[$input_name]) || $_FILES[$input_name]['error'] === UPLOAD_ERR_NO_FILE) {
         return false;
     }
-    return save_uploaded_image($_FILES[$input_name], $subdir, $prefix);
+    return save_uploaded_image($_FILES[$input_name], $subdir, $prefix, $max_bytes);
 }
