@@ -107,14 +107,48 @@ function upload_multi_images(string $input_name, string $subdir): array {
             'size'     => $files['size'][$i],
         ];
         $url = save_uploaded_image($file, $subdir);
-        if ($url) $saved[] = $url;
+        if ($url) $saved[$i] = $url;
     }
     return $saved;
 }
 
+/**
+ * Duplicate an already-uploaded image into another uploads subdir (e.g. when
+ * archiving a team member's photo into leadership history) so the two records
+ * own independent files and deleting one never breaks the other.
+ */
+function copy_uploaded_image(string $sourcePath, string $subdir): string|false {
+    if (!$sourcePath) return false;
+    $urlPath = parse_url($sourcePath, PHP_URL_PATH) ?: '';
+    $pos = strpos($urlPath, '/admin/uploads/');
+    if ($pos === false) return false;
+    $srcFile = SITE_ROOT . substr($urlPath, $pos);
+    if (!is_file($srcFile)) return false;
+
+    $ext     = strtolower(pathinfo($srcFile, PATHINFO_EXTENSION)) ?: 'jpg';
+    $destDir = SITE_ROOT . '/admin/uploads/' . trim($subdir, '/') . '/';
+    if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+
+    $name = uniqid('img_', true) . '.' . $ext;
+    if (!copy($srcFile, $destDir . $name)) return false;
+
+    // Reuse the same base URL prefix already on the source path (everything
+    // before "/admin/uploads/") so the copy matches this install's convention
+    // without depending on which page/script called us.
+    $base = substr($urlPath, 0, $pos);
+    return $base . '/admin/uploads/' . trim($subdir, '/') . '/' . $name;
+}
+
 function delete_image(string $path): void {
     if (!$path) return;
-    $file = SITE_ROOT . parse_url($path, PHP_URL_PATH);
+    $urlPath = parse_url($path, PHP_URL_PATH) ?: '';
+    // Stored paths are prefixed with whatever base URL the app was installed under
+    // (e.g. /Rotaract_Kwanza) at upload time — anchor on /admin/uploads/ instead of
+    // assuming SITE_ROOT + the raw path line up, since that prefix isn't part of
+    // the filesystem layout.
+    $pos = strpos($urlPath, '/admin/uploads/');
+    if ($pos === false) return;
+    $file = SITE_ROOT . substr($urlPath, $pos);
     if (file_exists($file)) unlink($file);
 }
 
@@ -226,6 +260,34 @@ function monthly_counts(mysqli $db, string $table, int $months, string $date_col
     for ($i = $months - 1; $i >= 0; $i--) {
         $ym = date('Y-m', strtotime("-$i months"));
         $series[] = ['label' => date('M Y', strtotime("-$i months")), 'value' => (int) ($counts[$ym] ?? 0)];
+    }
+    return $series;
+}
+
+/**
+ * Monthly series (row count, or SUM of $sum_col when given) for every calendar
+ * month between $from and $to inclusive (both 'Y-m-d'). $table/$date_col/$sum_col
+ * are always literals passed by callers, never user input.
+ */
+function monthly_series_range(mysqli $db, string $table, string $from, string $to, string $date_col = 'created_at', ?string $sum_col = null): array {
+    $agg = $sum_col ? "COALESCE(SUM($sum_col),0)" : "COUNT(*)";
+    $rows = db_rows(
+        $db,
+        "SELECT DATE_FORMAT($date_col, '%Y-%m') AS ym, $agg AS n
+         FROM $table
+         WHERE $date_col >= ? AND $date_col <= ?
+         GROUP BY ym",
+        [$from, $to]
+    );
+    $counts = array_column($rows, 'n', 'ym');
+
+    $series  = [];
+    $cursor  = new DateTime(date('Y-m-01', strtotime($from)));
+    $end     = new DateTime(date('Y-m-01', strtotime($to)));
+    while ($cursor <= $end) {
+        $ym = $cursor->format('Y-m');
+        $series[] = ['label' => $cursor->format('M Y'), 'value' => (float) ($counts[$ym] ?? 0)];
+        $cursor->modify('+1 month');
     }
     return $series;
 }

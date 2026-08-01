@@ -1,9 +1,7 @@
 <?php
-// Security headers for every admin page
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
-header('Referrer-Policy: strict-origin-when-cross-origin');
-header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+// Security headers are set centrally in includes/session_init.php (required
+// by admin/includes/auth.php before this file runs) so both public and
+// admin pages get the same baseline.
 ?>
 <!DOCTYPE html>
 <html lang="en">
