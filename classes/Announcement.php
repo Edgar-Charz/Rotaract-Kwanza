@@ -90,15 +90,19 @@ class Announcement
         return $rows;
     }
 
-    public function getAll(string $category = ''): array
+    // $limit is a safety cap, not a feature — prevents an unbounded fetch from
+    // ever loading the entire table into memory if it grows very large; 5000
+    // is far above any realistic row count for this app.
+    public function getAll(string $category = '', int $limit = 5000): array
     {
         if ($category !== '') {
             $stmt = $this->db->prepare(
-                'SELECT * FROM announcements WHERE category = ? ORDER BY created_at DESC'
+                'SELECT * FROM announcements WHERE category = ? ORDER BY created_at DESC LIMIT ?'
             );
-            $stmt->bind_param('s', $category);
+            $stmt->bind_param('si', $category, $limit);
         } else {
-            $stmt = $this->db->prepare('SELECT * FROM announcements ORDER BY created_at DESC');
+            $stmt = $this->db->prepare('SELECT * FROM announcements ORDER BY created_at DESC LIMIT ?');
+            $stmt->bind_param('i', $limit);
         }
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

@@ -14,17 +14,40 @@ class EventRSVP
         string $email,
         string $phone,
         int $guests,
-        string $notes = ''
+        string $notes = '',
+        ?int $member_id = null,
+        string $guest_names = ''
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO event_rsvps (event_id, name, email, phone, guests, notes)
-             VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO event_rsvps (event_id, name, email, phone, guests, notes, member_id, guest_names)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('isssis', $event_id, $name, $email, $phone, $guests, $notes);
+        $stmt->bind_param('isssisis', $event_id, $name, $email, $phone, $guests, $notes, $member_id, $guest_names);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
         return $id;
+    }
+
+    public function findById(int $id): array|false
+    {
+        $stmt = $this->db->prepare('SELECT * FROM event_rsvps WHERE id = ? LIMIT 1');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: false;
+    }
+
+    public function update(int $id, string $name, string $email, string $phone, int $guests, string $notes = '', string $guest_names = ''): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE event_rsvps SET name=?, email=?, phone=?, guests=?, notes=?, guest_names=? WHERE id=?'
+        );
+        $stmt->bind_param('sssissi', $name, $email, $phone, $guests, $notes, $guest_names, $id);
+        $stmt->execute();
+        $stmt->close();
+        return true;
     }
 
     public function alreadyRegistered(int $event_id, string $email): bool
@@ -98,6 +121,17 @@ class EventRSVP
         $stmt->execute();
         $stmt->close();
         return true;
+    }
+
+    public function getGuestCount(int $event_id): int
+    {
+        $stmt = $this->db->prepare('SELECT COALESCE(SUM(guests),0) FROM event_rsvps WHERE event_id = ?');
+        $stmt->bind_param('i', $event_id);
+        $stmt->execute();
+        $stmt->bind_result($n);
+        $stmt->fetch();
+        $stmt->close();
+        return (int) $n;
     }
 
     public function getAttendanceSummary(int $event_id): array

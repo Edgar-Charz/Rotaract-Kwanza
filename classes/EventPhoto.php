@@ -8,16 +8,36 @@ class EventPhoto
         $this->db = $conn;
     }
 
-    public function create(int $event_id, string $image_path, int $display_order = 0): int
+    public function create(int $event_id, string $image_path, int $display_order = 0, string $caption = ''): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO event_photos (event_id, image_path, display_order) VALUES (?, ?, ?)'
+            'INSERT INTO event_photos (event_id, image_path, display_order, caption) VALUES (?, ?, ?, ?)'
         );
-        $stmt->bind_param('isi', $event_id, $image_path, $display_order);
+        $stmt->bind_param('isis', $event_id, $image_path, $display_order, $caption);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
         return $id;
+    }
+
+    public function updateCaption(int $id, string $caption): bool
+    {
+        $stmt = $this->db->prepare('UPDATE event_photos SET caption=? WHERE id=?');
+        $stmt->bind_param('si', $caption, $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows >= 0;
+        $stmt->close();
+        return $ok;
+    }
+
+    public function updateOrder(int $id, int $display_order): bool
+    {
+        $stmt = $this->db->prepare('UPDATE event_photos SET display_order=? WHERE id=?');
+        $stmt->bind_param('ii', $display_order, $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows >= 0;
+        $stmt->close();
+        return $ok;
     }
 
     public function findById(int $id): array|false

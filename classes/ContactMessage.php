@@ -25,6 +25,17 @@ class ContactMessage
         return $id;
     }
 
+    public function setEmailSent(int $id, bool $sent): bool
+    {
+        $stmt = $this->db->prepare('UPDATE contact_messages SET email_sent=? WHERE id=?');
+        $val = $sent ? 1 : 0;
+        $stmt->bind_param('ii', $val, $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $ok;
+    }
+
     public function findById(int $id): array|false
     {
         $stmt = $this->db->prepare('SELECT * FROM contact_messages WHERE id = ? LIMIT 1');
@@ -60,17 +71,21 @@ class ContactMessage
         return (int) $n;
     }
 
-    public function getAll(string $status = ''): array
+    // $limit is a safety cap, not a feature — prevents an unbounded fetch from
+    // ever loading the entire table into memory if it grows very large; 5000
+    // is far above any realistic row count for this app.
+    public function getAll(string $status = '', int $limit = 5000): array
     {
         if ($status !== '') {
             $stmt = $this->db->prepare(
-                'SELECT * FROM contact_messages WHERE status = ? ORDER BY created_at DESC'
+                'SELECT * FROM contact_messages WHERE status = ? ORDER BY created_at DESC LIMIT ?'
             );
-            $stmt->bind_param('s', $status);
+            $stmt->bind_param('si', $status, $limit);
         } else {
             $stmt = $this->db->prepare(
-                'SELECT * FROM contact_messages ORDER BY created_at DESC'
+                'SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT ?'
             );
+            $stmt->bind_param('i', $limit);
         }
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -108,5 +123,31 @@ class ContactMessage
         $ok = $stmt->affected_rows > 0;
         $stmt->close();
         return $ok;
+    }
+
+    /** Batched form of updateStatus() for admin bulk actions — one query instead of one per row. */
+    public function updateStatusBatch(array $ids, string $status): int
+    {
+        if (!$ids) return 0;
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("UPDATE contact_messages SET status=? WHERE id IN ($placeholders)");
+        $stmt->bind_param('s' . str_repeat('i', count($ids)), $status, ...$ids);
+        $stmt->execute();
+        $n = $stmt->affected_rows;
+        $stmt->close();
+        return (int) $n;
+    }
+
+    /** Batched form of delete() for admin bulk actions — one query instead of one per row. */
+    public function deleteBatch(array $ids): int
+    {
+        if (!$ids) return 0;
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("DELETE FROM contact_messages WHERE id IN ($placeholders)");
+        $stmt->bind_param(str_repeat('i', count($ids)), ...$ids);
+        $stmt->execute();
+        $n = $stmt->affected_rows;
+        $stmt->close();
+        return (int) $n;
     }
 }

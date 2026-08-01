@@ -1,6 +1,15 @@
 <?php
 class Event
 {
+    // Single source of truth for the event status workflow — key => admin-facing label.
+    // Referenced by admin/events.php (filters, bulk actions, add/edit selects) instead
+    // of retyping the same three strings in multiple places.
+    const STATUSES = [
+        'upcoming'  => 'Upcoming',
+        'past'      => 'Past',
+        'cancelled' => 'Cancelled',
+    ];
+
     private mysqli $db;
 
     public function __construct(mysqli $conn)
@@ -19,13 +28,14 @@ class Event
         int $is_featured = 0,
         string $image_path = '',
         string $instagram_url = '',
-        string $tiktok_url = ''
+        string $tiktok_url = '',
+        ?int $capacity = null
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO events (title, event_date, event_time, location, description, category, status, is_featured, image_path, instagram_url, tiktok_url)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events (title, event_date, event_time, location, description, category, status, is_featured, image_path, instagram_url, tiktok_url, capacity)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('sssssssisss', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url);
+        $stmt->bind_param('sssssssisssi', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $capacity);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -74,20 +84,37 @@ class Event
         return (int) $n;
     }
 
-    public function getAll(string $status = ''): array
+    // $limit is a safety cap, not a feature — prevents an unbounded fetch from
+    // ever loading the entire table into memory if it grows very large; 5000
+    // is far above any realistic row count for this app.
+    public function getAll(string $status = '', string $category = '', int $limit = 5000): array
     {
-        $where = $status !== '' ? 'WHERE e.status = ?' : '';
-        $stmt  = $this->db->prepare(
+        $where  = [];
+        $types  = '';
+        $params = [];
+        if ($status !== '') {
+            $where[]  = 'e.status = ?';
+            $types   .= 's';
+            $params[] = $status;
+        }
+        if ($category !== '') {
+            $where[]  = 'e.category = ?';
+            $types   .= 's';
+            $params[] = $category;
+        }
+        $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+        $types   .= 'i';
+        $params[] = $limit;
+        $stmt = $this->db->prepare(
             "SELECT e.*, COUNT(r.id) AS rsvp_count
              FROM events e
              LEFT JOIN event_rsvps r ON r.event_id = e.id
-             $where
+             $whereSql
              GROUP BY e.id
-             ORDER BY e.event_date DESC"
+             ORDER BY e.event_date DESC
+             LIMIT ?"
         );
-        if ($status !== '') {
-            $stmt->bind_param('s', $status);
-        }
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -116,16 +143,25 @@ class Event
         return $rows;
     }
 
-    public function getUpcoming(int $limit = 0): array
+    public function getUpcoming(int $limit = 0, string $search = ''): array
     {
-        $sql = "SELECT * FROM events WHERE status = 'upcoming' ORDER BY event_date ASC";
+        $sql = "SELECT * FROM events WHERE status = 'upcoming'";
+        $types = '';
+        $params = [];
+        if ($search !== '') {
+            $sql .= ' AND (title LIKE ? OR description LIKE ? OR location LIKE ?)';
+            $like = "%$search%";
+            $types .= 'sss';
+            $params = [$like, $like, $like];
+        }
+        $sql .= ' ORDER BY event_date ASC';
         if ($limit > 0) {
             $sql .= ' LIMIT ?';
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param('i', $limit);
-        } else {
-            $stmt = $this->db->prepare($sql);
+            $types .= 'i';
+            $params[] = $limit;
         }
+        $stmt = $this->db->prepare($sql);
+        if ($types !== '') $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -168,13 +204,14 @@ class Event
         int $is_featured,
         string $image_path = '',
         string $instagram_url = '',
-        string $tiktok_url = ''
+        string $tiktok_url = '',
+        ?int $capacity = null
     ): bool {
         $stmt = $this->db->prepare(
             'UPDATE events SET title=?, event_date=?, event_time=?, location=?, description=?,
-             category=?, status=?, is_featured=?, image_path=?, instagram_url=?, tiktok_url=? WHERE id=?'
+             category=?, status=?, is_featured=?, image_path=?, instagram_url=?, tiktok_url=?, capacity=? WHERE id=?'
         );
-        $stmt->bind_param('sssssssisssi', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $id);
+        $stmt->bind_param('sssssssisssii', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $capacity, $id);
         $stmt->execute();
         $stmt->close();
         return true;

@@ -20,13 +20,15 @@ class Member
         string $photo_path = '',
         string $bio = '',
         string $linkedin_url = '',
-        string $instagram_url = ''
+        string $instagram_url = '',
+        string $year_of_study = '',
+        ?string $birthday = null
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO members (first_name, last_name, email, phone, occupation, bio, linkedin_url, instagram_url, why_join, status, notes, photo_path)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO members (first_name, last_name, email, phone, occupation, year_of_study, birthday, bio, linkedin_url, instagram_url, why_join, status, notes, photo_path)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('ssssssssssss', $first_name, $last_name, $email, $phone, $occupation, $bio, $linkedin_url, $instagram_url, $why_join, $status, $notes, $photo_path);
+        $stmt->bind_param('ssssssssssssss', $first_name, $last_name, $email, $phone, $occupation, $year_of_study, $birthday, $bio, $linkedin_url, $instagram_url, $why_join, $status, $notes, $photo_path);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -85,13 +87,17 @@ class Member
         return $exists;
     }
 
-    public function getAll(string $status = ''): array
+    // $limit is a safety cap, not a feature — prevents an unbounded fetch from
+    // ever loading the entire table into memory if it grows very large; 5000
+    // is far above any realistic row count for this app.
+    public function getAll(string $status = '', int $limit = 5000): array
     {
         if ($status !== '') {
-            $stmt = $this->db->prepare('SELECT * FROM members WHERE status = ? ORDER BY created_at DESC');
-            $stmt->bind_param('s', $status);
+            $stmt = $this->db->prepare('SELECT * FROM members WHERE status = ? ORDER BY created_at DESC LIMIT ?');
+            $stmt->bind_param('si', $status, $limit);
         } else {
-            $stmt = $this->db->prepare('SELECT * FROM members ORDER BY created_at DESC');
+            $stmt = $this->db->prepare('SELECT * FROM members ORDER BY created_at DESC LIMIT ?');
+            $stmt->bind_param('i', $limit);
         }
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -147,13 +153,15 @@ class Member
         string $notes,
         string $bio = '',
         string $linkedin_url = '',
-        string $instagram_url = ''
+        string $instagram_url = '',
+        string $year_of_study = '',
+        ?string $birthday = null
     ): bool {
         $stmt = $this->db->prepare(
-            'UPDATE members SET first_name=?, last_name=?, email=?, phone=?, occupation=?, bio=?, linkedin_url=?, instagram_url=?,
+            'UPDATE members SET first_name=?, last_name=?, email=?, phone=?, occupation=?, year_of_study=?, birthday=?, bio=?, linkedin_url=?, instagram_url=?,
              why_join=?, status=?, notes=? WHERE id=?'
         );
-        $stmt->bind_param('sssssssssssi', $first_name, $last_name, $email, $phone, $occupation, $bio, $linkedin_url, $instagram_url, $why_join, $status, $notes, $id);
+        $stmt->bind_param('sssssssssssssi', $first_name, $last_name, $email, $phone, $occupation, $year_of_study, $birthday, $bio, $linkedin_url, $instagram_url, $why_join, $status, $notes, $id);
         $stmt->execute();
         $stmt->close();
         return true;
@@ -163,6 +171,41 @@ class Member
     {
         $stmt = $this->db->prepare('UPDATE members SET status=? WHERE id=?');
         $stmt->bind_param('si', $status, $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $ok;
+    }
+
+    public function setStatusEmailSent(int $id, bool $sent): bool
+    {
+        $stmt = $this->db->prepare('UPDATE members SET status_email_sent=? WHERE id=?');
+        $val = $sent ? 1 : 0;
+        $stmt->bind_param('ii', $val, $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $ok;
+    }
+
+    public function getTodaysBirthdays(): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT id, first_name, last_name, email FROM members
+             WHERE status = 'approved' AND birthday IS NOT NULL
+               AND MONTH(birthday) = MONTH(CURDATE()) AND DAY(birthday) = DAY(CURDATE())
+               AND (last_birthday_email_sent IS NULL OR last_birthday_email_sent <> CURDATE())"
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function markBirthdayEmailSent(int $id, string $date): bool
+    {
+        $stmt = $this->db->prepare('UPDATE members SET last_birthday_email_sent=? WHERE id=?');
+        $stmt->bind_param('si', $date, $id);
         $stmt->execute();
         $ok = $stmt->affected_rows > 0;
         $stmt->close();
@@ -191,6 +234,52 @@ class Member
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $rows;
+    }
+
+    /** Paginated, DB-filtered variant of getApprovedForDirectory() for the public directory page. */
+    public function getApprovedForDirectoryPage(int $limit, int $offset, string $search = ''): array
+    {
+        $sql = "SELECT id, first_name, last_name, occupation, bio, linkedin_url, instagram_url, created_at, COALESCE(photo_path,'') AS photo_path
+                FROM members
+                WHERE status = 'approved' AND show_in_directory = 1";
+        $types = '';
+        $params = [];
+        if ($search !== '') {
+            $sql .= ' AND (first_name LIKE ? OR last_name LIKE ? OR occupation LIKE ?)';
+            $like = "%$search%";
+            $types .= 'sss';
+            $params = [$like, $like, $like];
+        }
+        $sql .= ' ORDER BY first_name, last_name LIMIT ? OFFSET ?';
+        $types .= 'ii';
+        $params[] = $limit;
+        $params[] = $offset;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function countApprovedForDirectory(string $search = ''): int
+    {
+        $sql = "SELECT COUNT(*) FROM members WHERE status = 'approved' AND show_in_directory = 1";
+        $types = '';
+        $params = [];
+        if ($search !== '') {
+            $sql .= ' AND (first_name LIKE ? OR last_name LIKE ? OR occupation LIKE ?)';
+            $like = "%$search%";
+            $types = 'sss';
+            $params = [$like, $like, $like];
+        }
+        $stmt = $this->db->prepare($sql);
+        if ($types !== '') $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $stmt->bind_result($n);
+        $stmt->fetch();
+        $stmt->close();
+        return (int) $n;
     }
 
     public function getWithDues(int $year): array

@@ -47,6 +47,59 @@ class Gallery
         return (string) $path;
     }
 
+    /** id => image_path map for a set of rows — used by bulk delete to clean up files with one query. */
+    public function getImagePathsByIds(array $ids): array
+    {
+        if (!$ids) return [];
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("SELECT id, image_path FROM gallery WHERE id IN ($placeholders)");
+        $stmt->bind_param(str_repeat('i', count($ids)), ...$ids);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        $map = [];
+        foreach ($rows as $row) $map[(int) $row['id']] = $row['image_path'];
+        return $map;
+    }
+
+    /** Batched form of toggleVisibility()-style updates for admin bulk actions — one query instead of one per row. */
+    public function updateVisibilityBatch(array $ids, int $active): int
+    {
+        if (!$ids) return 0;
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("UPDATE gallery SET is_active=? WHERE id IN ($placeholders)");
+        $stmt->bind_param('i' . str_repeat('i', count($ids)), $active, ...$ids);
+        $stmt->execute();
+        $n = $stmt->affected_rows;
+        $stmt->close();
+        return (int) $n;
+    }
+
+    public function updateCategoryBatch(array $ids, string $category): int
+    {
+        if (!$ids) return 0;
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("UPDATE gallery SET category=? WHERE id IN ($placeholders)");
+        $stmt->bind_param('s' . str_repeat('i', count($ids)), $category, ...$ids);
+        $stmt->execute();
+        $n = $stmt->affected_rows;
+        $stmt->close();
+        return (int) $n;
+    }
+
+    /** Batched form of delete() for admin bulk actions — one query instead of one per row. */
+    public function deleteBatch(array $ids): int
+    {
+        if (!$ids) return 0;
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("DELETE FROM gallery WHERE id IN ($placeholders)");
+        $stmt->bind_param(str_repeat('i', count($ids)), ...$ids);
+        $stmt->execute();
+        $n = $stmt->affected_rows;
+        $stmt->close();
+        return (int) $n;
+    }
+
     public function countActive(): int
     {
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM gallery WHERE is_active = 1');
@@ -79,14 +132,41 @@ class Gallery
         return $rows;
     }
 
-    public function count(string $category = ''): int
+    /** Paginated, active-only listing for the public gallery page. */
+    public function getActivePage(int $limit, int $offset, string $category = ''): array
     {
+        $sql = 'SELECT * FROM gallery WHERE is_active = 1';
+        $types = '';
+        $params = [];
         if ($category !== '') {
-            $stmt = $this->db->prepare('SELECT COUNT(*) FROM gallery WHERE category = ?');
-            $stmt->bind_param('s', $category);
-        } else {
-            $stmt = $this->db->prepare('SELECT COUNT(*) FROM gallery');
+            $sql .= ' AND category = ?';
+            $types .= 's';
+            $params[] = $category;
         }
+        $sql .= ' ORDER BY display_order ASC, created_at DESC LIMIT ? OFFSET ?';
+        $types .= 'ii';
+        $params[] = $limit;
+        $params[] = $offset;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function countActiveFiltered(string $category = ''): int
+    {
+        $sql = 'SELECT COUNT(*) FROM gallery WHERE is_active = 1';
+        $types = '';
+        $params = [];
+        if ($category !== '') {
+            $sql .= ' AND category = ?';
+            $types = 's';
+            $params[] = $category;
+        }
+        $stmt = $this->db->prepare($sql);
+        if ($types !== '') $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $stmt->bind_result($n);
         $stmt->fetch();
@@ -94,23 +174,65 @@ class Gallery
         return (int) $n;
     }
 
-    public function getPage(int $limit, int $offset, string $category = ''): array
+    public function getActiveCategories(): array
     {
-        if ($category !== '') {
-            $stmt = $this->db->prepare(
-                'SELECT * FROM gallery WHERE category = ? ORDER BY display_order ASC, created_at DESC LIMIT ? OFFSET ?'
-            );
-            $stmt->bind_param('sii', $category, $limit, $offset);
-        } else {
-            $stmt = $this->db->prepare(
-                'SELECT * FROM gallery ORDER BY display_order ASC, created_at DESC LIMIT ? OFFSET ?'
-            );
-            $stmt->bind_param('ii', $limit, $offset);
-        }
+        $stmt = $this->db->prepare(
+            "SELECT DISTINCT category FROM gallery WHERE is_active = 1 AND category IS NOT NULL AND category != '' ORDER BY category"
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return array_column($rows, 'category');
+    }
+
+    public function count(string $category = '', string $search = ''): int
+    {
+        [$where, $types, $params] = $this->buildFilter($category, $search);
+        $sql = 'SELECT COUNT(*) FROM gallery';
+        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+        $stmt = $this->db->prepare($sql);
+        if ($types !== '') $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $stmt->bind_result($n);
+        $stmt->fetch();
+        $stmt->close();
+        return (int) $n;
+    }
+
+    public function getPage(int $limit, int $offset, string $category = '', string $search = ''): array
+    {
+        [$where, $types, $params] = $this->buildFilter($category, $search);
+        $sql = 'SELECT * FROM gallery';
+        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+        $sql .= ' ORDER BY display_order ASC, created_at DESC LIMIT ? OFFSET ?';
+        $types    .= 'ii';
+        $params[] = $limit;
+        $params[] = $offset;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $rows;
+    }
+
+    private function buildFilter(string $category, string $search): array
+    {
+        $where  = [];
+        $types  = '';
+        $params = [];
+        if ($category !== '') {
+            $where[]  = 'category = ?';
+            $types   .= 's';
+            $params[] = $category;
+        }
+        if ($search !== '') {
+            $where[]  = '(title LIKE ? OR description LIKE ?)';
+            $types   .= 'ss';
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+        return [$where, $types, $params];
     }
 
     public function getCategories(): array
