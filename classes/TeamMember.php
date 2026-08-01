@@ -67,12 +67,16 @@ class TeamMember
         string $instagram_url = ''
     ): int {
         $role_name = $this->getRoleName($role_id);
+        // team_roles.id is FK-constrained (ON DELETE SET NULL) — a role_id of 0
+        // (unassigned) must be written as SQL NULL, never the literal 0, which
+        // doesn't exist as a team_roles row and would violate the constraint.
+        $role_id_param = $role_id > 0 ? $role_id : null;
         if ($this->hasRoleId()) {
             $stmt = $this->db->prepare(
                 'INSERT INTO team_members (full_name, role, role_id, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->bind_param('ssissssssii', $full_name, $role_name, $role_id, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
+            $stmt->bind_param('ssissssssii', $full_name, $role_name, $role_id_param, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
         } else {
             $stmt = $this->db->prepare(
                 'INSERT INTO team_members (full_name, role, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active)
@@ -179,12 +183,16 @@ class TeamMember
         return $rows;
     }
 
-    public function getAll(): array
+    // $limit is a safety cap, not a feature — prevents an unbounded fetch from
+    // ever loading the entire table into memory if it grows very large; 5000
+    // is far above any realistic row count for this app.
+    public function getAll(int $limit = 5000): array
     {
         if ($this->canJoinRoles()) {
             $stmt = $this->db->prepare(
                 $this->baseSelect() . '
-                 ORDER BY COALESCE(tr.display_order, 9999) ASC, tm.display_order ASC, tm.created_at ASC'
+                 ORDER BY COALESCE(tr.display_order, 9999) ASC, tm.display_order ASC, tm.created_at ASC
+                 LIMIT ?'
             );
         } else {
             $stmt = $this->db->prepare(
@@ -197,9 +205,11 @@ class TeamMember
                           ELSE "Team Members"
                         END AS tier_label
                  FROM team_members
-                 ORDER BY tier ASC, display_order ASC, created_at ASC'
+                 ORDER BY tier ASC, display_order ASC, created_at ASC
+                 LIMIT ?'
             );
         }
+        $stmt->bind_param('i', $limit);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -220,12 +230,15 @@ class TeamMember
         string $instagram_url = ''
     ): bool {
         $role_name = $this->getRoleName($role_id);
+        // Same NULL-vs-0 rule as create(): 0 (unassigned) must be written as NULL
+        // to satisfy the team_roles FK constraint.
+        $role_id_param = $role_id > 0 ? $role_id : null;
         if ($this->hasRoleId()) {
             $stmt = $this->db->prepare(
                 'UPDATE team_members SET full_name=?, role=?, role_id=?, term=?, description=?, image_path=?,
                  email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
             );
-            $stmt->bind_param('ssissssssiii', $full_name, $role_name, $role_id, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
+            $stmt->bind_param('ssissssssiii', $full_name, $role_name, $role_id_param, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
         } else {
             $stmt = $this->db->prepare(
                 'UPDATE team_members SET full_name=?, role=?, term=?, description=?, image_path=?,
