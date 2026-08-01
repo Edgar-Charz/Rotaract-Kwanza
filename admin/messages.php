@@ -22,24 +22,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = $_POST['status'] ?? 'read';
         if (in_array($status, ['unread','read','replied'])) {
             $cm->updateStatus($id, $status);
+            log_activity('update_message_status', "Marked message ID $id as $status");
             flash('success', 'Marked as ' . $status . '.');
         }
     }
 
     if ($action === 'notes') {
         $cm->markReplied($id, trim($_POST['admin_notes']));
+        log_activity('update_message_notes', "Saved admin notes on message ID $id");
         flash('success', 'Notes saved and message marked as replied.');
+    }
+
+    if ($action === 'resend_email') {
+        $msg = $cm->findById($id);
+        if ($msg) {
+            require_once dirname(__DIR__) . '/classes/Mailer.php';
+            $sent = Mailer::fromSettings($conn)->contactConfirmation($msg['email'], $msg['full_name']);
+            $cm->setEmailSent($id, $sent);
+            log_activity('resend_message_email', "Resent confirmation email for message ID $id" . ($sent ? '' : ' (failed)'));
+            flash($sent ? 'success' : 'error', $sent ? 'Confirmation email resent.' : 'Resend failed — check mail server configuration.');
+        }
     }
 
     if ($action === 'bulk_status') {
         $status = $_POST['bulk_status'] ?? '';
         $ids    = array_map('intval', $_POST['ids'] ?? []);
         if (in_array($status, ['unread', 'read', 'replied'], true) && $ids) {
-            $count = 0;
-            foreach ($ids as $mid) {
-                $cm->updateStatus($mid, $status);
-                $count++;
-            }
+            $count = $cm->updateStatusBatch($ids, $status);
             log_activity('bulk_update_message_status', "Bulk set $count message(s) to $status");
             flash('success', "$count message(s) marked as $status.");
         }
@@ -47,11 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'bulk_delete') {
         $ids   = array_map('intval', $_POST['ids'] ?? []);
-        $count = 0;
-        foreach ($ids as $mid) {
-            $cm->delete($mid);
-            $count++;
-        }
+        $count = $cm->deleteBatch($ids);
         log_activity('bulk_delete_message', "Bulk deleted $count message(s)");
         flash('success', "$count message(s) deleted.");
     }
@@ -165,6 +170,11 @@ include __DIR__ . '/includes/header.php';
         <div class="fw-bold"><?= h($view_msg['full_name']) ?></div>
         <div><?= h($view_msg['email']) ?></div>
       </div>
+      <?php if (empty($view_msg['email_sent'])): ?>
+      <div style="margin-bottom:16px">
+        <span class="badge badge-unread">Confirmation email failed to send</span>
+      </div>
+      <?php endif; ?>
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">SUBJECT</div>
         <div class="fw-bold"><?= h($view_msg['subject'] ?? '(no subject)') ?></div>
@@ -180,6 +190,14 @@ include __DIR__ . '/includes/header.php';
 
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
         <a href="mailto:<?= h($view_msg['email']) ?>?subject=Re: <?= urlencode($view_msg['subject'] ?? '') ?>" class="btn btn-primary btn-sm">Reply via Email</a>
+        <?php if (empty($view_msg['email_sent']) && has_role('editor')): ?>
+        <form method="POST" style="display:inline">
+          <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+          <input type="hidden" name="action" value="resend_email">
+          <input type="hidden" name="id" value="<?= $view_msg['id'] ?>">
+          <button type="submit" class="btn btn-secondary btn-sm">Resend Confirmation Email</button>
+        </form>
+        <?php endif; ?>
         <?php if (has_role('editor')): ?>
         <form method="POST" style="display:inline">
           <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">

@@ -19,12 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Title is required.');
         } else {
             try {
-                $img = upload_image('image', 'projects') ?: '';
+                $img        = upload_image('image', 'projects') ?: '';
+                $start_date = trim($_POST['start_date'] ?? '') ?: null;
+                $end_date   = trim($_POST['end_date'] ?? '') ?: null;
                 $proj->create(
                     $title, trim($_POST['description']), trim($_POST['impact_stat']),
                     trim($_POST['impact_label']), trim($_POST['icon_type']) ?: 'heart',
                     $_POST['status'] ?? 'active', isset($_POST['is_featured']) ? 1 : 0, $img,
-                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? '')
+                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? ''),
+                    $start_date, $end_date
                 );
                 log_activity('add_project', "Added project: $title");
                 flash('success', 'Project added.');
@@ -41,14 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Title is required.');
         } else {
             try {
-                $oldImg = $proj->getImagePathById($id);
-                $img    = upload_image('image', 'projects') ?: $oldImg;
+                $oldImg     = $proj->getImagePathById($id);
+                $img        = upload_image('image', 'projects') ?: $oldImg;
+                $start_date = trim($_POST['start_date'] ?? '') ?: null;
+                $end_date   = trim($_POST['end_date'] ?? '') ?: null;
                 $proj->update(
                     $id,
                     $title, trim($_POST['description']), trim($_POST['impact_stat']),
                     trim($_POST['impact_label']), trim($_POST['icon_type']) ?: 'heart',
                     $_POST['status'], isset($_POST['is_featured']) ? 1 : 0, $img,
-                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? '')
+                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? ''),
+                    $start_date, $end_date
                 );
                 if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_project', "Edited project ID $id: $title");
@@ -74,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'bulk_status') {
         $status = $_POST['bulk_status'] ?? '';
         $ids    = array_map('intval', $_POST['ids'] ?? []);
-        if (in_array($status, ['active', 'completed', 'featured'], true) && $ids) {
+        if (array_key_exists($status, Project::STATUSES) && $ids) {
             $count = 0;
             foreach ($ids as $pid) {
                 $p = $proj->findById($pid);
@@ -82,7 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $proj->update(
                     $pid, $p['title'], $p['description'] ?? '', $p['impact_stat'] ?? '', $p['impact_label'] ?? '',
                     $p['icon_type'] ?: 'heart', $status, (int)$p['is_featured'],
-                    $p['image_path'] ?? '', $p['instagram_url'] ?? '', $p['tiktok_url'] ?? ''
+                    $p['image_path'] ?? '', $p['instagram_url'] ?? '', $p['tiktok_url'] ?? '',
+                    $p['start_date'] ?? null, $p['end_date'] ?? null
                 );
                 $count++;
             }
@@ -133,9 +140,9 @@ include __DIR__ . '/includes/header.php';
   <div class="card-header" id="bulk-bar" style="display:none;background:#fef6f0">
     <span id="bulk-count" class="text-muted" style="font-size:13px;font-weight:600"></span>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button type="button" class="btn btn-sm btn-secondary" onclick="bulkMark('active')">Mark Active</button>
-      <button type="button" class="btn btn-sm btn-secondary" onclick="bulkMark('completed')">Mark Completed</button>
-      <button type="button" class="btn btn-sm btn-secondary" onclick="bulkMark('featured')">Mark Featured</button>
+      <?php foreach (Project::STATUSES as $st => $label): ?>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="bulkMark('<?= $st ?>')">Mark <?= h($label) ?></button>
+      <?php endforeach; ?>
       <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeleteProjects()">Delete Selected</button>
     </div>
   </div>
@@ -152,7 +159,7 @@ include __DIR__ . '/includes/header.php';
       <thead>
         <tr>
           <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
-          <th>Icon</th><th>Title</th><th>Impact</th><th>Status</th><th>Featured</th><th>Created</th><th>Actions</th>
+          <th>Icon</th><th>Title</th><th>Impact</th><th>Timeline</th><th>Status</th><th>Featured</th><th>Created</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -170,6 +177,11 @@ include __DIR__ . '/includes/header.php';
             <div class="text-muted" style="font-size:12px"><?= h($p['impact_label'] ?? '') ?></div>
             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
           </td>
+          <td class="text-muted" style="font-size:12px">
+            <?php if ($p['start_date'] || $p['end_date']): ?>
+              <?= $p['start_date'] ? date('M Y', strtotime($p['start_date'])) : '?' ?> &ndash; <?= $p['end_date'] ? date('M Y', strtotime($p['end_date'])) : 'ongoing' ?>
+            <?php else: ?>—<?php endif; ?>
+          </td>
           <td><span class="badge badge-<?= h($p['status']) ?>"><?= h($p['status']) ?></span></td>
           <td><?= $p['is_featured'] ? '<span class="badge badge-featured">Featured</span>' : '<span class="text-muted">No</span>' ?></td>
           <td class="text-muted"><?= $p['created_at'] ? date('d M Y', strtotime($p['created_at'])) : '—' ?></td>
@@ -178,6 +190,7 @@ include __DIR__ . '/includes/header.php';
               <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
               <?php if (has_role('editor')): ?>
               <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit" onclick="openEditModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+              <button class="btn btn-icon btn-sm btn-secondary" title="Duplicate" aria-label="Duplicate" onclick="duplicateProject(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
               <a href="project_photos.php?project=<?= $p['id'] ?>" class="btn btn-icon btn-sm btn-secondary" title="Manage Photos" aria-label="Manage Photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></a>
               <form id="del-p-<?= $p['id'] ?>" method="POST" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
@@ -210,12 +223,25 @@ include __DIR__ . '/includes/header.php';
         <div class="form-group mb-2"><label>Description</label><textarea name="description"></textarea></div>
         <div class="form-group mb-2">
           <label>Cover Image (optional)</label>
-          <input type="file" name="image" accept="image/*" onchange="previewImage(this,'add-proj-prev')" style="padding:6px">
-          <img id="add-proj-prev" src="" alt="" style="display:none;max-height:100px;margin-top:8px;border-radius:6px">
+          <div class="image-field">
+            <label class="upload-area" for="ap_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Upload cover</strong></p>
+            </label>
+            <input type="file" id="ap_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'add-proj-prev')">
+            <div class="thumb-col">
+              <span class="thumb-col-label">Preview</span>
+              <img id="add-proj-prev" src="" alt="" class="image-thumb image-thumb--wide">
+            </div>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Impact Stat</label><input type="text" name="impact_stat" placeholder="e.g. 1,200+"></div>
           <div class="form-group"><label>Impact Label</label><input type="text" name="impact_label" placeholder="e.g. children reached"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Start Date <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="date" name="start_date"></div>
+          <div class="form-group"><label>End Date <span class="text-muted" style="font-weight:400">(optional, blank = ongoing)</span></label><input type="date" name="end_date"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Icon <span class="text-muted" style="font-weight:400">(shown when there's no cover image)</span></label>
@@ -226,9 +252,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group">
             <label>Status</label>
             <select name="status">
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="featured">Featured</option>
+              <?php foreach (Project::STATUSES as $st => $label): ?><option value="<?= $st ?>"><?= h($label) ?></option><?php endforeach; ?>
             </select>
           </div>
         </div>
@@ -265,13 +289,26 @@ include __DIR__ . '/includes/header.php';
         <div class="form-group mb-2"><label>Description</label><textarea name="description" id="ep_description"></textarea></div>
         <div class="form-group mb-2">
           <label>Replace Cover Image (optional)</label>
-          <div id="ep_img_preview" style="margin-bottom:6px"></div>
-          <input type="file" name="image" accept="image/*" onchange="previewImage(this,'edit-proj-prev')" style="padding:6px">
-          <img id="edit-proj-prev" src="" alt="" style="display:none;max-height:100px;margin-top:8px;border-radius:6px">
+          <div class="image-field">
+            <label class="upload-area" for="ep_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Upload cover</strong></p>
+            </label>
+            <input type="file" id="ep_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'edit-proj-prev')">
+            <div id="ep_img_preview"></div>
+            <div class="thumb-col">
+              <span class="thumb-col-label">New</span>
+              <img id="edit-proj-prev" src="" alt="" class="image-thumb image-thumb--wide">
+            </div>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Impact Stat</label><input type="text" name="impact_stat" id="ep_impact_stat"></div>
           <div class="form-group"><label>Impact Label</label><input type="text" name="impact_label" id="ep_impact_label"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Start Date <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="date" name="start_date" id="ep_start_date"></div>
+          <div class="form-group"><label>End Date <span class="text-muted" style="font-weight:400">(optional, blank = ongoing)</span></label><input type="date" name="end_date" id="ep_end_date"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Icon <span class="text-muted" style="font-weight:400">(shown when there's no cover image)</span></label>
@@ -282,9 +319,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group">
             <label>Status</label>
             <select name="status" id="ep_status">
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="featured">Featured</option>
+              <?php foreach (Project::STATUSES as $st => $label): ?><option value="<?= $st ?>"><?= h($label) ?></option><?php endforeach; ?>
             </select>
           </div>
         </div>
@@ -335,6 +370,8 @@ function openViewModal(p) {
     <div class="view-dl">
       <div><div class="view-dt">Impact</div><div class="view-dd">${esc(p.impact_stat) || '—'}</div></div>
       <div><div class="view-dt">Impact Label</div><div class="view-dd">${esc(p.impact_label) || '—'}</div></div>
+      <div><div class="view-dt">Start Date</div><div class="view-dd">${p.start_date ? esc(p.start_date) : '—'}</div></div>
+      <div><div class="view-dt">End Date</div><div class="view-dd">${p.end_date ? esc(p.end_date) : (p.start_date ? 'Ongoing' : '—')}</div></div>
       <div><div class="view-dt">Status</div><div class="view-dd">${esc(p.status)}</div></div>
       <div><div class="view-dt">Created</div><div class="view-dd">${esc(p.created_at ? p.created_at.substring(0,10) : '')}</div></div>
     </div>
@@ -353,7 +390,7 @@ $(document).ready(function() {
   $('#dt-projects').DataTable({
     pageLength: 25,
     columnDefs: [
-      { orderable: false, targets: <?= has_role('editor') ? '[0, 1, 7]' : '[0, 6]' ?> }
+      { orderable: false, targets: <?= has_role('editor') ? '[0, 1, 8]' : '[0, 7]' ?> }
     ]
   });
 });
@@ -363,15 +400,32 @@ function openEditModal(p) {
   document.getElementById('ep_description').value  = p.description || '';
   document.getElementById('ep_impact_stat').value  = p.impact_stat || '';
   document.getElementById('ep_impact_label').value = p.impact_label || '';
+  document.getElementById('ep_start_date').value   = p.start_date || '';
+  document.getElementById('ep_end_date').value     = p.end_date || '';
   document.getElementById('ep_icon_type').value    = p.icon_type || 'heart';
   document.getElementById('ep_status').value       = p.status;
   document.getElementById('ep_instagram').value    = p.instagram_url || '';
   document.getElementById('ep_tiktok').value       = p.tiktok_url || '';
   document.getElementById('ep_feat').checked       = p.is_featured == 1;
   const prev = document.getElementById('ep_img_preview');
-  prev.innerHTML = p.image_path ? '<img src="'+esc(p.image_path)+'" style="max-height:80px;border-radius:6px">' : '';
+  prev.innerHTML = p.image_path
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(p.image_path)+'" class="current-photo-thumb current-photo-thumb--wide"></div>'
+    : '';
   document.getElementById('edit-proj-prev').style.display = 'none';
   openModal('edit-modal');
+}
+
+function duplicateProject(p) {
+  const form = document.getElementById('add-modal').querySelector('form');
+  form.reset();
+  form.querySelector('[name="title"]').value         = p.title;
+  form.querySelector('[name="description"]').value   = p.description || '';
+  form.querySelector('[name="impact_stat"]').value    = p.impact_stat || '';
+  form.querySelector('[name="impact_label"]').value   = p.impact_label || '';
+  form.querySelector('[name="icon_type"]').value      = p.icon_type || 'heart';
+  form.querySelector('[name="instagram_url"]').value  = p.instagram_url || '';
+  form.querySelector('[name="tiktok_url"]').value     = p.tiktok_url || '';
+  openModal('add-modal');
 }
 
 function getCheckedProjectIds() {

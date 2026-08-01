@@ -3,6 +3,8 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/TeamMember.php';
 require_once dirname(__DIR__) . '/classes/TeamRole.php';
+require_once dirname(__DIR__) . '/classes/LeadershipTerm.php';
+require_once dirname(__DIR__) . '/classes/LeadershipMember.php';
 
 $page_title = 'Team Members';
 
@@ -107,6 +109,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', "$count team member(s) removed.");
     }
 
+    if ($action === 'bulk_reassign_role') {
+        $new_role_id = (int) ($_POST['bulk_role_id'] ?? 0);
+        $ids         = array_map('intval', $_POST['ids'] ?? []);
+        $tr          = new TeamRole($conn);
+        if ($new_role_id <= 0 || !$tr->getNameById($new_role_id)) {
+            flash('error', 'Please select a valid role.');
+        } else {
+            $count = 0;
+            foreach ($ids as $tid) {
+                $t = $tm->findById($tid);
+                if (!$t) continue;
+                $tm->update(
+                    $tid, $t['full_name'], $new_role_id, $t['description'] ?? '', $t['image_path'] ?? '',
+                    $t['email'] ?? '', (int) $t['display_order'], (int) $t['is_active'],
+                    $t['term'] ?? '', $t['linkedin_url'] ?? '', $t['instagram_url'] ?? ''
+                );
+                $count++;
+            }
+            log_activity('bulk_reassign_team_role', "Bulk reassigned $count team member(s) to role ID $new_role_id");
+            flash('success', "$count team member(s) reassigned.");
+        }
+    }
+
+    if ($action === 'reorder') {
+        $ids = array_map('intval', $_POST['ids'] ?? []);
+        foreach ($ids as $i => $tid) {
+            $t = $tm->findById($tid);
+            if (!$t) continue;
+            $tm->update(
+                $tid, $t['full_name'], (int) $t['role_id'], $t['description'] ?? '', $t['image_path'] ?? '',
+                $t['email'] ?? '', $i, (int) $t['is_active'],
+                $t['term'] ?? '', $t['linkedin_url'] ?? '', $t['instagram_url'] ?? ''
+            );
+        }
+        log_activity('reorder_team', 'Reordered team member display order');
+        flash('success', 'Team order updated.');
+    }
+
+    if ($action === 'bulk_archive') {
+        $ids = array_map('intval', $_POST['ids'] ?? []);
+        if (!$ids) {
+            flash('error', 'No team members selected.');
+        } else {
+            $term_id = (int) ($_POST['term_id'] ?? 0);
+            if ($term_id === -1) {
+                $new_label = trim($_POST['new_term_label'] ?? '');
+                if ($new_label === '') {
+                    flash('error', 'New term label is required.');
+                    header('Location: ' . ADMIN_URL . '/team.php');
+                    exit;
+                }
+                $ys = (int) ($_POST['new_term_year_start'] ?? 0) ?: null;
+                $ye = (int) ($_POST['new_term_year_end'] ?? 0) ?: null;
+                $term_id = (new LeadershipTerm($conn))->create($new_label, $ys, $ye, '', '', 0, 1);
+            }
+            if ($term_id > 0) {
+                $lm    = new LeadershipMember($conn);
+                $count = 0;
+                foreach ($ids as $mid) {
+                    $member = $tm->findById($mid);
+                    if (!$member) continue;
+                    $photo = $member['image_path'] ? (copy_uploaded_image($member['image_path'], 'leadership') ?: '') : '';
+                    $lm->create(
+                        $term_id, $member['full_name'], $member['role'], $member['description'] ?? '', $photo,
+                        (int) $member['display_order'], 1,
+                        $member['linkedin_url'] ?? '', $member['instagram_url'] ?? '',
+                        (int) ($member['role_id'] ?? 0)
+                    );
+                    $count++;
+                }
+                log_activity('bulk_archive_team', "Bulk archived $count team member(s) to leadership history (term ID $term_id)");
+                flash('success', "$count team member(s) archived to Leadership History.");
+            } else {
+                flash('error', 'Please select or create a term.');
+            }
+        }
+    }
+
+    if ($action === 'archive') {
+        $member_id = (int) ($_POST['member_id'] ?? 0);
+        $member    = $tm->findById($member_id);
+        if (!$member) {
+            flash('error', 'Team member not found.');
+        } else {
+            $term_id = (int) ($_POST['term_id'] ?? 0);
+            if ($term_id === -1) {
+                $new_label = trim($_POST['new_term_label'] ?? '');
+                if ($new_label === '') {
+                    flash('error', 'New term label is required.');
+                    header('Location: ' . ADMIN_URL . '/team.php');
+                    exit;
+                }
+                $ys = (int) ($_POST['new_term_year_start'] ?? 0) ?: null;
+                $ye = (int) ($_POST['new_term_year_end'] ?? 0) ?: null;
+                $term_id = (new LeadershipTerm($conn))->create($new_label, $ys, $ye, '', '', 0, 1);
+            }
+            if ($term_id > 0) {
+                $role        = trim($_POST['role'] ?? '') ?: $member['role'];
+                $description = trim($_POST['description'] ?? '') ?: ($member['description'] ?? '');
+                $photo       = $member['image_path'] ? (copy_uploaded_image($member['image_path'], 'leadership') ?: '') : '';
+                // Only carry the role_id FK across when the admin left the role text
+                // unchanged — if they typed something else, it's a deliberate free-text
+                // override and shouldn't silently keep pointing at the old team_roles row.
+                $role_id = ($role === $member['role']) ? (int) ($member['role_id'] ?? 0) : 0;
+                (new LeadershipMember($conn))->create(
+                    $term_id, $member['full_name'], $role, $description, $photo,
+                    (int) $member['display_order'], 1,
+                    $member['linkedin_url'] ?? '', $member['instagram_url'] ?? '',
+                    $role_id
+                );
+                log_activity('archive_team_member', "Archived {$member['full_name']} to leadership history (term ID $term_id)");
+                flash('success', "{$member['full_name']} archived to Leadership History.");
+            } else {
+                flash('error', 'Please select or create a term.');
+            }
+        }
+    }
+
     header('Location: ' . ADMIN_URL . '/team.php');
     exit;
 }
@@ -120,18 +240,24 @@ foreach ($roles as $r) {
     $roles_by_tier[$r['tier_label']][] = $r;
 }
 
+$leadership_terms = (new LeadershipTerm($conn))->getAllWithMemberCounts();
+
 include __DIR__ . '/includes/header.php';
 ?>
 
 <div class="card">
   <div class="card-header">
     <span class="card-title"><?= count($team) ?> Team Member<?= count($team) !== 1 ? 's':'' ?></span>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a href="roles.php" class="btn btn-secondary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Manage Roles
       </a>
       <?php if (has_role('editor')): ?>
+      <button class="btn btn-secondary" onclick="openReorderModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        Reorder
+      </button>
       <button class="btn btn-primary" onclick="openModal('add-modal')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Member
@@ -151,6 +277,8 @@ include __DIR__ . '/includes/header.php';
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button type="button" class="btn btn-sm btn-secondary" onclick="submitTeamBulk('bulk_active','1')">Show Selected</button>
       <button type="button" class="btn btn-sm btn-secondary" onclick="submitTeamBulk('bulk_active','0')">Hide Selected</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('bulk-role-modal')">Reassign Role&hellip;</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="openBulkArchiveModal()">Archive to Leadership Term&hellip;</button>
       <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeleteTeam()">Delete Selected</button>
     </div>
   </div>
@@ -158,7 +286,98 @@ include __DIR__ . '/includes/header.php';
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <input type="hidden" name="action" id="bulk-action-field" value="">
     <input type="hidden" name="bulk_active" id="bulk-active-field" value="">
+    <input type="hidden" name="bulk_role_id" id="bulk-role-field" value="">
+    <input type="hidden" name="term_id" id="bulk-archive-term-field" value="">
+    <input type="hidden" name="new_term_label" id="bulk-archive-new-label-field" value="">
+    <input type="hidden" name="new_term_year_start" id="bulk-archive-new-ys-field" value="">
+    <input type="hidden" name="new_term_year_end" id="bulk-archive-new-ye-field" value="">
     <div id="bulk-ids-container"></div>
+  </form>
+
+  <!-- Bulk Reassign Role Modal -->
+  <div class="modal fade" id="bulk-role-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-content" style="max-width:380px">
+      <div class="modal-header">
+        <span class="modal-title">Reassign Role for Selected</span>
+        <button class="modal-close" onclick="closeModal('bulk-role-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>New Role</label>
+          <select id="bulk-role-select">
+            <option value="">Select a role&hellip;</option>
+            <?php foreach ($roles_by_tier as $tier_label => $tier_roles): ?>
+              <optgroup label="<?= h($tier_label) ?>">
+                <?php foreach ($tier_roles as $r): ?><option value="<?= $r['id'] ?>"><?= h($r['name']) ?></option><?php endforeach; ?>
+              </optgroup>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('bulk-role-modal')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="applyBulkRole()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Archive to Leadership Term Modal -->
+  <div class="modal fade" id="bulk-archive-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-content" style="max-width:420px">
+      <div class="modal-header">
+        <span class="modal-title">Archive Selected to Leadership Term</span>
+        <button class="modal-close" onclick="closeModal('bulk-archive-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:12.5px;margin-bottom:14px">
+          Copies each selected member's name, role, description, and photo into the chosen Leadership Term. The team members themselves are unaffected.
+        </p>
+        <div class="form-group mb-2">
+          <label>Term</label>
+          <select id="bulk-archive-term-select" onchange="toggleBulkArchiveNewTerm()">
+            <?php foreach ($leadership_terms as $lt): ?>
+              <option value="<?= (int) $lt['id'] ?>"><?= h($lt['term_label']) ?></option>
+            <?php endforeach; ?>
+            <option value="-1">+ Create new term&hellip;</option>
+          </select>
+        </div>
+        <div id="bulk-archive-new-term-fields" style="display:none">
+          <div class="form-group mb-2"><label>New Term Label</label><input type="text" id="bulk-archive-new-label" placeholder="2025–2026"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Year Start</label><input type="number" id="bulk-archive-new-ys" min="1990" max="2100"></div>
+            <div class="form-group"><label>Year End</label><input type="number" id="bulk-archive-new-ye" min="1990" max="2100"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('bulk-archive-modal')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="applyBulkArchive()">Archive</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reorder Modal -->
+  <div class="modal fade" id="reorder-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-content" style="max-width:480px">
+      <div class="modal-header">
+        <span class="modal-title">Reorder Team Members</span>
+        <button class="modal-close" onclick="closeModal('reorder-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:12.5px;margin-bottom:12px">Drag to reorder. This sets each member's display order (used as a tie-breaker within the same role/tier).</p>
+        <div id="reorder-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('reorder-modal')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveReorder()">Save Order</button>
+      </div>
+    </div>
+  </div>
+
+  <form id="reorder-form" method="POST" style="display:none">
+    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+    <input type="hidden" name="action" value="reorder">
+    <div id="reorder-ids-container"></div>
   </form>
   <?php endif; ?>
 
@@ -195,6 +414,7 @@ include __DIR__ . '/includes/header.php';
               <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($t)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
               <?php if (has_role('editor')): ?>
               <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit" onclick="openEditModal(<?= h(json_encode($t)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+              <button class="btn btn-icon btn-sm btn-secondary" title="Archive to Leadership History" aria-label="Archive to Leadership History" onclick="openArchiveModal(<?= h(json_encode($t)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
               <form id="del-t-<?= $t['id'] ?>" method="POST" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete">
@@ -224,12 +444,17 @@ include __DIR__ . '/includes/header.php';
         <input type="hidden" name="action" value="add">
         <div class="form-group mb-2">
           <label>Photo (optional)</label>
-          <label class="upload-area" for="at_image" style="padding:16px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;margin-bottom:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <p><strong>Upload photo</strong></p>
-          </label>
-          <input type="file" id="at_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'add-team-prev')">
-          <img id="add-team-prev" src="" alt="Preview">
+          <div class="image-field">
+            <label class="upload-area" for="at_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Upload photo</strong></p>
+            </label>
+            <input type="file" id="at_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'add-team-prev')">
+            <div class="thumb-col">
+              <span class="thumb-col-label">Preview</span>
+              <img id="add-team-prev" src="" alt="Preview" class="image-thumb image-thumb--avatar">
+            </div>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" required></div>
@@ -283,9 +508,18 @@ include __DIR__ . '/includes/header.php';
         <input type="hidden" name="id" id="et_id">
         <div class="form-group mb-2">
           <label>Replace Photo (optional)</label>
-          <div id="et_current_photo" style="margin-bottom:8px"></div>
-          <input type="file" name="image" accept="image/*" onchange="previewImage(this,'edit-team-prev')" style="padding:6px">
-          <img id="edit-team-prev" src="" alt="Preview">
+          <div class="image-field">
+            <label class="upload-area" for="et_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Replace photo</strong></p>
+            </label>
+            <input type="file" id="et_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'edit-team-prev')">
+            <div id="et_current_photo"></div>
+            <div class="thumb-col">
+              <span class="thumb-col-label">New</span>
+              <img id="edit-team-prev" src="" alt="Preview" class="image-thumb image-thumb--avatar">
+            </div>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" id="et_name" required></div>
@@ -320,6 +554,48 @@ include __DIR__ . '/includes/header.php';
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal('edit-modal')">Cancel</button>
         <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Archive to Leadership History Modal -->
+<div class="modal fade" id="archive-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-title">Archive to Leadership History</span>
+      <button class="modal-close" onclick="closeModal('archive-modal')">&times;</button>
+    </div>
+    <form method="POST">
+      <div class="modal-body">
+        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+        <input type="hidden" name="action" value="archive">
+        <input type="hidden" name="member_id" id="ar_member_id">
+        <p class="text-muted" style="font-size:12.5px;margin-bottom:14px">
+          Copies <strong id="ar_member_name"></strong>'s name, role, description, and photo into a Leadership History term. The team member itself is unaffected.
+        </p>
+        <div class="form-group mb-2">
+          <label>Term</label>
+          <select name="term_id" id="ar_term_id" onchange="toggleArchiveNewTerm()">
+            <?php foreach ($leadership_terms as $lt): ?>
+              <option value="<?= (int) $lt['id'] ?>"><?= h($lt['term_label']) ?></option>
+            <?php endforeach; ?>
+            <option value="-1">+ Create new term&hellip;</option>
+          </select>
+        </div>
+        <div id="ar_new_term_fields" style="display:none">
+          <div class="form-group mb-2"><label>New Term Label</label><input type="text" name="new_term_label" id="ar_new_term_label" placeholder="2025–2026"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Year Start</label><input type="number" name="new_term_year_start" min="1990" max="2100"></div>
+            <div class="form-group"><label>Year End</label><input type="number" name="new_term_year_end" min="1990" max="2100"></div>
+          </div>
+        </div>
+        <div class="form-group mb-2"><label>Role</label><input type="text" name="role" id="ar_role"></div>
+        <div class="form-group"><label>Description</label><textarea name="description" id="ar_description" style="min-height:70px"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('archive-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Archive</button>
       </div>
     </form>
   </div>
@@ -389,7 +665,9 @@ function openEditModal(t) {
   document.getElementById('et_desc').value  = t.description || '';
   document.getElementById('et_active').checked = t.is_active == 1;
   const ph = document.getElementById('et_current_photo');
-  ph.innerHTML = t.image_path ? '<img src="' + esc(t.image_path) + '" style="width:50px;height:50px;border-radius:50%;object-fit:cover">' : '';
+  ph.innerHTML = t.image_path
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="' + esc(t.image_path) + '" class="current-photo-thumb current-photo-thumb--avatar"></div>'
+    : '';
   openModal('edit-modal');
 }
 
@@ -424,6 +702,159 @@ function bulkDeleteTeam() {
   if (ids.length && confirm('Permanently remove ' + ids.length + ' selected team member(s)? This cannot be undone.')) {
     submitTeamBulk('bulk_delete');
   }
+}
+
+function applyBulkRole() {
+  var ids = getCheckedTeamIds();
+  if (!ids.length) return;
+  var roleId = document.getElementById('bulk-role-select').value;
+  if (!roleId) { alert('Please select a role.'); return; }
+  document.getElementById('bulk-action-field').value = 'bulk_reassign_role';
+  document.getElementById('bulk-role-field').value = roleId;
+  closeModal('bulk-role-modal');
+  var container = document.getElementById('bulk-ids-container');
+  container.innerHTML = '';
+  ids.forEach(function (id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+
+function openBulkArchiveModal() {
+  var ids = getCheckedTeamIds();
+  if (!ids.length) return;
+  document.getElementById('bulk-archive-term-select').value = '';
+  document.getElementById('bulk-archive-new-label').value = '';
+  document.getElementById('bulk-archive-new-ys').value = '';
+  document.getElementById('bulk-archive-new-ye').value = '';
+  toggleBulkArchiveNewTerm();
+  openModal('bulk-archive-modal');
+}
+function toggleBulkArchiveNewTerm() {
+  var sel = document.getElementById('bulk-archive-term-select');
+  document.getElementById('bulk-archive-new-term-fields').style.display = sel.value === '-1' ? 'block' : 'none';
+}
+function applyBulkArchive() {
+  var ids = getCheckedTeamIds();
+  if (!ids.length) return;
+  var termId = document.getElementById('bulk-archive-term-select').value;
+  if (!termId) { alert('Please select a term.'); return; }
+  if (termId === '-1' && !document.getElementById('bulk-archive-new-label').value.trim()) {
+    alert('Please enter a label for the new term.');
+    return;
+  }
+  document.getElementById('bulk-action-field').value = 'bulk_archive';
+  document.getElementById('bulk-archive-term-field').value = termId;
+  document.getElementById('bulk-archive-new-label-field').value = document.getElementById('bulk-archive-new-label').value;
+  document.getElementById('bulk-archive-new-ys-field').value = document.getElementById('bulk-archive-new-ys').value;
+  document.getElementById('bulk-archive-new-ye-field').value = document.getElementById('bulk-archive-new-ye').value;
+  closeModal('bulk-archive-modal');
+  var container = document.getElementById('bulk-ids-container');
+  container.innerHTML = '';
+  ids.forEach(function (id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+
+function openArchiveModal(t) {
+  document.getElementById('ar_member_id').value = t.id;
+  document.getElementById('ar_member_name').textContent = t.full_name;
+  document.getElementById('ar_role').value = t.role || '';
+  document.getElementById('ar_description').value = t.description || '';
+  toggleArchiveNewTerm();
+  openModal('archive-modal');
+}
+function toggleArchiveNewTerm() {
+  const sel = document.getElementById('ar_term_id');
+  document.getElementById('ar_new_term_fields').style.display = sel.value === '-1' ? 'block' : 'none';
+}
+
+var allTeamMembers = <?= json_encode(array_map(fn($t) => ['id' => $t['id'], 'full_name' => $t['full_name'], 'role' => $t['role'], 'image_path' => $t['image_path']], $team)) ?>;
+
+function openReorderModal() {
+  const list = document.getElementById('reorder-list');
+  list.innerHTML = '';
+  allTeamMembers.forEach(function (m) {
+    const row = document.createElement('div');
+    row.className = 'reorder-row';
+    row.draggable = true;
+    row.dataset.id = m.id;
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:6px;background:#fff;cursor:grab';
+
+    const avatar = document.createElement('div');
+    avatar.style.cssText = 'width:32px;height:32px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#C0396B,#D4882A);color:#fff;font-size:13px;font-weight:700';
+    if (m.image_path) {
+      const img = document.createElement('img');
+      img.src = m.image_path;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = m.full_name ? m.full_name[0].toUpperCase() : '?';
+    }
+
+    const label = document.createElement('div');
+    label.style.cssText = 'flex:1';
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-weight:700;font-size:13px';
+    nameEl.textContent = m.full_name;
+    const roleEl = document.createElement('div');
+    roleEl.style.cssText = 'font-size:11.5px;color:var(--text-muted)';
+    roleEl.textContent = m.role;
+    label.appendChild(nameEl);
+    label.appendChild(roleEl);
+
+    const handle = document.createElement('div');
+    handle.innerHTML = '&#8942;&#8942;';
+    handle.style.cssText = 'color:var(--text-muted);letter-spacing:-3px;flex-shrink:0';
+
+    row.appendChild(avatar);
+    row.appendChild(label);
+    row.appendChild(handle);
+    list.appendChild(row);
+  });
+  attachReorderDragHandlers(list);
+  openModal('reorder-modal');
+}
+
+function attachReorderDragHandlers(list) {
+  let dragEl = null;
+  list.querySelectorAll('.reorder-row').forEach(function (row) {
+    row.addEventListener('dragstart', function () {
+      dragEl = row;
+      row.style.opacity = '0.4';
+    });
+    row.addEventListener('dragend', function () {
+      row.style.opacity = '1';
+    });
+    row.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      if (!dragEl || dragEl === row) return;
+      const bounding = row.getBoundingClientRect();
+      const offset = e.clientY - bounding.top;
+      if (offset > bounding.height / 2) {
+        row.after(dragEl);
+      } else {
+        row.before(dragEl);
+      }
+    });
+  });
+}
+
+function saveReorder() {
+  const rows = document.querySelectorAll('#reorder-list .reorder-row');
+  const container = document.getElementById('reorder-ids-container');
+  container.innerHTML = '';
+  rows.forEach(function (row) {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = row.dataset.id;
+    container.appendChild(inp);
+  });
+  document.getElementById('reorder-form').submit();
 }
 </script>
 

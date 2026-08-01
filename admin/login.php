@@ -1,5 +1,6 @@
 <?php
 require_once dirname(__DIR__) . '/includes/session_init.php';
+require_once dirname(__DIR__) . '/config/Database.php';
 
 // Security headers
 header('X-Frame-Options: DENY');
@@ -9,6 +10,8 @@ header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
 require_once dirname(__DIR__) . '/includes/csrf.php';
 require_once dirname(__DIR__) . '/classes/Admin.php';
+require_once dirname(__DIR__) . '/classes/SiteSettings.php';
+
 
 $db   = new Database();
 $conn = $db->connect();
@@ -18,11 +21,14 @@ if (isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// ── Rate limiting (DB-backed per username: 5 attempts per 15 minutes) ────────
+// ── Rate limiting (DB-backed per username) ───────────────────────────────────
 // Persisted in the login_attempts table rather than $_SESSION, so an attacker
 // can't reset their attempt count just by dropping the session cookie.
-$MAX_ATTEMPTS = 5;
-$LOCKOUT_SECS = 15 * 60;
+// Thresholds are admin-configurable via Settings → Login & Session Security.
+$ss           = new SiteSettings($conn);
+$MAX_ATTEMPTS = max(1, (int) $ss->get('login_max_attempts', '5'));
+$LOCKOUT_MINS = max(1, (int) $ss->get('login_lockout_minutes', '15'));
+$LOCKOUT_SECS = $LOCKOUT_MINS * 60;
 
 $posted_username = trim($_POST['username'] ?? '');
 $error   = '';
@@ -65,7 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
                 $_SESSION['admin_id']       = $admin['id'];
                 $_SESSION['admin_username'] = $admin['username'];
                 $_SESSION['admin_name']     = $admin['full_name'];
-                $_SESSION['admin_role']     = $admin['role'] ?? 'super_admin';
+                // Fail closed: an admin row with no role should get the least
+                // privilege, matching auth.php's own default for a missing session role.
+                $_SESSION['admin_role']     = $admin['role'] ?? 'viewer';
+                $_SESSION['admin_login_time'] = time();
                 header('Location: index.php');
                 exit;
             }
@@ -92,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
         if ($row && $row['locked_until'] && time() < $row['locked_until']) {
             $locked  = true;
             $lockout = (int)$row['locked_until'];
-            $error   = "Too many failed attempts. Try again in 15 minutes.";
+            $error   = "Too many failed attempts. Try again in $LOCKOUT_MINS minute(s).";
         } else {
             $remaining_attempts = max(0, $MAX_ATTEMPTS - $attempts);
             $error = "Invalid username or password. {$remaining_attempts} attempt(s) remaining.";
@@ -100,6 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
     } else {
         $error = 'Please enter both username and password.';
     }
+}
+
+if (!$error && ($_GET['expired'] ?? '') === '1') {
+    $error = 'Your session expired due to inactivity. Please log in again.';
 }
 ?>
 <!DOCTYPE html>
