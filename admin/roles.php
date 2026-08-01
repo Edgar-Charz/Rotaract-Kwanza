@@ -13,27 +13,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $tr = new TeamRole($conn);
 
   if ($action === 'add') {
-    $tr->create(
-      trim($_POST['name']),
-      trim($_POST['tier_label']) ?: 'Team Members',
-      (int) ($_POST['display_order'] ?? 0),
-      isset($_POST['is_active']) ? 1 : 0
-    );
-    log_activity('add_role', "Added team role: " . trim($_POST['name']));
-    flash('success', 'Role added.');
+    try {
+      $tr->create(
+        trim($_POST['name']),
+        trim($_POST['tier_label']) ?: 'Team Members',
+        (int) ($_POST['display_order'] ?? 0),
+        isset($_POST['is_active']) ? 1 : 0
+      );
+      log_activity('add_role', "Added team role: " . trim($_POST['name']));
+      flash('success', 'Role added.');
+    } catch (mysqli_sql_exception $e) {
+      flash('error', 'Could not add role. A role with that name may already exist.');
+    }
   }
 
   if ($action === 'edit') {
     $id = (int) $_POST['id'];
-    $tr->update(
-      $id,
-      trim($_POST['name']),
-      trim($_POST['tier_label']) ?: 'Team Members',
-      (int) ($_POST['display_order'] ?? 0),
-      isset($_POST['is_active']) ? 1 : 0
-    );
-    log_activity('edit_role', "Edited team role ID $id: " . trim($_POST['name']));
-    flash('success', 'Role updated.');
+    try {
+      $tr->update(
+        $id,
+        trim($_POST['name']),
+        trim($_POST['tier_label']) ?: 'Team Members',
+        (int) ($_POST['display_order'] ?? 0),
+        isset($_POST['is_active']) ? 1 : 0
+      );
+      log_activity('edit_role', "Edited team role ID $id: " . trim($_POST['name']));
+      flash('success', 'Role updated.');
+    } catch (mysqli_sql_exception $e) {
+      flash('error', 'Could not update role. A role with that name may already exist.');
+    }
   }
 
   if ($action === 'delete') {
@@ -46,9 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($action === 'add_tier') {
     $rt = new RoleTier($conn);
-    $rt->create(trim($_POST['tier_name']), (int) ($_POST['tier_order'] ?? 0));
-    log_activity('add_role_tier', "Added tier: " . trim($_POST['tier_name']));
-    flash('success', 'Tier added.');
+    try {
+      $rt->create(trim($_POST['tier_name']), (int) ($_POST['tier_order'] ?? 0));
+      log_activity('add_role_tier', "Added tier: " . trim($_POST['tier_name']));
+      flash('success', 'Tier added.');
+    } catch (mysqli_sql_exception $e) {
+      flash('error', 'Could not add tier. A tier with that name may already exist.');
+    }
   }
 
   if ($action === 'delete_tier') {

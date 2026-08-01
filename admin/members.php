@@ -28,15 +28,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           trim($_POST['notes'] ?? ''),
           '',
           trim($_POST['bio'] ?? ''),
-          trim($_POST['linkedin_url'] ?? ''),
-          trim($_POST['instagram_url'] ?? ''),
+          clean_url($_POST['linkedin_url'] ?? ''),
+          clean_url($_POST['instagram_url'] ?? ''),
           trim($_POST['year_of_study'] ?? ''),
           trim($_POST['birthday'] ?? '') ?: null
         );
-        $photo = upload_image('photo', 'members');
-        if ($photo) $m->updatePhoto($new_id, $photo);
+        if (!empty($_FILES['photo']['name'])) {
+          $photo = upload_image('photo', 'members');
+          if ($photo) {
+            $m->updatePhoto($new_id, $photo);
+          } else {
+            flash('error', 'Member added, but the photo could not be uploaded (invalid file type or too large).');
+          }
+        }
         log_activity('add_member', "Added: " . trim($_POST['first_name']) . " " . trim($_POST['last_name']));
-        flash('success', 'Member added successfully.');
+        if (!isset($_SESSION['flash'])) flash('success', 'Member added successfully.');
       } catch (mysqli_sql_exception $e) {
         flash('error', $e->getCode() == 1062 ? 'Email already exists.' : 'Could not add member.');
       }
@@ -61,19 +67,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $_POST['status'],
           trim($_POST['notes'] ?? ''),
           trim($_POST['bio'] ?? ''),
-          trim($_POST['linkedin_url'] ?? ''),
-          trim($_POST['instagram_url'] ?? ''),
+          clean_url($_POST['linkedin_url'] ?? ''),
+          clean_url($_POST['instagram_url'] ?? ''),
           trim($_POST['year_of_study'] ?? ''),
           trim($_POST['birthday'] ?? '') ?: null
         );
-        $new_photo = upload_image('photo', 'members');
-        if ($new_photo) {
-          $old_photo = $m->getPhotoById($id);
-          if ($old_photo) delete_image($old_photo);
-          $m->updatePhoto($id, $new_photo);
+        if (!empty($_FILES['photo']['name'])) {
+          $new_photo = upload_image('photo', 'members');
+          if ($new_photo) {
+            $old_photo = $m->getPhotoById($id);
+            if ($old_photo) delete_image($old_photo);
+            $m->updatePhoto($id, $new_photo);
+          } else {
+            flash('error', 'Member updated, but the new photo could not be uploaded (invalid file type or too large).');
+          }
         }
         log_activity('edit_member', "Edited member ID $id: " . trim($_POST['first_name']) . " " . trim($_POST['last_name']));
-        flash('success', 'Member updated.');
+        if (!isset($_SESSION['flash'])) flash('success', 'Member updated.');
       } catch (mysqli_sql_exception $e) {
         flash('error', $e->getCode() == 1062 ? 'Email already exists.' : 'Could not update member.');
       }

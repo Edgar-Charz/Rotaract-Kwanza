@@ -24,16 +24,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $img      = upload_image('image', 'events') ?: '';
+                if (!$img && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Event created, but the image could not be uploaded (invalid file type or too large).');
+                }
                 $capacity = trim($_POST['capacity'] ?? '') !== '' ? max(0, (int) $_POST['capacity']) : null;
                 $ev->create(
                     $title, $_POST['event_date'], trim($_POST['event_time']),
                     trim($_POST['location']), trim($_POST['description']),
                     trim($_POST['category']) ?: 'General', $_POST['status'] ?? 'upcoming',
                     isset($_POST['is_featured']) ? 1 : 0, $img,
-                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? ''), $capacity
+                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''), $capacity
                 );
                 log_activity('add_event', "Created event: $title on " . $_POST['event_date']);
-                flash('success', 'Event created.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Event created.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not create event.');
             }
@@ -52,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $oldImg   = $ev->getImagePathById($id);
                 $img      = upload_image('image', 'events') ?: $oldImg;
+                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Event updated, but the new image could not be uploaded (invalid file type or too large).');
+                }
                 $capacity = trim($_POST['capacity'] ?? '') !== '' ? max(0, (int) $_POST['capacity']) : null;
                 $ev->update(
                     $id,
@@ -59,11 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     trim($_POST['location']), trim($_POST['description']),
                     trim($_POST['category']) ?: 'General', $_POST['status'],
                     isset($_POST['is_featured']) ? 1 : 0, $img,
-                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? ''), $capacity
+                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''), $capacity
                 );
                 if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_event', "Edited event ID $id: $title");
-                flash('success', 'Event updated.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Event updated.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not update event.');
             }

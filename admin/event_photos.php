@@ -24,8 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $paths    = upload_multi_images('images', 'event_photos');
         $captions = $_POST['captions'] ?? [];
+        $next_order = $photo_obj->countByEvent($event_id);
         foreach ($paths as $i => $p) {
-            $photo_obj->create($event_id, $p, 0, trim($captions[$i] ?? ''));
+            $photo_obj->create($event_id, $p, $next_order + $i, trim($captions[$i] ?? ''));
         }
         if ($paths) {
             log_activity('add_event_photos', count($paths) . ' photo(s) added to event: ' . $event['title']);

@@ -505,7 +505,7 @@ if ($hero_image) $page_image = img_url($hero_image);
             <div class="dir-card reveal<?= $di > 0 ? ' reveal-delay-' . ($di % 4) : '' ?>">
               <?php if ($dm['photo_path']): ?>
                 <div class="dir-avatar dir-avatar-photo">
-                  <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($initials) ?>"
+                  <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($dm['first_name'] . ' ' . $dm['last_name']) ?>"
                     style="width:100%;height:100%;object-fit:cover;border-radius:50%">
                 </div>
               <?php else: ?>

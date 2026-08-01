@@ -11,6 +11,7 @@ header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 require_once dirname(__DIR__) . '/includes/csrf.php';
 require_once dirname(__DIR__) . '/classes/Admin.php';
 require_once dirname(__DIR__) . '/classes/SiteSettings.php';
+require_once dirname(__DIR__) . '/classes/ActivityLog.php';
 
 
 $db   = new Database();
@@ -75,10 +76,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
                 // privilege, matching auth.php's own default for a missing session role.
                 $_SESSION['admin_role']     = $admin['role'] ?? 'viewer';
                 $_SESSION['admin_login_time'] = time();
+                try {
+                    (new ActivityLog($conn))->log(
+                        (int)$admin['id'], $admin['username'], 'login', 'Logged in',
+                        substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
+                    );
+                } catch (Throwable $e) {}
                 header('Location: index.php');
                 exit;
             }
         } catch (mysqli_sql_exception $e) {}
+
+        try {
+            (new ActivityLog($conn))->log(
+                0, $username, 'login_failed', 'Failed login attempt',
+                substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
+            );
+        } catch (Throwable $e) {}
 
         // Failed attempt - recorded server-side, keyed by username
         $stmt = $conn->prepare(

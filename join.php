@@ -29,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $year_of_study = trim($_POST['year_of_study'] ?? '');
     $birthday      = trim($_POST['birthday']      ?? '');
     $why_join      = trim($_POST['why_join']      ?? '');
-    // LinkedIn, Instagram, and profile photo are collected later (post-confirmation), not on the initial application.
+    // LinkedIn and Instagram aren't collected on the application — an officer
+    // adds them later if the member wants a public directory/team profile.
     $linkedin  = '';
     $instagram = '';
 
@@ -47,11 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'This email address is already registered. Please use a different email.';
       } else {
         try {
-          $new_id = $member->create($first_name, $last_name, $email, $phone, $occupation, $why_join, 'pending', '', '', '', $linkedin, $instagram, $year_of_study, $birthday);
-
-          // Profile photo upload is collected later (post-confirmation), not on the initial application.
-          // $photo = upload_member_photo('photo');
-          // if ($photo) $member->updatePhoto($new_id, $photo);
+          $member->create($first_name, $last_name, $email, $phone, $occupation, $why_join, 'pending', '', '', '', $linkedin, $instagram, $year_of_study, $birthday);
 
           // Confirmation email to applicant (non-fatal)
           try {
@@ -208,35 +205,10 @@ $page_description = 'Join a global network of young leaders committed to service
                   <input type="date" name="birthday" value="<?= e($old['birthday'] ?? '') ?>" max="<?= date('Y-m-d') ?>" required>
                 </div>
               </div>
-              <!-- LinkedIn and Instagram are collected later (post-confirmation), not on the initial application.
-              <div class="form-row">
-                <div class="form-group">
-                  <label>LinkedIn <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
-                  <input type="text" name="linkedin_url" value="<?= e($old['linkedin_url'] ?? '') ?>" placeholder="https://linkedin.com/in/yourname">
-                </div>
-                <div class="form-group">
-                  <label>Instagram <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
-                  <input type="text" name="instagram_url" value="<?= e($old['instagram_url'] ?? '') ?>" placeholder="https://instagram.com/yourname">
-                </div>
-              </div>
-              -->
               <div class="form-group">
                 <label>Why do you want to join? <span style="color:var(--pink-700)">*</span></label>
                 <textarea name="why_join" placeholder="Tell us about yourself and what motivates you to become a Rotaractor..." style="min-height:130px" required><?= e($old['why_join'] ?? '') ?></textarea>
               </div>
-              <!-- Profile photo is collected later (post-confirmation), not on the initial application.
-              <div class="form-group" style="margin-top:4px">
-                <label>Profile Photo <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
-                <input type="file" name="photo" accept="image/*" id="join-photo-input"
-                  style="padding:6px;border:1.5px solid var(--border);border-radius:8px;width:100%;font-family:inherit;font-size:13px"
-                  onchange="joinPhotoPreview(this)">
-                <div id="join-photo-preview" style="display:none;margin-top:10px;text-align:center">
-                  <img id="join-photo-img" src="" alt="Preview"
-                    style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--pink-200)">
-                </div>
-                <p style="font-size:11.5px;color:var(--text-soft);margin-top:5px">JPG, PNG or WEBP · max 3 MB. Shown in the member directory if your profile is listed.</p>
-              </div>
-              -->
               <button type="submit" name="submitJoinBTN" class="btn-submit">Submit Application &rarr;</button>
             </form>
           <?php endif; ?>
@@ -249,20 +221,6 @@ $page_description = 'Join a global network of young leaders committed to service
   <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
   <script src="assets/js/scripts.js"></script>
-  <!-- Profile photo preview is unused while the photo field is disabled (see form above).
-  <script>
-    function joinPhotoPreview(input) {
-      if (input.files && input.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-          document.getElementById('join-photo-img').src = e.target.result;
-          document.getElementById('join-photo-preview').style.display = 'block';
-        };
-        reader.readAsDataURL(input.files[0]);
-      }
-    }
-  </script>
-  -->
 </body>
 
 </html>

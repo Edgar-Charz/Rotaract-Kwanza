@@ -53,6 +53,9 @@ const TEXT_SETTING_KEYS = [
   'home_news_description',
   'home_gallery_description',
   'contact_intro',
+  'donate_intro',
+  'donate_bank_details',
+  'donate_mobile_money',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -111,21 +114,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ss = new SiteSettings($conn);
     foreach ($keys as $key) {
       if (isset($_POST[$key])) {
-        $ss->set($key, trim($_POST[$key]));
+        $value = str_ends_with($key, '_url') ? clean_url($_POST[$key]) : trim($_POST[$key]);
+        $ss->set($key, $value);
       }
     }
 
     foreach (['hero_image', 'about_image'] as $img_key) {
+      if (empty($_FILES[$img_key]['name'])) continue;
       $img = upload_image($img_key, 'site');
       if ($img) {
         $old = $ss->get($img_key);
         $ss->set($img_key, $img);
         if ($old) delete_image($old);
+      } else {
+        flash('error', ucfirst(str_replace('_', ' ', $img_key)) . ' could not be uploaded (invalid file type or too large).');
       }
     }
 
     log_activity('update_settings', 'Updated site settings');
-    flash('success', 'Settings saved.');
+    if (!isset($_SESSION['flash'])) flash('success', 'Settings saved.');
   }
 
   if ($action === 'save_security_settings') {
@@ -201,6 +208,9 @@ $setting_defaults = [
   'home_news_description'   => 'Club updates, meeting minutes, and announcements from Rotaract Club of Kwanza.',
   'home_gallery_description' => 'A glimpse into our community service, events, and fellowship moments.',
   'contact_intro'           => 'Whether you have a question, partnership opportunity, or just want to say hello — our doors are always open.',
+  'donate_intro'            => 'Every contribution helps us fund community service projects, from clean water initiatives to educational scholarships. Your generosity directly changes lives in Kwanza.',
+  'donate_bank_details'     => '',
+  'donate_mobile_money'     => '',
   'login_max_attempts'      => '5',
   'login_lockout_minutes'   => '15',
   'session_idle_minutes'    => '30',
@@ -578,6 +588,18 @@ include __DIR__ . '/includes/header.php';
               <div class="form-group mt-1"><label>Contact Hours</label><input type="text" name="contact_hours" value="<?= h($settings['contact_hours']) ?>" placeholder="Mon – Fri, 8:00 AM – 5:00 PM"></div>
             </div>
             <div class="form-group mt-1"><label>Contact Page Intro</label><textarea name="contact_intro" style="min-height:72px"><?= h($settings['contact_intro']) ?></textarea></div>
+          </div>
+        </div>
+
+        <div class="card mb-2">
+          <div class="card-header"><span class="card-title">Donate / Support Us</span></div>
+          <div class="card-body">
+            <div class="form-group"><label>Donate Page Intro</label><textarea name="donate_intro" style="min-height:72px"><?= h($settings['donate_intro']) ?></textarea></div>
+            <div class="form-row">
+              <div class="form-group mt-1"><label>Bank Transfer Details</label><textarea name="donate_bank_details" style="min-height:72px" placeholder="Account name, number, bank, branch..."><?= h($settings['donate_bank_details']) ?></textarea></div>
+              <div class="form-group mt-1"><label>Mobile Money Details</label><textarea name="donate_mobile_money" style="min-height:72px" placeholder="Provider, number, account name..."><?= h($settings['donate_mobile_money']) ?></textarea></div>
+            </div>
+            <p class="text-muted" style="font-size:12.5px;margin-top:4px">Leave either blank to hide that payment method on the public Donate page.</p>
           </div>
         </div>
 

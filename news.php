@@ -269,6 +269,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
             <h1><?= e($post['title']) ?></h1>
             <p style="font-size:13px;color:#b2bec3;margin-bottom:24px"><?= date('l, d F Y', strtotime($post['created_at'])) ?></p>
             <div class="post-content"><?= sanitize_rich_text($post['content']) ?></div>
+            <?= render_share_buttons(current_page_url(), $post['title']) ?>
           </div>
         </div>
       <?php endif; ?>
@@ -279,6 +280,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
         <?php foreach ($cat_labels as $k => $label): ?>
           <a href="news.php?cat=<?= $k ?>" class="cat-btn <?= $cat === $k ? 'active' : '' ?>"><?= $label ?></a>
         <?php endforeach; ?>
+        <a href="rss.php" class="cat-btn" style="margin-left:auto" title="Subscribe via RSS">&#128225; RSS</a>
       </div>
 
       <?php if ($posts): ?>

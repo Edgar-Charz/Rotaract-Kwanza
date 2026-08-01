@@ -195,7 +195,9 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
           <p class="pj-desc"><?= e($project['description']) ?></p>
         <?php endif; ?>
 
-        <a href="project_signup.php?id=<?= (int) $project['id'] ?>" class="pj-cta">Get Involved &rarr;</a>
+        <?php if ($project['status'] !== 'completed'): ?>
+          <a href="project_signup.php?id=<?= (int) $project['id'] ?>" class="pj-cta">Get Involved &rarr;</a>
+        <?php endif; ?>
 
         <?php if ($project['instagram_url'] || $project['tiktok_url']): ?>
           <div class="pj-socials">

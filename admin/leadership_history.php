@@ -21,6 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $img = upload_image('image', 'leadership') ?: '';
+                if (!$img && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Term added, but the image could not be uploaded (invalid file type or too large).');
+                }
                 $ys  = (int) ($_POST['year_start'] ?? 0) ?: null;
                 $ye  = (int) ($_POST['year_end'] ?? 0) ?: null;
                 $lt->create(
@@ -31,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     isset($_POST['is_active']) ? 1 : 0
                 );
                 log_activity('add_leadership_term', "Added leadership term: $label");
-                flash('success', 'Term added. You can now add officers to this term.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Term added. You can now add officers to this term.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not add term.');
             }
@@ -47,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $oldImg = $lt->getImagePathById($id);
                 $img    = upload_image('image', 'leadership') ?: $oldImg;
+                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Term updated, but the new image could not be uploaded (invalid file type or too large).');
+                }
                 $ys     = (int) ($_POST['year_start'] ?? 0) ?: null;
                 $ye     = (int) ($_POST['year_end'] ?? 0) ?: null;
                 $lt->update(
@@ -58,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_leadership_term', "Edited leadership term ID $id: $label");
-                flash('success', 'Term updated.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Term updated.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not update term.');
             }
@@ -132,27 +138,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($new_label === '') {
             flash('error', 'New term label is required.');
         } else {
-            $ys    = (int) ($_POST['new_term_year_start'] ?? 0) ?: null;
-            $ye    = (int) ($_POST['new_term_year_end'] ?? 0) ?: null;
-            $photo = $source['image_path'] ? (copy_uploaded_image($source['image_path'], 'leadership') ?: '') : '';
+            try {
+                $ys    = (int) ($_POST['new_term_year_start'] ?? 0) ?: null;
+                $ye    = (int) ($_POST['new_term_year_end'] ?? 0) ?: null;
+                $photo = $source['image_path'] ? (copy_uploaded_image($source['image_path'], 'leadership') ?: '') : '';
 
-            $new_term_id = $lt->create($new_label, $ys, $ye, $source['summary'] ?? '', $photo, 0, 1);
+                $new_term_id = $lt->create($new_label, $ys, $ye, $source['summary'] ?? '', $photo, 0, 1);
 
-            $lm     = new LeadershipMember($conn);
-            $copied = 0;
-            foreach ($lm->getByTermId($source_id) as $o) {
-                $officer_photo = $o['photo_path'] ? (copy_uploaded_image($o['photo_path'], 'leadership') ?: '') : '';
-                $lm->create(
-                    $new_term_id, $o['full_name'], $o['role'], $o['description'] ?? '', $officer_photo,
-                    (int) $o['display_order'], 1,
-                    $o['linkedin_url'] ?? '', $o['instagram_url'] ?? '',
-                    (int) ($o['role_id'] ?? 0)
-                );
-                $copied++;
+                $lm     = new LeadershipMember($conn);
+                $copied = 0;
+                foreach ($lm->getByTermId($source_id) as $o) {
+                    $officer_photo = $o['photo_path'] ? (copy_uploaded_image($o['photo_path'], 'leadership') ?: '') : '';
+                    $lm->create(
+                        $new_term_id, $o['full_name'], $o['role'], $o['description'] ?? '', $officer_photo,
+                        (int) $o['display_order'], 1,
+                        $o['linkedin_url'] ?? '', $o['instagram_url'] ?? '',
+                        (int) ($o['role_id'] ?? 0)
+                    );
+                    $copied++;
+                }
+
+                $ltp          = new LeadershipTermPhoto($conn);
+                $photos_copied = 0;
+                foreach ($ltp->getByTerm($source_id) as $p) {
+                    $copied_path = copy_uploaded_image($p['image_path'], 'leadership');
+                    if ($copied_path) {
+                        $ltp->create($new_term_id, $copied_path, (int) $p['display_order']);
+                        $photos_copied++;
+                    }
+                }
+
+                log_activity('duplicate_leadership_term', "Duplicated term '{$source['term_label']}' into '$new_label' with $copied officer(s) and $photos_copied photo(s)");
+                flash('success', "Term duplicated with $copied officer(s) and $photos_copied gallery photo(s). Edit the new term's details as needed.");
+            } catch (mysqli_sql_exception $e) {
+                flash('error', 'Could not duplicate the term.');
             }
-
-            log_activity('duplicate_leadership_term', "Duplicated term '{$source['term_label']}' into '$new_label' with $copied officer(s)");
-            flash('success', "Term duplicated with $copied officer(s). Edit the new term's details as needed.");
         }
     }
 

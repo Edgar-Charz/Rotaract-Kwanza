@@ -38,7 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         if ($img !== $oldImg && $oldImg) delete_image($oldImg);
         log_activity('edit_gallery', "Edited photo ID $id: " . trim($_POST['title']));
-        flash('success', 'Photo updated.');
+        if ($img === $oldImg && !empty($_FILES['image']['name'])) {
+            flash('error', 'Photo updated, but the new image could not be uploaded (invalid file type or too large).');
+        } else {
+            flash('success', 'Photo updated.');
+        }
     }
 
     if ($action === 'delete') {

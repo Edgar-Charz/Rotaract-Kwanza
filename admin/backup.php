@@ -8,65 +8,139 @@ $page_title = 'DB Backup';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    if (($_POST['action'] ?? '') !== 'download') {
+    $backup_action = $_POST['action'] ?? '';
+    if ($backup_action !== 'download' && $backup_action !== 'download_full') {
         header('Location: ' . ADMIN_URL . '/backup.php');
         exit;
     }
 
-    log_activity('db_backup', 'Downloaded full database backup');
+    // Large tables (activity_log, gallery, event_photos, ...) can exceed PHP's
+    // memory/time limits with mysqli's default buffered queries, which load an
+    // entire result set into memory before the loop even starts. Unbuffered
+    // mode streams row-by-row instead, and the time limit is lifted since a
+    // full dump can legitimately take longer than the default 30s.
+    set_time_limit(0);
+    mysqli_report(MYSQLI_REPORT_OFF);
     $db = $conn;
 
-    $filename = 'rotaract_kwanza_backup_' . date('Y-m-d_His') . '.sql';
+    $sql_filename = 'rotaract_kwanza_backup_' . date('Y-m-d_His') . '.sql';
 
-    header('Content-Type: application/octet-stream');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Pragma: no-cache');
-    header('Expires: 0');
+    $dumpSql = function () use ($db): string {
+        $tables = [];
+        $res = $db->query("SHOW TABLES");
+        while ($row = $res->fetch_row()) $tables[] = $row[0];
 
-    $tables = [];
-    $res = $db->query("SHOW TABLES");
-    while ($row = $res->fetch_row()) $tables[] = $row[0];
+        $out = "-- Rotaract Kwanza Database Backup\n";
+        $out .= "-- Generated: " . date('Y-m-d H:i:s') . "\n";
+        $out .= "-- Database: rotaract_kwanza\n\n";
+        $out .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
-    echo "-- Rotaract Kwanza Database Backup\n";
-    echo "-- Generated: " . date('Y-m-d H:i:s') . "\n";
-    echo "-- Database: rotaract_kwanza\n\n";
-    echo "SET FOREIGN_KEY_CHECKS=0;\n\n";
+        foreach ($tables as $table) {
+            $res = $db->query("SHOW CREATE TABLE `$table`");
+            $row = $res->fetch_row();
+            $out .= "-- Table: $table\n";
+            $out .= "DROP TABLE IF EXISTS `$table`;\n";
+            $out .= $row[1] . ";\n\n";
 
-    foreach ($tables as $table) {
-        $res = $db->query("SHOW CREATE TABLE `$table`");
-        $row = $res->fetch_row();
-        echo "-- Table: $table\n";
-        echo "DROP TABLE IF EXISTS `$table`;\n";
-        echo $row[1] . ";\n\n";
+            // MYSQLI_USE_RESULT streams rows from the server one at a time
+            // instead of buffering the whole table in PHP memory first.
+            $db->real_query("SELECT * FROM `$table`");
+            $res  = $db->use_result();
+            $cols = $res->field_count;
 
-        $res  = $db->query("SELECT * FROM `$table`");
-        $cols = $res->field_count;
+            $rowCount = 0;
+            $chunk = [];
+            while ($row = $res->fetch_row()) {
+                $rowCount++;
+                $vals = [];
+                for ($i = 0; $i < $cols; $i++) {
+                    $vals[] = $row[$i] === null ? 'NULL' : "'" . $db->real_escape_string($row[$i]) . "'";
+                }
+                $chunk[] = '(' . implode(',', $vals) . ')';
 
-        if ($res->num_rows === 0) {
-            echo "-- (no rows)\n\n";
-            continue;
-        }
-
-        $chunk = [];
-        while ($row = $res->fetch_row()) {
-            $vals = [];
-            for ($i = 0; $i < $cols; $i++) {
-                $vals[] = $row[$i] === null ? 'NULL' : "'" . $db->real_escape_string($row[$i]) . "'";
+                if (count($chunk) >= 100) {
+                    $out .= "INSERT INTO `$table` VALUES\n" . implode(",\n", $chunk) . ";\n";
+                    $chunk = [];
+                }
             }
-            $chunk[] = '(' . implode(',', $vals) . ')';
+            $res->free();
+            if ($chunk) {
+                $out .= "INSERT INTO `$table` VALUES\n" . implode(",\n", $chunk) . ";\n";
+            }
+            if ($rowCount === 0) {
+                $out .= "-- (no rows)\n";
+            }
+            $out .= "\n";
+        }
 
-            if (count($chunk) >= 100) {
-                echo "INSERT INTO `$table` VALUES\n" . implode(",\n", $chunk) . ";\n";
-                $chunk = [];
+        $out .= "SET FOREIGN_KEY_CHECKS=1;\n";
+        return $out;
+    };
+
+    if ($backup_action === 'download_full') {
+        // Bundle the SQL dump with the uploads directory so restoring doesn't
+        // leave every photo/image reference pointing at a file that no longer
+        // exists — a DB-only backup silently breaks every image on restore.
+        $zip_filename = 'rotaract_kwanza_backup_' . date('Y-m-d_His') . '.zip';
+        $tmp_zip = tempnam(sys_get_temp_dir(), 'rkbackup_');
+
+        $zip = new ZipArchive();
+        $openResult = $zip->open($tmp_zip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        if ($openResult !== true) {
+            @unlink($tmp_zip);
+            flash('error', 'Could not create the backup archive. Please try again.');
+            header('Location: ' . ADMIN_URL . '/backup.php');
+            exit;
+        }
+        $zip->addFromString($sql_filename, $dumpSql());
+
+        $uploadsDir = dirname(__DIR__) . '/admin/uploads';
+        if (is_dir($uploadsDir)) {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($uploadsDir, RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $localPath = 'uploads/' . substr($file->getPathname(), strlen($uploadsDir) + 1);
+                    $zip->addFile($file->getPathname(), str_replace('\\', '/', $localPath));
+                }
             }
         }
-        if ($chunk) {
-            echo "INSERT INTO `$table` VALUES\n" . implode(",\n", $chunk) . ";\n";
+        $closed = $zip->close();
+        if (!$closed || !is_file($tmp_zip) || filesize($tmp_zip) === 0) {
+            @unlink($tmp_zip);
+            flash('error', 'The backup archive could not be finalized. Please try again.');
+            header('Location: ' . ADMIN_URL . '/backup.php');
+            exit;
         }
-        echo "\n";
+
+        // Log after the archive is actually built, not before — if ZipArchive
+        // or the dump itself failed partway, the log shouldn't claim success.
+        log_activity('db_backup', 'Downloaded full backup (database + uploads, .zip)');
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $zip_filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Content-Length: ' . filesize($tmp_zip));
+        readfile($tmp_zip);
+        unlink($tmp_zip);
+        exit;
     }
 
-    echo "SET FOREIGN_KEY_CHECKS=1;\n";
+    $sql = $dumpSql();
+
+    // Logged after the dump string is fully built (not before), so a mid-dump
+    // failure (memory/time exhaustion on a very large table) doesn't get
+    // recorded as a successful backup when nothing was actually downloaded.
+    log_activity('db_backup', 'Downloaded full database backup (.sql)');
+
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename="' . $sql_filename . '"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('Content-Length: ' . strlen($sql));
+    echo $sql;
     exit;
 }
 

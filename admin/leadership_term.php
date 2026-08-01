@@ -35,18 +35,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $img = upload_image('image', 'leadership') ?: '';
+                if (!$img && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Officer added, but the photo could not be uploaded (invalid file type or too large).');
+                }
                 $lm->create(
                     $term_id, $full_name, '',
                     trim($_POST['description'] ?? ''),
                     $img,
                     (int) ($_POST['display_order'] ?? 0),
                     isset($_POST['is_active']) ? 1 : 0,
-                    trim($_POST['linkedin_url'] ?? ''),
-                    trim($_POST['instagram_url'] ?? ''),
+                    clean_url($_POST['linkedin_url'] ?? ''),
+                    clean_url($_POST['instagram_url'] ?? ''),
                     $role_id
                 );
                 log_activity('add_leadership_member', "Added officer $full_name to term {$term['term_label']}");
-                flash('success', 'Officer added.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Officer added.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not add officer.');
             }
@@ -69,19 +72,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $oldImg = $record['photo_path'] ?? '';
                     $img    = upload_image('image', 'leadership') ?: $oldImg;
+                    if ($img === $oldImg && !empty($_FILES['image']['name'])) {
+                        flash('error', 'Officer updated, but the new photo could not be uploaded (invalid file type or too large).');
+                    }
                     $lm->update(
                         $id, $full_name, '',
                         trim($_POST['description'] ?? ''),
                         $img,
                         (int) ($_POST['display_order'] ?? 0),
                         isset($_POST['is_active']) ? 1 : 0,
-                        trim($_POST['linkedin_url'] ?? ''),
-                        trim($_POST['instagram_url'] ?? ''),
+                        clean_url($_POST['linkedin_url'] ?? ''),
+                        clean_url($_POST['instagram_url'] ?? ''),
                         $role_id
                     );
                     if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
                     log_activity('edit_leadership_member', "Edited officer ID $id: $full_name");
-                    flash('success', 'Officer updated.');
+                    if (!isset($_SESSION['flash'])) flash('success', 'Officer updated.');
                 }
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not update officer.');

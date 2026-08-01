@@ -22,9 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
-        $paths = upload_multi_images('images', 'leadership_term_photos');
-        foreach ($paths as $p) {
-            $photo_obj->create($term_id, $p);
+        $paths      = upload_multi_images('images', 'leadership_term_photos');
+        $next_order = count($photo_obj->getByTerm($term_id));
+        foreach ($paths as $i => $p) {
+            $photo_obj->create($term_id, $p, $next_order + $i);
         }
         if ($paths) {
             log_activity('add_leadership_term_photos', count($paths) . ' photo(s) added to term: ' . $term['term_label']);

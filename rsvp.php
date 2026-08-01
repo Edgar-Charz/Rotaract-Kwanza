@@ -58,18 +58,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $event) {
           $member = (new Member($conn))->findByEmail($email);
           $member_id = $member ? (int) $member['id'] : null;
 
-          $rsvp_obj->create($id, $name, $email, $phone, $guests, $notes, $member_id, $guest_names);
+          $new_rsvp_id = $rsvp_obj->create($id, $name, $email, $phone, $guests, $notes, $member_id, $guest_names);
+          $cancel_token = $rsvp_obj->findById($new_rsvp_id)['cancel_token'] ?? '';
+          $cancel_url = $cancel_token ? site_origin() . '/cancel_rsvp.php?token=' . urlencode($cancel_token) : '';
 
           // Send confirmation email (non-fatal)
           try {
             require_once __DIR__ . '/classes/Mailer.php';
-            Mailer::fromSettings($conn)->rsvpConfirmation($email, $name, $event, (bool) $member);
+            Mailer::fromSettings($conn)->rsvpConfirmation($email, $name, $event, (bool) $member, $cancel_url);
           } catch (Throwable $e) {
           }
 
           // Carried across the redirect so the confirmation page can show a
-          // members-only note or a "join the club" nudge as appropriate.
-          $_SESSION['flash_is_member'] = (bool) $member;
+          // members-only note, a "join the club" nudge, and cancel/calendar
+          // links as appropriate.
+          $_SESSION['flash_is_member']   = (bool) $member;
+          $_SESSION['flash_cancel_token'] = $cancel_token;
 
           // Redirect (PRG) so refreshing the confirmation page doesn't resubmit the form
           header('Location: rsvp.php?id=' . $id . '&success=1');
@@ -100,6 +104,9 @@ if (isset($_SESSION['flash_error'])) {
 }
 $was_member = $_SESSION['flash_is_member'] ?? false;
 unset($_SESSION['flash_is_member']);
+$cancel_token = $_SESSION['flash_cancel_token'] ?? '';
+unset($_SESSION['flash_cancel_token']);
+$ics_href = ($success && $event) ? build_ics_data_uri($event['title'], $event['description'] ?? '', $event['location'] ?? '', $event['event_date'], $event['event_time'] ?? '') : '';
 
 $page_title = $event ? site_title($conn, 'RSVP — ' . $event['title']) : site_title($conn, 'RSVP');
 $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Club of Kwanza.' : 'This event may have ended or the link is incorrect.';
@@ -109,136 +116,6 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
 
 <head>
   <?php require __DIR__ . '/includes/public_head.php'; ?>
-  <style>
-    .rsvp-wrap {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 80px 20px 40px;
-      background: var(--surface-bg, #fff5f9);
-    }
-
-    .rsvp-card {
-      background: #fff;
-      border-radius: 20px;
-      padding: 40px;
-      max-width: 520px;
-      width: 100%;
-      box-shadow: 0 8px 40px rgba(192, 57, 107, 0.12);
-    }
-
-    .rsvp-event-header {
-      background: linear-gradient(135deg, var(--pink-600), var(--pink-900));
-      border-radius: 12px;
-      padding: 24px;
-      color: #fff;
-      margin-bottom: 28px;
-    }
-
-    .rsvp-event-header h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 0 0 8px;
-    }
-
-    .rsvp-meta {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      font-size: 13px;
-      opacity: .85;
-      margin-top: 10px;
-    }
-
-    .rsvp-meta span {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .rsvp-form .form-group {
-      margin-bottom: 16px;
-    }
-
-    .rsvp-form label {
-      display: block;
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 5px;
-      color: #2d3436;
-    }
-
-    .rsvp-form input,
-    .rsvp-form select,
-    .rsvp-form textarea {
-      width: 100%;
-      padding: 10px 13px;
-      border: 1.5px solid #e0e4ef;
-      border-radius: 8px;
-      font-size: 13.5px;
-      font-family: inherit;
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .rsvp-form input:focus,
-    .rsvp-form select:focus,
-    .rsvp-form textarea:focus {
-      border-color: var(--pink-600);
-    }
-
-    .rsvp-form .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .btn-rsvp {
-      width: 100%;
-      padding: 13px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--pink-600), var(--pink-800));
-      color: #fff;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      margin-top: 4px;
-      transition: opacity .2s;
-    }
-
-    .btn-rsvp:hover {
-      opacity: .9;
-    }
-
-    .success-box {
-      text-align: center;
-      padding: 20px 0;
-    }
-
-    .success-box svg {
-      margin-bottom: 14px;
-    }
-
-    .success-box h3 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.8rem;
-      margin-bottom: 8px;
-    }
-
-    .alert-err {
-      background: #fde8e8;
-      border: 1px solid #f5b8be;
-      color: #9b2335;
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 13.5px;
-    }
-  </style>
 </head>
 
 <body>
@@ -269,6 +146,20 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
           <?php if ($event['location']): ?>
             <p style="color:#636e72;font-size:13px;margin-top:4px">&#128205; <?= e($event['location']) ?></p>
           <?php endif; ?>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px">
+            <?php if ($ics_href): ?>
+              <a href="<?= e($ics_href) ?>" download="<?= e(preg_replace('/[^a-z0-9]+/i', '-', $event['title'])) ?>.ics"
+                style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;background:var(--pink-50);border:1.5px solid var(--pink-200);color:var(--pink-800);font-size:13px;font-weight:600;text-decoration:none">
+                &#128197; Add to Calendar
+              </a>
+            <?php endif; ?>
+            <?php if ($cancel_token): ?>
+              <a href="cancel_rsvp.php?token=<?= e($cancel_token) ?>"
+                style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;background:#fdf0f5;border:1.5px solid #f5d5e3;color:#9b2335;font-size:13px;font-weight:600;text-decoration:none">
+                Cancel RSVP
+              </a>
+            <?php endif; ?>
+          </div>
           <?php if (!$was_member): ?>
             <div style="background:#fdf0f5;border-radius:10px;padding:16px 20px;margin-top:20px;text-align:left">
               <p style="font-weight:700;color:#2d3436;margin-bottom:4px">Enjoyed being here?</p>

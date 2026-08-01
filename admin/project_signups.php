@@ -15,20 +15,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action     = $_POST['action'] ?? '';
 
     if ($action === 'delete') {
-        $signup_obj->delete((int)$_POST['id']);
-        log_activity('delete_project_signup', "Deleted project sign-up ID " . (int)$_POST['id']);
-        flash('success', 'Sign-up removed.');
+        $id     = (int)$_POST['id'];
+        $record = $signup_obj->findById($id);
+        if (!$record || ($project_id && (int)$record['project_id'] !== $project_id)) {
+            flash('error', 'Sign-up not found.');
+        } else {
+            $signup_obj->delete($id);
+            log_activity('delete_project_signup', "Deleted project sign-up ID $id");
+            flash('success', 'Sign-up removed.');
+        }
     }
 
     if ($action === 'contacted') {
-        $contacted = (int)(($_POST['contacted'] ?? 0) == '1');
-        $signup_obj->markContacted((int)$_POST['id'], $contacted);
-        flash('success', $contacted ? 'Marked as contacted.' : 'Marked as not contacted.');
+        $id     = (int)$_POST['id'];
+        $record = $signup_obj->findById($id);
+        if (!$record || ($project_id && (int)$record['project_id'] !== $project_id)) {
+            flash('error', 'Sign-up not found.');
+        } else {
+            $contacted = (int)(($_POST['contacted'] ?? 0) == '1');
+            $signup_obj->markContacted($id, $contacted);
+            flash('success', $contacted ? 'Marked as contacted.' : 'Marked as not contacted.');
+        }
     }
 
     if ($action === 'bulk_contacted') {
-        $ids   = array_map('intval', $_POST['ids'] ?? []);
-        $count = $signup_obj->markContactedBatch($ids, 1);
+        $ids = array_map('intval', $_POST['ids'] ?? []);
+        if ($project_id) {
+            $ids = array_values(array_filter($ids, function ($sid) use ($signup_obj, $project_id) {
+                $record = $signup_obj->findById($sid);
+                return $record && (int)$record['project_id'] === $project_id;
+            }));
+        }
+        $count = $ids ? $signup_obj->markContactedBatch($ids, 1) : 0;
         log_activity('bulk_contact_project_signups', "Bulk marked $count project sign-up(s) as contacted");
         flash('success', "$count sign-up(s) marked as contacted.");
     }
@@ -118,6 +136,7 @@ include __DIR__ . '/includes/header.php';
         </span>
         <div class="flex align-center gap-2">
           <span class="text-muted" style="font-size:13px"><?= count($signups) ?> sign-up<?= count($signups) !== 1 ? 's' : '' ?></span>
+          <a href="export_project_signups.php?project=<?= $project_id ?>" class="btn btn-sm btn-secondary">Export CSV</a>
           <?php if ($project_id && has_role('editor')): ?>
           <button class="btn btn-sm btn-primary" onclick="openModal('add-signup-modal')">+ Add Sign-Up</button>
           <?php endif; ?>

@@ -17,22 +17,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_type = in_array($_POST['type'] ?? '', $valid_types, true) ? $_POST['type'] : 'gallery';
 
     if ($action === 'add') {
-        $cat->create(
-            $post_type, trim($_POST['name']),
-            (int)($_POST['display_order'] ?? 0), isset($_POST['is_active']) ? 1 : 0
-        );
-        log_activity('add_category', "Added $post_type category: " . trim($_POST['name']));
-        flash('success', 'Category added.');
+        try {
+            $cat->create(
+                $post_type, trim($_POST['name']),
+                (int)($_POST['display_order'] ?? 0), isset($_POST['is_active']) ? 1 : 0
+            );
+            log_activity('add_category', "Added $post_type category: " . trim($_POST['name']));
+            flash('success', 'Category added.');
+        } catch (mysqli_sql_exception $e) {
+            flash('error', $e->getCode() == 1062 ? 'A category with that name already exists.' : 'Could not add category.');
+        }
     }
 
     if ($action === 'edit') {
         $id = (int)$_POST['id'];
-        $cat->update(
-            $id, trim($_POST['name']),
-            (int)($_POST['display_order'] ?? 0), isset($_POST['is_active']) ? 1 : 0
-        );
-        log_activity('edit_category', "Edited category ID $id: " . trim($_POST['name']));
-        flash('success', 'Category updated.');
+        try {
+            $cat->update(
+                $id, trim($_POST['name']),
+                (int)($_POST['display_order'] ?? 0), isset($_POST['is_active']) ? 1 : 0
+            );
+            log_activity('edit_category', "Edited category ID $id: " . trim($_POST['name']));
+            flash('success', 'Category updated.');
+        } catch (mysqli_sql_exception $e) {
+            flash('error', $e->getCode() == 1062 ? 'A category with that name already exists.' : 'Could not update category.');
+        }
     }
 
     if ($action === 'delete') {

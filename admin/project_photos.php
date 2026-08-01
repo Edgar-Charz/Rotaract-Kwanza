@@ -24,8 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $paths    = upload_multi_images('images', 'project_photos');
         $captions = $_POST['captions'] ?? [];
+        $next_order = $photo_obj->countByProject($project_id);
         foreach ($paths as $i => $p) {
-            $photo_obj->create($project_id, $p, 0, trim($captions[$i] ?? ''));
+            $photo_obj->create($project_id, $p, $next_order + $i, trim($captions[$i] ?? ''));
         }
         if ($paths) {
             log_activity('add_project_photos', count($paths) . ' photo(s) added to project: ' . $project['title']);

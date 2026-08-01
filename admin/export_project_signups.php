@@ -21,14 +21,6 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-function csv_safe($value): string {
-    $value = (string) $value;
-    if ($value !== '' && in_array($value[0], ['=', '+', '-', '@'], true)) {
-        return "'" . $value;
-    }
-    return $value;
-}
-
 $out = fopen('php://output', 'w');
 fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
 

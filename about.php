@@ -296,6 +296,8 @@ if ($about_image)
           <a href="join.php" class="btn-submit"
             style="display:inline-block; margin-right:1rem; text-decoration: none;">Join Us
             &rarr;</a>
+          <a href="donate.php" class="btn-submit"
+            style="display:inline-block;background:transparent;border:2px solid var(--pink-700);color:var(--pink-700); text-decoration: none; margin-right:1rem;">Donate</a>
           <a href="contact.php" class="btn-submit"
             style="display:inline-block;background:transparent;border:2px solid var(--pink-700);color:var(--pink-700); text-decoration: none;">Contact
             Us</a>

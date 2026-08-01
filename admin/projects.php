@@ -20,17 +20,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $img        = upload_image('image', 'projects') ?: '';
+                if (!$img && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Project added, but the image could not be uploaded (invalid file type or too large).');
+                }
                 $start_date = trim($_POST['start_date'] ?? '') ?: null;
                 $end_date   = trim($_POST['end_date'] ?? '') ?: null;
                 $proj->create(
                     $title, trim($_POST['description']), trim($_POST['impact_stat']),
                     trim($_POST['impact_label']), trim($_POST['icon_type']) ?: 'heart',
                     $_POST['status'] ?? 'active', isset($_POST['is_featured']) ? 1 : 0, $img,
-                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? ''),
+                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''),
                     $start_date, $end_date
                 );
                 log_activity('add_project', "Added project: $title");
-                flash('success', 'Project added.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Project added.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not add project.');
             }
@@ -46,6 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $oldImg     = $proj->getImagePathById($id);
                 $img        = upload_image('image', 'projects') ?: $oldImg;
+                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Project updated, but the new image could not be uploaded (invalid file type or too large).');
+                }
                 $start_date = trim($_POST['start_date'] ?? '') ?: null;
                 $end_date   = trim($_POST['end_date'] ?? '') ?: null;
                 $proj->update(
@@ -53,12 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $title, trim($_POST['description']), trim($_POST['impact_stat']),
                     trim($_POST['impact_label']), trim($_POST['icon_type']) ?: 'heart',
                     $_POST['status'], isset($_POST['is_featured']) ? 1 : 0, $img,
-                    trim($_POST['instagram_url'] ?? ''), trim($_POST['tiktok_url'] ?? ''),
+                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''),
                     $start_date, $end_date
                 );
                 if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_project', "Edited project ID $id: $title");
-                flash('success', 'Project updated.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Project updated.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not update project.');
             }

@@ -312,6 +312,7 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
                 <?php endif; ?>
               </div>
             <?php endif; ?>
+            <?= render_share_buttons(current_page_url(), $event['title']) ?>
           </div>
         </div>
 

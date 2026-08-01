@@ -12,9 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
-        $paths = upload_multi_images('images', 'team_photos');
-        foreach ($paths as $p) {
-            $photo_obj->create($p);
+        $paths      = upload_multi_images('images', 'team_photos');
+        $next_order = count($photo_obj->getAll());
+        foreach ($paths as $i => $p) {
+            $photo_obj->create($p, $next_order + $i);
         }
         if ($paths) {
             log_activity('add_team_photos', count($paths) . ' current-team photo(s) uploaded');

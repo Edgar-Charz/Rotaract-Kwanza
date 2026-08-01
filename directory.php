@@ -242,7 +242,7 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
           <div class="dir-card">
             <?php if ($member['photo_path']): ?>
               <div class="dir-avatar dir-avatar-photo">
-                <img src="<?= e(img_url($member['photo_path'])) ?>" alt="<?= e($initials) ?>"
+                <img src="<?= e(img_url($member['photo_path'])) ?>" alt="<?= e($member['first_name'] . ' ' . $member['last_name']) ?>"
                   style="width:100%;height:100%;object-fit:cover;border-radius:50%">
               </div>
             <?php else: ?>

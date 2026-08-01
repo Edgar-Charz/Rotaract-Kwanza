@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
+require_role('editor');
 
 $page_title = 'Reports & Analytics';
 
@@ -116,7 +117,7 @@ include __DIR__ . '/includes/header.php';
       <a href="reports.php" class="btn btn-sm btn-secondary">Reset</a>
     <?php endif; ?>
   </form>
-  <a href="export_report.php" class="btn btn-sm btn-secondary">Export Report (CSV)</a>
+  <a href="export_report.php?from=<?= urlencode($from) ?>&to=<?= urlencode($to) ?>" class="btn btn-sm btn-secondary">Export Report (CSV)</a>
 </div>
 
 <!-- KPI row -->

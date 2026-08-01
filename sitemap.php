@@ -37,6 +37,7 @@ $add('news.php', 'daily', '0.7');
 $add('directory.php', 'weekly', '0.5');
 $add('join.php', 'monthly', '0.8');
 $add('contact.php', 'monthly', '0.6');
+$add('donate.php', 'monthly', '0.7');
 
 foreach ((new Project($conn))->getAll() as $p) {
     $add('project.php?id=' . $p['id'], 'monthly', '0.6', $p['updated_at'] ?? $p['created_at'] ?? null);

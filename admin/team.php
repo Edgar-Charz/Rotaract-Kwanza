@@ -24,14 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $img = upload_image('image', 'team') ?: '';
+                if (!$img && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Team member added, but the photo could not be uploaded (invalid file type or too large).');
+                }
                 $tm->create(
                     $full_name, $role_id, trim($_POST['description']),
                     $img, trim($_POST['email']), (int)($_POST['display_order'] ?? 0),
                     isset($_POST['is_active']) ? 1 : 0,
-                    trim($_POST['term'] ?? ''), trim($_POST['linkedin_url'] ?? ''), trim($_POST['instagram_url'] ?? '')
+                    trim($_POST['term'] ?? ''), clean_url($_POST['linkedin_url'] ?? ''), clean_url($_POST['instagram_url'] ?? '')
                 );
                 log_activity('add_team', "Added team member: $full_name");
-                flash('success', 'Team member added.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Team member added.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not add team member.');
             }
@@ -50,16 +53,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $oldImg = $tm->getImagePathById($id);
                 $img    = upload_image('image', 'team') ?: $oldImg;
+                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
+                    flash('error', 'Team member updated, but the new photo could not be uploaded (invalid file type or too large).');
+                }
                 $tm->update(
                     $id,
                     $full_name, $role_id, trim($_POST['description']),
                     $img, trim($_POST['email']), (int)($_POST['display_order'] ?? 0),
                     isset($_POST['is_active']) ? 1 : 0,
-                    trim($_POST['term'] ?? ''), trim($_POST['linkedin_url'] ?? ''), trim($_POST['instagram_url'] ?? '')
+                    trim($_POST['term'] ?? ''), clean_url($_POST['linkedin_url'] ?? ''), clean_url($_POST['instagram_url'] ?? '')
                 );
                 if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_team', "Edited team member ID $id: $full_name");
-                flash('success', 'Team member updated.');
+                if (!isset($_SESSION['flash'])) flash('success', 'Team member updated.');
             } catch (mysqli_sql_exception $e) {
                 flash('error', 'Could not update team member.');
             }
@@ -162,7 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $ys = (int) ($_POST['new_term_year_start'] ?? 0) ?: null;
                 $ye = (int) ($_POST['new_term_year_end'] ?? 0) ?: null;
-                $term_id = (new LeadershipTerm($conn))->create($new_label, $ys, $ye, '', '', 0, 1);
+                try {
+                    $term_id = (new LeadershipTerm($conn))->create($new_label, $ys, $ye, '', '', 0, 1);
+                } catch (mysqli_sql_exception $e) {
+                    $term_id = 0;
+                    flash('error', 'Could not create the new term.');
+                }
             }
             if ($term_id > 0) {
                 $lm    = new LeadershipMember($conn);
@@ -181,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 log_activity('bulk_archive_team', "Bulk archived $count team member(s) to leadership history (term ID $term_id)");
                 flash('success', "$count team member(s) archived to Leadership History.");
-            } else {
+            } elseif (!isset($_SESSION['flash'])) {
                 flash('error', 'Please select or create a term.');
             }
         }
@@ -203,7 +214,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $ys = (int) ($_POST['new_term_year_start'] ?? 0) ?: null;
                 $ye = (int) ($_POST['new_term_year_end'] ?? 0) ?: null;
-                $term_id = (new LeadershipTerm($conn))->create($new_label, $ys, $ye, '', '', 0, 1);
+                try {
+                    $term_id = (new LeadershipTerm($conn))->create($new_label, $ys, $ye, '', '', 0, 1);
+                } catch (mysqli_sql_exception $e) {
+                    $term_id = 0;
+                    flash('error', 'Could not create the new term.');
+                }
             }
             if ($term_id > 0) {
                 $role        = trim($_POST['role'] ?? '') ?: $member['role'];
@@ -221,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 log_activity('archive_team_member', "Archived {$member['full_name']} to leadership history (term ID $term_id)");
                 flash('success', "{$member['full_name']} archived to Leadership History.");
-            } else {
+            } elseif (!isset($_SESSION['flash'])) {
                 flash('error', 'Please select or create a term.');
             }
         }

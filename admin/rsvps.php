@@ -15,21 +15,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action   = $_POST['action'] ?? '';
 
     if ($action === 'delete') {
-        $rsvp_obj->delete((int)$_POST['id']);
-        log_activity('delete_rsvp', "Deleted RSVP ID " . (int)$_POST['id']);
-        flash('success', 'RSVP removed.');
+        $id     = (int)$_POST['id'];
+        $record = $rsvp_obj->findById($id);
+        if (!$record || ($event_id && (int)$record['event_id'] !== $event_id)) {
+            flash('error', 'RSVP not found.');
+        } else {
+            $rsvp_obj->delete($id);
+            log_activity('delete_rsvp', "Deleted RSVP ID $id");
+            flash('success', 'RSVP removed.');
+        }
     }
 
     if ($action === 'attend') {
-        $attended = (int)(($_POST['attended'] ?? 0) == '1');
-        $rsvp_obj->markAttended((int)$_POST['id'], $attended);
-        flash('success', $attended ? 'Marked as present.' : 'Marked as not present.');
+        $id     = (int)$_POST['id'];
+        $record = $rsvp_obj->findById($id);
+        if (!$record || ($event_id && (int)$record['event_id'] !== $event_id)) {
+            flash('error', 'RSVP not found.');
+        } else {
+            $attended = (int)(($_POST['attended'] ?? 0) == '1');
+            $rsvp_obj->markAttended($id, $attended);
+            flash('success', $attended ? 'Marked as present.' : 'Marked as not present.');
+        }
     }
 
     if ($action === 'bulk_attend') {
         $ids   = array_map('intval', $_POST['ids'] ?? []);
         $count = 0;
         foreach ($ids as $rid) {
+            $record = $rsvp_obj->findById($rid);
+            if (!$record || ($event_id && (int)$record['event_id'] !== $event_id)) continue;
             $rsvp_obj->markAttended($rid, 1);
             $count++;
         }
@@ -42,8 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name         = trim($_POST['name'] ?? '');
         $email        = trim($_POST['email'] ?? '');
         $phone        = trim($_POST['phone'] ?? '');
-        $guests       = max(1, (int) ($_POST['guests'] ?? 1));
+        $guests       = max(1, min(10, (int) ($_POST['guests'] ?? 1)));
         $notes        = trim($_POST['notes'] ?? '');
+        $guest_names  = trim($_POST['guest_names'] ?? '');
 
         if (!$add_event_id || !$name || !$email) {
             flash('error', 'Event, name, and email are required.');
@@ -57,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($rsvp_obj->alreadyRegistered($add_event_id, $email)) {
                 flash('error', "This email has already RSVP'd to this event.");
             } else {
-                $rsvp_obj->create($add_event_id, $name, $email, $phone, $guests, $notes);
+                $rsvp_obj->create($add_event_id, $name, $email, $phone, $guests, $notes, null, $guest_names);
                 log_activity('add_rsvp', "Manually added RSVP for $name to event ID $add_event_id");
                 flash('success', 'RSVP added.');
             }
@@ -69,17 +84,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name   = trim($_POST['name'] ?? '');
         $email  = trim($_POST['email'] ?? '');
         $phone  = trim($_POST['phone'] ?? '');
-        $guests = max(1, (int) ($_POST['guests'] ?? 1));
+        $guests = max(1, min(10, (int) ($_POST['guests'] ?? 1)));
         $notes  = trim($_POST['notes'] ?? '');
+        $guest_names = trim($_POST['guest_names'] ?? '');
+        $existing = $rsvp_obj->findById($id);
 
-        if (!$name || !$email) {
+        if (!$existing) {
+            flash('error', 'RSVP not found.');
+        } elseif (!$name || !$email) {
             flash('error', 'Name and email are required.');
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             flash('error', 'Invalid email address.');
         } else {
-            $rsvp_obj->update($id, $name, $email, $phone, $guests, $notes);
-            log_activity('edit_rsvp', "Edited RSVP ID $id");
-            flash('success', 'RSVP updated.');
+            $ev = (new Event($conn))->findById((int)$existing['event_id']);
+            $guests_used_others = ($ev && $ev['capacity'] !== null)
+                ? $rsvp_obj->getGuestCount((int)$existing['event_id']) - (int)$existing['guests']
+                : 0;
+            if ($ev && $ev['capacity'] !== null && ($guests_used_others + $guests) > (int) $ev['capacity']) {
+                flash('error', 'Not enough spots left for this event.');
+            } else {
+                $rsvp_obj->update($id, $name, $email, $phone, $guests, $notes, $guest_names);
+                log_activity('edit_rsvp', "Edited RSVP ID $id");
+                flash('success', 'RSVP updated.');
+            }
         }
     }
 
@@ -195,7 +222,7 @@ include __DIR__ . '/includes/header.php';
             <tr>
               <?php if ($event_id && has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
               <?php if (!$event_id): ?><th>Event</th><?php endif; ?>
-              <th>Name</th><th>Email</th><th>Phone</th><th>Guests</th><th>Notes</th>
+              <th>Name</th><th>Email</th><th>Phone</th><th>Guests</th><th>Guest Names</th><th>Notes</th>
               <?php if ($event_id): ?><th>Attended</th><?php endif; ?>
               <th>Registered</th><th></th>
             </tr>
@@ -209,6 +236,7 @@ include __DIR__ . '/includes/header.php';
               <td><?= h($r['email']) ?></td>
               <td class="text-muted"><?= h($r['phone'] ?? '—') ?></td>
               <td><?= $r['guests'] ?></td>
+              <td class="text-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= h($r['guest_names'] ?? '') ?>"><?= h($r['guest_names'] ?? '') ?: '—' ?></td>
               <td class="text-muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= h($r['notes'] ?? '—') ?></td>
               <?php if ($event_id): ?>
               <td>
@@ -245,7 +273,7 @@ include __DIR__ . '/includes/header.php';
               </td>
             </tr>
             <?php endforeach; else: ?>
-            <tr><td colspan="10" class="text-muted" style="text-align:center;padding:30px">No RSVPs found.</td></tr>
+            <tr><td colspan="11" class="text-muted" style="text-align:center;padding:30px">No RSVPs found.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
@@ -278,6 +306,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>Phone</label><input type="tel" name="phone"></div>
           <div class="form-group"><label>Guests</label><input type="number" name="guests" value="1" min="1" max="10"></div>
         </div>
+        <div class="form-group"><label>Guest Names <span class="text-muted" style="font-weight:400">(if bringing others)</span></label><input type="text" name="guest_names" placeholder="e.g. Jane Doe, John Doe"></div>
         <div class="form-group"><label>Notes</label><textarea name="notes" style="min-height:70px"></textarea></div>
       </div>
       <div class="modal-footer">
@@ -308,6 +337,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>Phone</label><input type="tel" name="phone" id="er_phone"></div>
           <div class="form-group"><label>Guests</label><input type="number" name="guests" id="er_guests" min="1" max="10"></div>
         </div>
+        <div class="form-group"><label>Guest Names <span class="text-muted" style="font-weight:400">(if bringing others)</span></label><input type="text" name="guest_names" id="er_guest_names" placeholder="e.g. Jane Doe, John Doe"></div>
         <div class="form-group"><label>Notes</label><textarea name="notes" id="er_notes" style="min-height:70px"></textarea></div>
       </div>
       <div class="modal-footer">
@@ -365,6 +395,7 @@ function openEditRsvpModal(r) {
   document.getElementById('er_email').value  = r.email;
   document.getElementById('er_phone').value  = r.phone || '';
   document.getElementById('er_guests').value = r.guests || 1;
+  document.getElementById('er_guest_names').value = r.guest_names || '';
   document.getElementById('er_notes').value  = r.notes || '';
   openModal('edit-rsvp-modal');
 }

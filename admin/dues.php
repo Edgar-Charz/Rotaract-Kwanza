@@ -13,20 +13,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save') {
         $member_id    = (int)$_POST['member_id'];
-        $year         = (int)$_POST['year'];
-        $amount_due   = (float)$_POST['amount_due'];
-        $amount_paid  = (float)$_POST['amount_paid'];
+        $year         = max(2020, min((int)date('Y') + 1, (int)$_POST['year']));
+        $amount_due   = max(0, (float)$_POST['amount_due']);
+        $amount_paid  = max(0, (float)$_POST['amount_paid']);
         $payment_date = $_POST['payment_date'] ?: '';
         $notes        = trim($_POST['notes']);
 
         $status = 'unpaid';
-        if ($amount_paid >= $amount_due && $amount_due > 0) $status = 'paid';
+        if ($amount_due > 0 && $amount_paid >= $amount_due) $status = 'paid';
         elseif ($amount_paid > 0) $status = 'partial';
 
-        (new MemberDues($conn))->save($member_id, $year, $amount_due, $amount_paid, $payment_date, $notes, $status);
-        $name = (new Member($conn))->getFullName($member_id);
-        log_activity('update_dues', "Updated dues for $name — $year — $status");
-        flash('success', 'Dues record saved.');
+        try {
+            (new MemberDues($conn))->save($member_id, $year, $amount_due, $amount_paid, $payment_date, $notes, $status);
+            $name = (new Member($conn))->getFullName($member_id);
+            log_activity('update_dues', "Updated dues for $name — $year — $status");
+            flash('success', 'Dues record saved.');
+        } catch (mysqli_sql_exception $e) {
+            flash('error', 'Could not save dues record.');
+        }
     }
 
     if ($action === 'delete') {
