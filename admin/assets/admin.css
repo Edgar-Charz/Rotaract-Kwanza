@@ -422,11 +422,11 @@ table {
 
 thead th {
   background: #f7f8fc;
-  padding: 11px 14px;
+  padding: 12px 14px;
   text-align: left;
   font-weight: 700;
-  color: var(--text-muted);
-  font-size: 11px;
+  color: var(--text);
+  font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid var(--border);
@@ -437,12 +437,62 @@ tbody td {
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
+/* Only columns that genuinely hold long free text (descriptions, notes,
+   messages) should wrap; everything else stays single-line so a handful of
+   action buttons can never force a row to balloon in height. */
+tbody td.wrap { white-space: normal; }
+
+/* The "primary" column (member/event/project name — always marked .fw-bold)
+   has no built-in length limit like the notes/description columns do. Under
+   the new nowrap default an unusually long one would stretch the whole
+   table sideways instead of truncating; cap and ellipsize it like the rest. */
+tbody td.fw-bold {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+tbody tr:nth-child(even) { background: #fafbfd; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: #f9faff; }
 
-.table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+/* nowrap (not wrap) is the fix for the tall-row bug: previously, once a row
+   had more action buttons than the squeezed Actions column could fit
+   side-by-side, they stacked vertically and inflated every cell in that row
+   to match. Now the table scrolls horizontally (.table-wrap) instead. */
+.table-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+/* Neutral, uniform icon buttons for row actions — colored fills (btn-info,
+   btn-danger, etc.) read as noisy when there are 4-6 of them in a row; a
+   shared light/bordered look with a tinted icon on hover reads calmer while
+   still keeping destructive actions visually distinct. */
+.table-actions .btn-icon,
+.gallery-item-actions .btn-icon {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+}
+.table-actions .btn-icon:hover,
+.gallery-item-actions .btn-icon:hover {
+  background: var(--content-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.table-actions .btn-icon.btn-danger,
+.gallery-item-actions .btn-icon.btn-danger {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  color: var(--danger);
+}
+.table-actions .btn-icon.btn-danger:hover,
+.gallery-item-actions .btn-icon.btn-danger:hover {
+  background: #fde8e8;
+  border-color: var(--danger);
+  color: var(--danger);
+}
 
 /* ── Badges ──────────────────────────────── */
 .badge {

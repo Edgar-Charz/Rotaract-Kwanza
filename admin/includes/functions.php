@@ -85,6 +85,17 @@ function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
+// Rejects any URL that isn't a well-formed http(s) link, so a stored value can
+// never carry a javascript:/data:/vbscript: scheme through to a rendered <a href>.
+function clean_url(string $url): string {
+    $url = trim($url);
+    if ($url === '') return '';
+    $scheme = parse_url($url, PHP_URL_SCHEME);
+    if ($scheme === null || $scheme === false) return '';
+    if (!in_array(strtolower($scheme), ['http', 'https'], true)) return '';
+    return filter_var($url, FILTER_VALIDATE_URL) ? $url : '';
+}
+
 // ── File upload ───────────────────────────────────────────────────────────────
 
 function upload_image(string $input_name, string $subdir): string|false {
@@ -298,9 +309,15 @@ function active_nav(string $page): string {
     return basename($_SERVER['PHP_SELF']) === $page ? 'active' : '';
 }
 
+// Cached per request: without this, a page like settings.php (~50 keys) or
+// auth.php's timeout checks would issue one query per key on every load.
 function get_setting(string $key, string $default = ''): string {
     global $conn;
-    return (new SiteSettings($conn))->get($key, $default);
+    static $cache = null;
+    if ($cache === null) {
+        $cache = (new SiteSettings($conn))->getAll();
+    }
+    return array_key_exists($key, $cache) ? $cache[$key] : $default;
 }
 
 function log_activity(string $action, string $description): void {
@@ -314,6 +331,21 @@ function log_activity(string $action, string $description): void {
             substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
         );
     } catch (Throwable $e) {}
+}
+
+// ── CSV export ────────────────────────────────────────────────────────────────
+
+/**
+ * Prefix values that a spreadsheet app would interpret as a formula
+ * (=, +, -, @) with a single quote so exported CSVs can't be used for
+ * formula-injection against whoever opens them in Excel/Sheets.
+ */
+function csv_safe($value): string {
+    $value = (string) $value;
+    if ($value !== '' && in_array($value[0], ['=', '+', '-', '@'], true)) {
+        return "'" . $value;
+    }
+    return $value;
 }
 
 function slugify(string $text): string {

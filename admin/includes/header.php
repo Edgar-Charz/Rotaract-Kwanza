@@ -20,8 +20,8 @@ $.extend($.fn.dataTable.defaults, {
   dom: '<"dt-top-bar"f>rt<"dt-bottom-bar"<"dt-bottom-left"li><"dt-bottom-right"p>>',
   language: {
     lengthMenu: 'Show per page: _MENU_',
-    info: '_START_ &ndash; _END_ of _TOTAL_ entries',
-    infoEmpty: '0 entries',
+    info: '_START_ &ndash; _END_ of _TOTAL_ items',
+    infoEmpty: '0 items',
     infoFiltered: '(filtered from _MAX_)',
     search: '',
     searchPlaceholder: 'Search...',
