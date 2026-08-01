@@ -9,7 +9,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     require_role('editor');
     if (($_POST['action'] ?? '') === 'clear') {
-        (new ActivityLog($conn))->deleteOlderThanDays((int)($_POST['days'] ?? 30));
+        $days    = (int)($_POST['days'] ?? 30);
+        $deleted = (new ActivityLog($conn))->deleteOlderThanDays($days);
+        log_activity('clear_activity_log', "Cleared $deleted log entr" . ($deleted === 1 ? 'y' : 'ies') . " older than $days day(s)");
         flash('success', 'Old log entries cleared.');
         header('Location: ' . ADMIN_URL . '/activity_log.php');
         exit;

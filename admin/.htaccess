@@ -1,0 +1,13 @@
+# Route any admin request that doesn't map to a real file or directory to
+# the admin-shell-styled 404 (not the public site's 404.php) — relative
+# RewriteRule target resolves against this .htaccess's own directory
+# (admin/), same portable trick used by the root .htaccess.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ 404.php [L]
+
+# Block direct web access to admin's own non-public include files
+# (auth.php, header.php, sidebar.php, topbar.php, footer.php, functions.php) —
+# mirrors the root .htaccess's protection of /config/, /classes/, /includes/.
+RewriteRule ^includes/ - [F,L]

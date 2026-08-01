@@ -30,7 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete') {
-        (new MemberDues($conn))->delete((int)$_POST['id']);
+        $dues_obj = new MemberDues($conn);
+        $record   = $dues_obj->findById((int)$_POST['id']);
+        $dues_obj->delete((int)$_POST['id']);
+        if ($record) {
+            $name = (new Member($conn))->getFullName((int)$record['member_id']);
+            log_activity('delete_dues', "Deleted dues record for $name — {$record['year']}");
+        }
         flash('success', 'Dues record deleted.');
     }
 
@@ -78,7 +84,7 @@ include __DIR__ . '/includes/header.php';
       <thead><tr><th>Member</th><th>Email</th><th>Amount Due</th><th>Amount Paid</th><th>Payment Date</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($members as $m): ?>
-        <tr>
+        <tr id="member-<?= $m['id'] ?>">
           <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
           <td class="text-muted"><?= h($m['email']) ?></td>
           <td><?= $m['amount_due'] ? number_format($m['amount_due'], 2) : '<span class="text-muted">—</span>' ?></td>

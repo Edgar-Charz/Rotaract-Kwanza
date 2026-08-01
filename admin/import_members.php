@@ -15,8 +15,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_role('editor');
 
     if (isset($_FILES['csv']) && $_FILES['csv']['error'] === UPLOAD_ERR_OK) {
-        $mime  = mime_content_type($_FILES['csv']['tmp_name']);
-        $valid = in_array($mime, ['text/csv','text/plain','application/csv','application/vnd.ms-excel']);
+        // finfo reads the file's actual magic bytes rather than trusting the
+        // client-supplied filename/extension — same approach as image uploads
+        // in includes/upload.php. mime_content_type() is looser and can be
+        // swayed by file content in ways finfo's MIME mode isn't.
+        $mime  = (new finfo(FILEINFO_MIME_TYPE))->file($_FILES['csv']['tmp_name']);
+        $valid = in_array($mime, ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'], true);
 
         if (!$valid) {
             flash('error', 'Please upload a valid CSV file.');
@@ -64,6 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email  = $get('email');
             $phone  = $get('phone')      ?: $get('telephone') ?: $get('mobile');
             $occ    = $get('occupation') ?: $get('job')       ?: $get('profession');
+            $year   = $get('year_of_study') ?: $get('year');
+            $bday   = $get('birthday') ?: $get('date_of_birth') ?: $get('dob');
             $why    = $get('why_join')   ?: $get('why')       ?: '';
             $status = $get('status');
             if (!in_array($status, ['pending','approved','rejected'])) $status = 'pending';
@@ -80,8 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
 
+            $bday_date = $bday !== '' ? DateTime::createFromFormat('Y-m-d', $bday) : false;
+            $bday = ($bday_date && $bday_date->format('Y-m-d') === $bday) ? $bday : null;
+
             try {
-                $m->create($first, $last, $email, $phone, $occ, $why, $status);
+                $m->create($first, $last, $email, $phone, $occ, $why, $status, '', '', '', '', '', $year, $bday);
                 $results[] = ['row' => $row_num, 'status' => 'ok', 'msg' => "Row $row_num imported: $first $last <$email>"];
                 $imported++;
             } catch (mysqli_sql_exception $e) {
@@ -120,7 +129,7 @@ include __DIR__ . '/includes/header.php';
       <div style="font-weight:700;margin-bottom:6px">CSV Format Requirements</div>
       <p>Your CSV must include a header row with at least these columns:</p>
       <code style="background:#fff;padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px">first_name, last_name, email</code>
-      <p style="margin-top:8px">Optional columns: <code>phone, occupation, why_join, status</code> (pending/approved/rejected)</p>
+      <p style="margin-top:8px">Optional columns: <code>phone, occupation, year_of_study, birthday (YYYY-MM-DD), why_join, status</code> (pending/approved/rejected)</p>
       <p style="margin-top:8px">Rows with duplicate emails are skipped automatically.</p>
     </div>
 
@@ -135,9 +144,9 @@ include __DIR__ . '/includes/header.php';
 
     <div style="margin-top:20px">
       <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px">Sample CSV</div>
-      <pre style="background:#f5f5f7;padding:10px;border-radius:6px;font-size:12px;overflow-x:auto">first_name,last_name,email,phone,occupation,why_join,status
-Maria,Santos,maria@example.com,+244900000001,Engineer,To serve the community,approved
-João,Silva,joao@example.com,+244900000002,Teacher,,pending</pre>
+      <pre style="background:#f5f5f7;padding:10px;border-radius:6px;font-size:12px;overflow-x:auto">first_name,last_name,email,phone,occupation,year_of_study,birthday,why_join,status
+Maria,Santos,maria@example.com,+244900000001,Computer Science,3rd Year,2002-05-14,To serve the community,approved
+João,Silva,joao@example.com,+244900000002,Medicine,2nd Year,2003-11-02,,pending</pre>
     </div>
 
     <?php else: ?>

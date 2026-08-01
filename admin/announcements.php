@@ -2,8 +2,19 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/Announcement.php';
+require_once dirname(__DIR__) . '/classes/Category.php';
 
 $page_title = 'Announcements';
+
+// Friendly labels for the categories seeded by migrate_categories.php; any
+// category an admin adds later just falls back to a title-cased slug.
+$cat_labels = [
+    'news'         => 'News',
+    'minutes'      => 'Meeting Minutes',
+    'notice'       => 'Notice',
+    'announcement' => 'Announcement',
+];
+$form_categories = (new Category($conn))->getActive('announcement');
 
 // Must match the whitelist news.php uses when rendering — sanitizing at save
 // time means every consumer of `content` gets an already-safe value.
@@ -89,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$filter = in_array($_GET['cat'] ?? '', ['news','minutes','notice','announcement']) ? $_GET['cat'] : '';
+$filter = in_array($_GET['cat'] ?? '', array_column($form_categories, 'name'), true) ? $_GET['cat'] : '';
 $posts  = (new Announcement($conn))->getAll($filter);
 
 include __DIR__ . '/includes/header.php';
@@ -99,8 +110,8 @@ include __DIR__ . '/includes/header.php';
   <div class="card-header">
     <div class="flex align-center gap-2 flex-wrap" style="flex:1">
       <a href="?" class="btn btn-sm <?= !$filter?'btn-primary':'btn-secondary' ?>">All</a>
-      <?php foreach(['news','minutes','notice','announcement'] as $cat): ?>
-      <a href="?cat=<?= $cat ?>" class="btn btn-sm <?= $filter===$cat?'btn-primary':'btn-secondary' ?>"><?= ucfirst($cat) ?></a>
+      <?php foreach ($form_categories as $c): $cat = $c['name']; ?>
+      <a href="?cat=<?= $cat ?>" class="btn btn-sm <?= $filter===$cat?'btn-primary':'btn-secondary' ?>"><?= h($cat_labels[$cat] ?? ucfirst($cat)) ?></a>
       <?php endforeach; ?>
     </div>
     <?php if (has_role('editor')): ?>
@@ -191,10 +202,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group">
             <label>Category</label>
             <select name="category">
-              <option value="news">News</option>
-              <option value="minutes">Meeting Minutes</option>
-              <option value="notice">Notice</option>
-              <option value="announcement">Announcement</option>
+              <?php foreach ($form_categories as $c): ?><option value="<?= h($c['name']) ?>"><?= h($cat_labels[$c['name']] ?? ucfirst($c['name'])) ?></option><?php endforeach; ?>
             </select>
           </div>
           <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;padding-top:24px">
@@ -209,8 +217,17 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-group">
           <label>Cover Image (optional)</label>
-          <input type="file" name="image" accept="image/*" onchange="previewImage(this,'add-ann-prev')" style="padding:6px">
-          <img id="add-ann-prev" src="" alt="Preview">
+          <div class="image-field">
+            <label class="upload-area" for="aa_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Upload cover</strong></p>
+            </label>
+            <input type="file" id="aa_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'add-ann-prev')">
+            <div class="thumb-col">
+              <span class="thumb-col-label">Preview</span>
+              <img id="add-ann-prev" src="" alt="Preview" class="image-thumb image-thumb--wide">
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -238,10 +255,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group">
             <label>Category</label>
             <select name="category" id="ea_category">
-              <option value="news">News</option>
-              <option value="minutes">Meeting Minutes</option>
-              <option value="notice">Notice</option>
-              <option value="announcement">Announcement</option>
+              <?php foreach ($form_categories as $c): ?><option value="<?= h($c['name']) ?>"><?= h($cat_labels[$c['name']] ?? ucfirst($c['name'])) ?></option><?php endforeach; ?>
             </select>
           </div>
           <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;padding-top:24px">
@@ -256,9 +270,18 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-group">
           <label>Replace Image (optional)</label>
-          <div id="ea_img_preview" style="margin-bottom:8px"></div>
-          <input type="file" name="image" accept="image/*" onchange="previewImage(this,'edit-ann-prev')" style="padding:6px">
-          <img id="edit-ann-prev" src="" alt="Preview">
+          <div class="image-field">
+            <label class="upload-area" for="ea_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Upload cover</strong></p>
+            </label>
+            <input type="file" id="ea_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'edit-ann-prev')">
+            <div id="ea_img_preview"></div>
+            <div class="thumb-col">
+              <span class="thumb-col-label">New</span>
+              <img id="edit-ann-prev" src="" alt="Preview" class="image-thumb image-thumb--wide">
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -377,7 +400,9 @@ function openEditModal(p) {
   document.getElementById('ea_content').value  = p.content;
   document.getElementById('ea_pub').checked    = p.is_published == 1;
   const prev = document.getElementById('ea_img_preview');
-  prev.innerHTML = p.image_path ? '<img src="'+esc(p.image_path)+'" style="max-height:80px;border-radius:6px">' : '';
+  prev.innerHTML = p.image_path
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(p.image_path)+'" class="current-photo-thumb current-photo-thumb--wide"></div>'
+    : '';
   // Load content into Quill (treat as HTML if it looks like HTML, else plain text)
   if (p.content && p.content.trim().startsWith('<')) {
     editQuill.root.innerHTML = p.content;

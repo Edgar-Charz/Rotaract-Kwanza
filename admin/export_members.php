@@ -32,7 +32,7 @@ function csv_safe($value): string {
 $out = fopen('php://output', 'w');
 fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM for Excel
 
-fputcsv($out, ['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Occupation', 'Why Join', 'Status', 'Notes', 'Applied Date']);
+fputcsv($out, ['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Occupation', 'Year of Study', 'Birthday', 'Why Join', 'Status', 'Notes', 'Applied Date']);
 
 foreach ($members as $m) {
     fputcsv($out, [
@@ -42,6 +42,8 @@ foreach ($members as $m) {
         csv_safe($m['email']),
         csv_safe($m['phone'] ?? ''),
         csv_safe($m['occupation'] ?? ''),
+        csv_safe($m['year_of_study'] ?? ''),
+        $m['birthday'] ? date('d M Y', strtotime($m['birthday'])) : '',
         csv_safe($m['why_join'] ?? ''),
         $m['status'],
         csv_safe($m['notes'] ?? ''),

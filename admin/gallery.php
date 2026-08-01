@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/Gallery.php';
+require_once dirname(__DIR__) . '/classes/Category.php';
 
 $page_title = 'Gallery';
 
@@ -50,36 +51,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'toggle') {
-        $gal->toggleVisibility((int)$_POST['id']);
+        $id = (int)$_POST['id'];
+        $gal->toggleVisibility($id);
+        log_activity('toggle_gallery_visibility', "Toggled visibility for gallery photo ID $id");
         flash('success', 'Visibility updated.');
     }
 
     if ($action === 'bulk_hide' || $action === 'bulk_show') {
         $ids    = array_map('intval', $_POST['ids'] ?? []);
         $active = $action === 'bulk_show' ? 1 : 0;
-        $count  = 0;
-        foreach ($ids as $pid) {
-            $p = $gal->findById($pid);
-            if (!$p) continue;
-            $gal->update($pid, $p['title'], $p['description'] ?? '', $p['image_path'], $p['category'] ?? '', (int)$p['display_order'], $active);
-            $count++;
-        }
+        $count  = $gal->updateVisibilityBatch($ids, $active);
         log_activity('bulk_update_gallery', "Bulk set $count photo(s) " . ($active ? 'visible' : 'hidden'));
         flash('success', "$count photo(s) updated.");
     }
 
     if ($action === 'bulk_delete') {
         $ids   = array_map('intval', $_POST['ids'] ?? []);
-        $count = 0;
-        foreach ($ids as $pid) {
-            $path = $gal->getImagePathById($pid);
-            if (!$path) continue;
-            delete_image($path);
-            $gal->delete($pid);
-            $count++;
+        $paths = $gal->getImagePathsByIds($ids);
+        foreach ($paths as $path) {
+            if ($path) delete_image($path);
         }
+        $count = $gal->deleteBatch($ids);
         log_activity('bulk_delete_gallery', "Bulk deleted $count photo(s)");
         flash('success', "$count photo(s) deleted.");
+    }
+
+    if ($action === 'bulk_category') {
+        $new_category = trim($_POST['bulk_category'] ?? '');
+        $ids          = array_map('intval', $_POST['ids'] ?? []);
+        $count        = $gal->updateCategoryBatch($ids, $new_category);
+        log_activity('bulk_update_gallery_category', "Bulk set $count photo(s) category to '" . ($new_category ?: '(none)') . "'");
+        flash('success', "$count photo(s) updated.");
     }
 
     header('Location: ' . ADMIN_URL . '/gallery.php');
@@ -88,14 +90,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $gal_obj    = new Gallery($conn);
 $category   = $_GET['category'] ?? '';
+$search     = trim($_GET['q'] ?? '');
 $page       = max(1, (int)($_GET['page'] ?? 1));
 $per_page   = 24;
-$total      = $gal_obj->count($category);
+$total      = $gal_obj->count($category, $search);
 $pg         = paginate($total, $per_page, $page);
-$photos     = $gal_obj->getPage($per_page, $pg['offset'], $category);
+$photos     = $gal_obj->getPage($per_page, $pg['offset'], $category, $search);
 $categories = $gal_obj->getCategories();
+$form_categories = (new Category($conn))->getActive('gallery');
 
-$qs = fn(int $p) => '?' . http_build_query(array_filter(['category' => $category, 'page' => $p]));
+$qs = fn(int $p) => '?' . http_build_query(array_filter(['category' => $category, 'q' => $search, 'page' => $p]));
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -103,17 +107,25 @@ include __DIR__ . '/includes/header.php';
 <div class="card-header" style="background:#fff;border-radius:10px;padding:14px 20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
   <div class="flex align-center gap-2 flex-wrap">
     <span class="card-title"><?= $total ?> Photo<?= $total !== 1 ? 's':'' ?></span>
-    <a href="?" class="btn btn-sm <?= !$category ? 'btn-primary':'btn-secondary' ?>">All</a>
+    <a href="?<?= http_build_query(array_filter(['q' => $search])) ?>" class="btn btn-sm <?= !$category ? 'btn-primary':'btn-secondary' ?>">All</a>
     <?php foreach ($categories as $cat): ?>
-    <a href="?category=<?= urlencode($cat) ?>" class="btn btn-sm <?= $category===$cat ? 'btn-primary':'btn-secondary' ?>"><?= h($cat) ?></a>
+    <a href="?<?= http_build_query(array_filter(['category' => $cat, 'q' => $search])) ?>" class="btn btn-sm <?= $category===$cat ? 'btn-primary':'btn-secondary' ?>"><?= h($cat) ?></a>
     <?php endforeach; ?>
   </div>
-  <?php if (has_role('editor')): ?>
-  <button class="btn btn-primary" onclick="openModal('add-modal')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Upload Photo
-  </button>
-  <?php endif; ?>
+  <div class="flex align-center gap-2 flex-wrap">
+    <form method="GET" style="display:flex;gap:8px">
+      <?php if ($category): ?><input type="hidden" name="category" value="<?= h($category) ?>"><?php endif; ?>
+      <input type="text" name="q" value="<?= h($search) ?>" placeholder="Search title or description…" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px">
+      <button type="submit" class="btn btn-sm btn-secondary">Search</button>
+      <?php if ($search): ?><a href="?<?= http_build_query(array_filter(['category' => $category])) ?>" class="btn btn-sm btn-secondary">Clear</a><?php endif; ?>
+    </form>
+    <?php if (has_role('editor')): ?>
+    <button class="btn btn-primary" onclick="openModal('add-modal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Upload Photo
+    </button>
+    <?php endif; ?>
+  </div>
 </div>
 
 <?php if (has_role('editor')): ?>
@@ -122,14 +134,39 @@ include __DIR__ . '/includes/header.php';
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button type="button" class="btn btn-sm btn-secondary" onclick="submitGalleryBulk('bulk_show')">Show Selected</button>
     <button type="button" class="btn btn-sm btn-secondary" onclick="submitGalleryBulk('bulk_hide')">Hide Selected</button>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('bulk-category-modal')">Set Category&hellip;</button>
     <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeletePhotos()">Delete Selected</button>
   </div>
 </div>
 <form id="bulk-form" method="POST" style="display:none">
   <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" id="bulk-action-field" value="">
+  <input type="hidden" name="bulk_category" id="bulk-category-field" value="">
   <div id="bulk-ids-container"></div>
 </form>
+
+<!-- Bulk Set Category Modal -->
+<div class="modal fade" id="bulk-category-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-content" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title">Set Category for Selected</span>
+      <button class="modal-close" onclick="closeModal('bulk-category-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Category <span class="text-muted" style="font-weight:400">(leave blank to clear)</span></label>
+        <select id="bulk-category-input">
+          <option value="">None</option>
+          <?php foreach ($form_categories as $c): ?><option value="<?= h($c['name']) ?>"><?= h($c['name']) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('bulk-category-modal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="applyBulkCategory()">Apply</button>
+    </div>
+  </div>
+</div>
 <?php endif; ?>
 
 <?php if ($photos): ?>
@@ -193,7 +230,11 @@ include __DIR__ . '/includes/header.php';
 <?php else: ?>
 <div class="empty-state">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+  <?php if ($search || $category): ?>
+  <p>No photos match your search<?= $search ? ' for "' . h($search) . '"' : '' ?>.</p>
+  <?php else: ?>
   <p>No photos yet. Upload your first photo!</p>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 
@@ -210,17 +251,27 @@ include __DIR__ . '/includes/header.php';
         <input type="hidden" name="action" value="add">
         <div class="form-group mb-2">
           <label>Photo *</label>
-          <label class="upload-area" for="a_image">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <p><strong>Click to upload</strong></p>
-            <p style="font-size:11px;margin-top:4px">JPG, PNG, GIF, WEBP — max 5 MB</p>
-          </label>
-          <input type="file" id="a_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'add-gal-prev')">
-          <img id="add-gal-prev" src="" alt="Preview">
+          <div class="image-field">
+            <label class="upload-area" for="a_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Click to upload</strong></p>
+              <p style="font-size:11px;margin-top:4px">JPG, PNG, GIF, WEBP — max 5 MB</p>
+            </label>
+            <input type="file" id="a_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'add-gal-prev')">
+            <div class="thumb-col">
+              <span class="thumb-col-label">Preview</span>
+              <img id="add-gal-prev" src="" alt="Preview" class="image-thumb image-thumb--wide">
+            </div>
+          </div>
         </div>
         <div class="form-group mb-2"><label>Title *</label><input type="text" name="title" required></div>
         <div class="form-row">
-          <div class="form-group"><label>Category</label><input type="text" name="category" placeholder="e.g. Events, Service…"></div>
+          <div class="form-group"><label>Category</label>
+            <select name="category">
+              <option value="">None</option>
+              <?php foreach ($form_categories as $c): ?><option value="<?= h($c['name']) ?>"><?= h($c['name']) ?></option><?php endforeach; ?>
+            </select>
+          </div>
           <div class="form-group"><label>Display Order</label><input type="number" name="display_order" value="0" min="0"></div>
         </div>
         <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
@@ -247,13 +298,27 @@ include __DIR__ . '/includes/header.php';
         <input type="hidden" name="id" id="eg_id">
         <div class="form-group mb-2">
           <label>Replace Photo (optional)</label>
-          <div id="eg_current_img" style="margin-bottom:8px"></div>
-          <input type="file" name="image" accept="image/*" onchange="previewImage(this,'edit-gal-prev')" style="padding:6px">
-          <img id="edit-gal-prev" src="" alt="Preview">
+          <div class="image-field">
+            <label class="upload-area" for="eg_image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p><strong>Click to upload</strong></p>
+            </label>
+            <input type="file" id="eg_image" name="image" accept="image/*" style="display:none" onchange="previewImage(this,'edit-gal-prev')">
+            <div id="eg_current_img"></div>
+            <div class="thumb-col">
+              <span class="thumb-col-label">New</span>
+              <img id="edit-gal-prev" src="" alt="Preview" class="image-thumb image-thumb--wide">
+            </div>
+          </div>
         </div>
         <div class="form-group mb-2"><label>Title *</label><input type="text" name="title" id="eg_title" required></div>
         <div class="form-row">
-          <div class="form-group"><label>Category</label><input type="text" name="category" id="eg_category"></div>
+          <div class="form-group"><label>Category</label>
+            <select name="category" id="eg_category">
+              <option value="">None</option>
+              <?php foreach ($form_categories as $c): ?><option value="<?= h($c['name']) ?>"><?= h($c['name']) ?></option><?php endforeach; ?>
+            </select>
+          </div>
           <div class="form-group"><label>Display Order</label><input type="number" name="display_order" id="eg_display_order" min="0"></div>
         </div>
         <div class="form-group mb-2"><label>Description</label><textarea name="description" id="eg_description"></textarea></div>
@@ -313,7 +378,9 @@ function openEditModal(p) {
   document.getElementById('eg_description').value   = p.description || '';
   document.getElementById('eg_active').checked      = p.is_active == 1;
   const ci = document.getElementById('eg_current_img');
-  ci.innerHTML = p.image_path ? '<img src="' + esc(p.image_path) + '" style="max-height:80px;border-radius:6px">' : '';
+  ci.innerHTML = p.image_path
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="' + esc(p.image_path) + '" class="current-photo-thumb current-photo-thumb--wide"></div>'
+    : '';
   openModal('edit-modal');
 }
 
@@ -343,6 +410,14 @@ function bulkDeletePhotos() {
   if (ids.length && confirm('Permanently delete ' + ids.length + ' selected photo(s)? This cannot be undone.')) {
     submitGalleryBulk('bulk_delete');
   }
+}
+function applyBulkCategory() {
+  var ids = getCheckedGalleryIds();
+  if (!ids.length) return;
+  var category = document.getElementById('bulk-category-input').value;
+  document.getElementById('bulk-category-field').value = category;
+  closeModal('bulk-category-modal');
+  submitGalleryBulk('bulk_category');
 }
 </script>
 

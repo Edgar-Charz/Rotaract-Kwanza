@@ -8,6 +8,7 @@ require_once dirname(__DIR__) . '/classes/Project.php';
 require_once dirname(__DIR__) . '/classes/ContactMessage.php';
 require_once dirname(__DIR__) . '/classes/MemberDues.php';
 require_once dirname(__DIR__) . '/classes/EventRSVP.php';
+require_once dirname(__DIR__) . '/classes/ActivityLog.php';
 
 $page_title = 'Dashboard';
 
@@ -30,11 +31,20 @@ $stats = [
     'messages'   => $_cm->count('unread'),
     'rsvps'      => $_rsvp->count(),
     'dues_paid'  => (float) $dues_totals['total_paid'],
+    'dues_due'   => (float) $dues_totals['total_due'],
 ];
+$dues_outstanding = max(0, $stats['dues_due'] - $stats['dues_paid']);
+
+$oldest_pending_at = db_val($conn, "SELECT MIN(created_at) FROM members WHERE status='pending'");
+$pending_days       = $oldest_pending_at ? (int) floor((time() - strtotime($oldest_pending_at)) / 86400) : 0;
+
+$members_this_month = monthly_counts($conn, 'members', 1)[0]['value'] ?? 0;
+$rsvps_this_month   = monthly_counts($conn, 'event_rsvps', 1)[0]['value'] ?? 0;
 
 $recent_members  = $_member->getRecent(5);
 $recent_messages = $_cm->getRecent(5);
 $upcoming_events = $_event->getUpcoming(4);
+$recent_activity = (new ActivityLog($conn))->getPage(7, 0);
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -63,7 +73,14 @@ include __DIR__ . '/includes/header.php';
     <div>
       <div class="stat-label">Total Members</div>
       <div class="stat-value"><?= $stats['members'] ?></div>
-      <div class="stat-sub"><?= $stats['pending'] ?> pending · <?= $stats['approved'] ?> approved</div>
+      <div class="stat-sub">
+        <?php if ($stats['pending'] > 0 && $pending_days >= 7): ?>
+          <span style="color:var(--danger);font-weight:700"><?= $stats['pending'] ?> pending</span> (oldest <?= $pending_days ?>d) · <?= $stats['approved'] ?> approved
+        <?php else: ?>
+          <?= $stats['pending'] ?> pending · <?= $stats['approved'] ?> approved
+        <?php endif; ?>
+        <?php if ($members_this_month > 0): ?> · <span style="color:var(--success)">+<?= $members_this_month ?> this month</span><?php endif; ?>
+      </div>
     </div>
   </div>
 
@@ -114,6 +131,9 @@ include __DIR__ . '/includes/header.php';
     <div>
       <div class="stat-label">Dues Collected (<?= $current_year ?>)</div>
       <div class="stat-value">Tsh <?= number_format($stats['dues_paid'], 0) ?></div>
+      <?php if ($dues_outstanding > 0): ?>
+        <div class="stat-sub" style="color:var(--danger)">Tsh <?= number_format($dues_outstanding, 0) ?> outstanding</div>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -124,6 +144,9 @@ include __DIR__ . '/includes/header.php';
     <div>
       <div class="stat-label">Total RSVPs</div>
       <div class="stat-value"><?= $stats['rsvps'] ?></div>
+      <?php if ($rsvps_this_month > 0): ?>
+        <div class="stat-sub"><span style="color:var(--success)">+<?= $rsvps_this_month ?> this month</span></div>
+      <?php endif; ?>
     </div>
   </div>
 </div>
@@ -196,6 +219,30 @@ include __DIR__ . '/includes/header.php';
         </tr>
         <?php endforeach; else: ?>
         <tr><td colspan="5" class="text-muted" style="text-align:center;padding:20px">No messages yet.</td></tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-header">
+    <span class="card-title">Recent Activity</span>
+    <a href="activity_log.php" class="btn btn-sm btn-secondary">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Admin</th><th>Action</th><th>Description</th><th>Date &amp; Time</th></tr></thead>
+      <tbody>
+        <?php if ($recent_activity): foreach ($recent_activity as $log): ?>
+        <tr>
+          <td class="fw-bold"><?= h($log['admin_username'] ?? '—') ?></td>
+          <td><span class="badge badge-upcoming"><?= h(str_replace('_', ' ', $log['action'])) ?></span></td>
+          <td class="text-muted"><?= h($log['description'] ?? '—') ?></td>
+          <td class="text-muted"><?= $log['created_at'] ? date('d M Y H:i', strtotime($log['created_at'])) : '—' ?></td>
+        </tr>
+        <?php endforeach; else: ?>
+        <tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px">No activity recorded yet.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>

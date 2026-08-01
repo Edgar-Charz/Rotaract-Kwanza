@@ -32,7 +32,7 @@ function csv_safe($value): string {
 $out = fopen('php://output', 'w');
 fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-fputcsv($out, ['Event', 'Name', 'Email', 'Phone', 'Guests', 'Notes', 'Attended', 'Registered']);
+fputcsv($out, ['Event', 'Name', 'Email', 'Phone', 'Member', 'Guests', 'Guest Names', 'Notes', 'Attended', 'Registered']);
 
 foreach ($rsvps as $r) {
     fputcsv($out, [
@@ -40,7 +40,9 @@ foreach ($rsvps as $r) {
         csv_safe($r['name']),
         csv_safe($r['email']),
         csv_safe($r['phone'] ?? ''),
+        !empty($r['member_id']) ? 'Yes' : 'No',
         $r['guests'],
+        csv_safe($r['guest_names'] ?? ''),
         csv_safe($r['notes'] ?? ''),
         ($r['attended'] ?? 0) ? 'Yes' : 'No',
         $r['created_at'] ? date('d M Y H:i', strtotime($r['created_at'])) : '',
