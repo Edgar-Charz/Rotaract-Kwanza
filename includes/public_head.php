@@ -36,6 +36,7 @@ $__image_url = match (true) {
 <meta name="description" content="<?= e($__description) ?>">
 <?php endif; ?>
 <link rel="canonical" href="<?= e($__self_url) ?>">
+<link rel="alternate" type="application/rss+xml" title="<?= e($__page_title) ?> — News" href="<?= e($__origin . '/rss.php') ?>">
 <meta property="og:type" content="website">
 <meta property="og:title" content="<?= e($__page_title) ?>">
 <?php if ($__description !== ''): ?>

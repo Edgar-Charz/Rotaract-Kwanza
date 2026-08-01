@@ -51,6 +51,7 @@ $_footer_tagline     = isset($conn) ? (new SiteSettings($conn))->get('footer_tag
         <li><a href="join.php">Join Rotaract</a></li>
         <li><a href="team.php">Our Team</a></li>
         <li><a href="contact.php">Contact Us</a></li>
+        <li><a href="donate.php">Donate</a></li>
         <li><a href="projects.php">Sponsor a Project</a></li>
         <li><a href="join.php">Volunteer</a></li>
       </ul>
