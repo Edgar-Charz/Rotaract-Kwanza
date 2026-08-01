@@ -16,11 +16,12 @@ class ProjectSignup
         string $notes = '',
         ?int $member_id = null
     ): int {
+        $token = bin2hex(random_bytes(16));
         $stmt = $this->db->prepare(
-            'INSERT INTO project_signups (project_id, name, email, phone, notes, member_id)
-             VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO project_signups (project_id, name, email, phone, notes, member_id, cancel_token)
+             VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('issssi', $project_id, $name, $email, $phone, $notes, $member_id);
+        $stmt->bind_param('issssis', $project_id, $name, $email, $phone, $notes, $member_id, $token);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -31,6 +32,21 @@ class ProjectSignup
     {
         $stmt = $this->db->prepare('SELECT * FROM project_signups WHERE id = ? LIMIT 1');
         $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: false;
+    }
+
+    /** Looks up a signup by its public cancel_token, joined with the project it's for. */
+    public function findByToken(string $token): array|false
+    {
+        $stmt = $this->db->prepare(
+            'SELECT s.*, p.title AS project_title
+             FROM project_signups s JOIN projects p ON p.id = s.project_id
+             WHERE s.cancel_token = ? LIMIT 1'
+        );
+        $stmt->bind_param('s', $token);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();

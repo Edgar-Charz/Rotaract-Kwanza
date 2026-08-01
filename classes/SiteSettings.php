@@ -21,6 +21,18 @@ class SiteSettings
         return $found ? (string) $value : $default;
     }
 
+    /** All settings in one query — used by callers that need many keys per request
+     *  (e.g. the admin settings page) instead of issuing one query per key. */
+    public function getAll(): array
+    {
+        $result = [];
+        $res = $this->db->query('SELECT setting_key, setting_value FROM site_settings');
+        while ($row = $res->fetch_assoc()) {
+            $result[$row['setting_key']] = $row['setting_value'];
+        }
+        return $result;
+    }
+
     public function set(string $key, string $value): bool
     {
         $stmt = $this->db->prepare(

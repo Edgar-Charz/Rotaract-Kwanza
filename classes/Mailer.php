@@ -86,7 +86,7 @@ class Mailer
         return $this->send($to, $name, "🎂 Happy Birthday, $n!", $html);
     }
 
-    public function rsvpConfirmation(string $to, string $name, array $event, bool $isMember = false): bool
+    public function rsvpConfirmation(string $to, string $name, array $event, bool $isMember = false, string $cancelUrl = ''): bool
     {
         $n     = htmlspecialchars($name);
         $title = htmlspecialchars($event['title']);
@@ -98,19 +98,23 @@ class Mailer
             ? "<p>Hi <strong>$n</strong>,</p><p>Great to have you confirmed — thanks for being an active member!</p>"
             : "<p>Hi <strong>$n</strong>,</p><p>Your RSVP has been confirmed! We look forward to seeing you at:</p>";
 
+        $cancelLine = $cancelUrl
+            ? "<p>Can't make it anymore? <a href='" . htmlspecialchars($cancelUrl) . "'>Cancel your RSVP</a>.</p>"
+            : "<p>If you need to cancel or make changes, please contact us directly.</p>";
+
         $html = "$greeting
 <div style='background:#fce4ef;border-radius:10px;padding:16px 20px;margin:16px 0'>
   <div style='font-size:17px;font-weight:700;color:#C0396B'>$title</div>
   <div style='margin-top:6px;color:#2d3436'>📅 $date$time$loc</div>
 </div>
-<p>If you need to cancel or make changes, please contact us directly.</p>"
+$cancelLine"
             . (!$isMember ? "<p>Not a member yet? We'd love to have you — <a href='join.php'>learn how to join</a>.</p>" : '')
             . "<p style='color:#636e72;font-size:13px;margin-top:24px'>See you there!<br>The Rotaract Kwanza Team</p>";
 
         return $this->send($to, $name, "RSVP Confirmed: $title", $html);
     }
 
-    public function projectSignupConfirmation(string $to, string $name, array $project, bool $isMember = false): bool
+    public function projectSignupConfirmation(string $to, string $name, array $project, bool $isMember = false, string $cancelUrl = ''): bool
     {
         $n     = htmlspecialchars($name);
         $title = htmlspecialchars($project['title']);
@@ -119,11 +123,16 @@ class Mailer
             ? "<p>Hi <strong>$n</strong>,</p><p>Thanks for stepping up again — we've got you down to help with:</p>"
             : "<p>Hi <strong>$n</strong>,</p><p>Thank you for volunteering! We've got you down to help with:</p>";
 
+        $cancelLine = $cancelUrl
+            ? "<p>Change of plans? <a href='" . htmlspecialchars($cancelUrl) . "'>Withdraw your signup</a>.</p>"
+            : '';
+
         $html = "$greeting
 <div style='background:#fce4ef;border-radius:10px;padding:16px 20px;margin:16px 0'>
   <div style='font-size:17px;font-weight:700;color:#C0396B'>$title</div>
 </div>
-<p>An officer will be in touch soon with details on how you can help.</p>"
+<p>An officer will be in touch soon with details on how you can help.</p>
+$cancelLine"
             . (!$isMember ? "<p>Enjoyed helping out? We'd love to have you as a member — <a href='join.php'>learn how to join</a>.</p>" : '')
             . "<p style='color:#636e72;font-size:13px;margin-top:24px'>Thank you for your service!<br>The Rotaract Kwanza Team</p>";
 

@@ -18,11 +18,12 @@ class EventRSVP
         ?int $member_id = null,
         string $guest_names = ''
     ): int {
+        $token = bin2hex(random_bytes(16));
         $stmt = $this->db->prepare(
-            'INSERT INTO event_rsvps (event_id, name, email, phone, guests, notes, member_id, guest_names)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO event_rsvps (event_id, name, email, phone, guests, notes, member_id, guest_names, cancel_token)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('isssisis', $event_id, $name, $email, $phone, $guests, $notes, $member_id, $guest_names);
+        $stmt->bind_param('isssisiss', $event_id, $name, $email, $phone, $guests, $notes, $member_id, $guest_names, $token);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -33,6 +34,21 @@ class EventRSVP
     {
         $stmt = $this->db->prepare('SELECT * FROM event_rsvps WHERE id = ? LIMIT 1');
         $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: false;
+    }
+
+    /** Looks up an RSVP by its public cancel_token, joined with the event it's for. */
+    public function findByToken(string $token): array|false
+    {
+        $stmt = $this->db->prepare(
+            'SELECT r.*, e.title AS event_title, e.event_date, e.event_time
+             FROM event_rsvps r JOIN events e ON e.id = r.event_id
+             WHERE r.cancel_token = ? LIMIT 1'
+        );
+        $stmt->bind_param('s', $token);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();

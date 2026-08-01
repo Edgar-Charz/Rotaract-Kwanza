@@ -97,6 +97,39 @@ class ActivityLog
         return $rows;
     }
 
+    /** Same filters as getPage() but no row cap — used for exports and any
+     *  view that needs a genuinely complete result set, not a paginated one. */
+    public function getFiltered(string $admin_username = '', string $action = ''): array
+    {
+        $where = [];
+        $types = '';
+        $params = [];
+
+        if ($admin_username !== '') {
+            $where[] = 'admin_username = ?';
+            $types .= 's';
+            $params[] = $admin_username;
+        }
+        if ($action !== '') {
+            $where[] = 'action = ?';
+            $types .= 's';
+            $params[] = $action;
+        }
+
+        $sql = 'SELECT * FROM activity_log';
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY created_at DESC';
+
+        $stmt = $this->db->prepare($sql);
+        if ($types !== '') $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
     public function getDistinctAdmins(): array
     {
         $stmt = $this->db->prepare(
@@ -106,6 +139,31 @@ class ActivityLog
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return array_column($rows, 'admin_username');
+    }
+
+    public function getDistinctActions(): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT DISTINCT action FROM activity_log ORDER BY action'
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return array_column($rows, 'action');
+    }
+
+    /** Rows that a given deleteOlderThanDays($days) call would remove — used to
+     *  force an exportable copy to exist before an admin purges the log. */
+    public function getOlderThanDays(int $days): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM activity_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY) ORDER BY created_at DESC'
+        );
+        $stmt->bind_param('i', $days);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
     }
 
     public function deleteOlderThanDays(int $days): int
