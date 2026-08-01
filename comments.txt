@@ -1,0 +1,92 @@
+Suggestion
+Yes — add it as a new historical feature separate from the current team page.
+
+Best approach
+Public page: leadership_history.php (or history.php)
+Admin management: admin/leadership_history.php
+Data model: new table(s) in the database
+This keeps current active team data on team.php and puts past leadership in its own area.
+
+Recommended structure
+Option 1: Simple timeline
+If you just want a chronological history of presidents/terms:
+
+leadership_history
+id
+term_label (e.g. 2024–2025)
+year_start
+year_end
+title / role (optional)
+name
+photo_path
+notes
+display_order
+is_active
+created_at
+updated_at
+This is easiest to manage and can render as a timeline or card list.
+
+Option 2: Full team history per term
+If you want to show each past leadership team with multiple officers per term:
+
+leadership_terms
+
+id
+term_label
+year_start
+year_end
+summary
+image_path
+display_order
+is_active
+leadership_members
+
+id
+term_id
+full_name
+role
+photo_path
+description
+display_order
+is_active
+This is more powerful and matches the current team structure well.
+
+Where to add it
+Public side
+Add a new page:
+
+leadership_history.php
+or history.php
+And add a link in:
+
+the main navbar
+or about.php as a “Leadership History” section / button
+Admin side
+Add a new menu item in:
+
+sidebar.php
+Next to:
+
+Team
+Roles
+Create:
+
+admin/leadership_history.php
+optional admin/includes/leadership_history_form.php
+How it should look
+Good UX ideas:
+
+a chronological timeline
+grouped by year or term
+each entry shows:
+term years
+president / officers
+photo
+brief summary
+optionally filter by decade
+Why this works
+team.php stays current-team-only
+history gets its own maintainable admin UI
+future changes like adding decades or archival teams become easier
+it fits the site architecture cleanly
+If you want, I can also propose the exact schema and page layout based on your current design.

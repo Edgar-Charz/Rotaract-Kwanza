@@ -8,8 +8,9 @@ $db = new Database();
 $conn = $db->connect();
 
 $event = new Event($conn);
-$upcoming = $event->getUpcoming();
-$past = $event->getPast(6);
+$search = trim($_GET['q'] ?? '');
+$upcoming = $event->getUpcoming(0, $search);
+$past = $search === '' ? $event->getPast(6) : [];
 
 // Build calendar-friendly JSON for FullCalendar
 $all_events = $event->getAll();
@@ -32,21 +33,15 @@ $cal_events = array_map(function ($ev) {
 }, $all_events);
 
 $event_colors = ['', 'gold', 'rose'];
+
+$page_title = site_title($conn, 'Events');
+$page_description = 'Upcoming service days, leadership forums, and fellowship celebrations from Rotaract Club of Kwanza.';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Events &mdash; Rotaract Club of Kwanza</title>
-  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/kwanza.css">
+  <?php require __DIR__ . '/includes/public_head.php'; ?>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css">
   <style>
     /* ── View toggle ─────────────────────────── */
@@ -142,6 +137,16 @@ $event_colors = ['', 'gold', 'rose'];
         </div>
       </div>
 
+      <form method="GET" style="display:flex;gap:10px;max-width:420px;margin:0 0 24px">
+        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search upcoming events…"
+          style="flex:1;padding:11px 16px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none">
+        <button type="submit" style="padding:11px 22px;background:var(--pink-700);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">Search</button>
+      </form>
+
+      <?php if ($search): ?>
+        <p style="color:var(--text-soft);font-size:13px;margin:-14px 0 24px"><?= count($upcoming) ?> result<?= count($upcoming) !== 1 ? 's' : '' ?> for "<?= e($search) ?>" &middot; <a href="events.php" style="color:var(--pink-700)">Clear</a></p>
+      <?php endif; ?>
+
       <!-- View toggle -->
       <div class="view-toggle">
         <button class="view-btn active" id="btn-list" onclick="switchView('list')">
@@ -178,21 +183,19 @@ $event_colors = ['', 'gold', 'rose'];
         <?php if ($upcoming): ?>
           <div class="events-grid">
             <?php foreach ($upcoming as $i => $ev): ?>
-              <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . $i % 3 : '' ?>">
+              <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . $i % 3 : '' ?>" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>" style="cursor:pointer">
                 <?php if ($ev['image_path'] ?? ''): ?>
                   <div class="event-card-img" style="padding:0;overflow:hidden">
                     <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>"
                       style="width:100%;height:100%;object-fit:cover">
+                    <div class="event-date-badge">
+                      <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
+                      <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                    </div>
                   </div>
                 <?php else: ?>
                   <div class="event-card-img <?= $event_colors[$i % 3] ?>">
-                    <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-                      <rect x="16" y="20" width="28" height="22" rx="3" fill="rgba(255,255,255,0.25)"
-                        stroke="rgba(255,255,255,0.8)" stroke-width="1.5" />
-                      <path d="M22 20V17a2 2 0 014 0v3M34 20V17a2 2 0 014 0v3" stroke="rgba(255,255,255,0.8)"
-                        stroke-width="1.5" stroke-linecap="round" />
-                      <path d="M22 30h16M22 34h10" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" />
-                    </svg>
+                    <div class="event-icon-badge"><?= icon_svg(event_category_icon($ev['category'] ?? ''), '#fff') ?></div>
                     <div class="event-date-badge">
                       <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
                       <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
@@ -230,8 +233,13 @@ $event_colors = ['', 'gold', 'rose'];
               <line x1="8" y1="2" x2="8" y2="6" />
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
-            <p style="font-size:1.2rem;font-weight:600">No upcoming events</p>
-            <p style="margin-top:8px">Check back soon for new events.</p>
+            <?php if ($search): ?>
+              <p style="font-size:1.2rem;font-weight:600">No events found for "<?= e($search) ?>"</p>
+              <p style="margin-top:8px"><a href="events.php" style="color:var(--pink-700);font-weight:600">Clear search</a></p>
+            <?php else: ?>
+              <p style="font-size:1.2rem;font-weight:600">No upcoming events</p>
+              <p style="margin-top:8px">Check back soon for new events.</p>
+            <?php endif; ?>
           </div>
         <?php endif; ?>
 
@@ -240,20 +248,19 @@ $event_colors = ['', 'gold', 'rose'];
             <h3 class="section-title" style="font-size:1.6rem;margin-bottom:24px">Past <em>Events</em></h3>
             <div class="events-grid">
               <?php foreach ($past as $i => $ev): ?>
-                <div class="event-card reveal" style="opacity:.75">
+                <div class="event-card reveal" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>" style="opacity:.75;cursor:pointer">
                   <?php if ($ev['image_path'] ?? ''): ?>
                     <div class="event-card-img" style="padding:0;overflow:hidden;filter:grayscale(30%)">
                       <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>"
                         style="width:100%;height:100%;object-fit:cover">
+                      <div class="event-date-badge">
+                        <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
+                        <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                      </div>
                     </div>
                   <?php else: ?>
-                    <div class="event-card-img" style="filter:grayscale(30%)">
-                      <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-                        <rect x="16" y="20" width="28" height="22" rx="3" fill="rgba(255,255,255,0.2)"
-                          stroke="rgba(255,255,255,0.6)" stroke-width="1.5" />
-                        <path d="M22 30h16M22 34h10" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"
-                          stroke-linecap="round" />
-                      </svg>
+                    <div class="event-card-img <?= $event_colors[$i % 3] ?>" style="filter:grayscale(30%)">
+                      <div class="event-icon-badge"><?= icon_svg(event_category_icon($ev['category'] ?? ''), '#fff') ?></div>
                       <div class="event-date-badge">
                         <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
                         <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
@@ -306,16 +313,20 @@ $event_colors = ['', 'gold', 'rose'];
         calInit = true;
         calObj = new FullCalendar.Calendar(document.getElementById('calendar'), {
           initialView: 'dayGridMonth',
-          headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listMonth'
+          },
           events: calEvents,
           height: 'auto',
-          eventClick: function (info) {
+          eventClick: function(info) {
             if (info.event.url && info.event.url !== '#') {
               info.jsEvent.preventDefault();
               window.location.href = info.event.url;
             }
           },
-          eventDidMount: function (info) {
+          eventDidMount: function(info) {
             var loc = info.event.extendedProps.location;
             if (loc) info.el.title = info.event.title + '\n📍 ' + loc;
           }
@@ -323,6 +334,19 @@ $event_colors = ['', 'gold', 'rose'];
         calObj.render();
       }
     }
+
+    // Whole card is clickable through to the event detail page, but clicks on
+    // an actual link inside it (RSVP, Details, title) keep going to their own
+    // destination instead of being overridden by the card-wide handler.
+    document.querySelectorAll('.event-card[data-href]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        window.location.href = card.dataset.href;
+      });
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.target.closest('a')) window.location.href = card.dataset.href;
+      });
+    });
   </script>
 </body>
 

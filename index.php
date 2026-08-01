@@ -36,6 +36,7 @@ $li = $settings->get('linkedin_url', '#');
 $addr = $settings->get('contact_address', 'Kwanza Community Centre, Kwanza District, Angola');
 $tel = $settings->get('contact_phone', '+244 900 000 000');
 $mail = $settings->get('contact_email', 'info@rotaractkwanza.org');
+$contact_intro = $settings->get('contact_intro', 'Whether you have a question, partnership opportunity, or just want to say hello — our doors are always open.');
 $hero_image = $settings->get('hero_image', '');
 $about_image = $settings->get('about_image', '');
 $founding_year = $settings->get('founding_year', '2012');
@@ -49,9 +50,12 @@ $hero_subtitle           = $settings->get('hero_subtitle', 'Together we make a d
 $hero_description        = $settings->get('hero_description', 'The Rotaract Club of Kwanza is a vibrant community of young leaders committed to fellowship, professional development, and meaningful service to our community and beyond.');
 $home_about_highlight    = $settings->get('home_about_highlight', 'Over a decade of community service and fellowship in Kwanza');
 $home_about_description  = $settings->get('home_about_description', 'The Rotaract Club of Kwanza is a Rotary International-sponsored organization bringing together young professionals and leaders aged 18–30 to create lasting change in our community.');
+$home_projects_description = $settings->get('home_projects_description', 'Discover our projects');
 $home_events_description = $settings->get('home_events_description', 'Discover our next service days, leadership forums, and fellowship celebrations. Join Rotaract Kwanza for meaningful impact.');
 $home_team_description   = $settings->get('home_team_description', 'Passionate, driven young leaders who dedicate their time to making a difference in Kwanza.');
 $home_join_description   = $settings->get('home_join_description', 'Join a community of passionate young leaders making real change in Kwanza. Membership is open to all aged 18–30.');
+$home_news_description   = $settings->get('home_news_description', 'Club updates, meeting minutes, and announcements from Rotaract Club of Kwanza.');
+$home_gallery_description = $settings->get('home_gallery_description', 'A glimpse into our community service, events, and fellowship moments.');
 
 $event_colors = ['', 'gold', 'rose'];
 $gallery_classes = [
@@ -62,21 +66,16 @@ $gallery_classes = [
   'reveal reveal-delay-1',
   'reveal reveal-delay-2',
 ];
+
+$page_title = site_title($conn);
+$page_description = $hero_description;
+if ($hero_image) $page_image = img_url($hero_image);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= e(site_title($conn)) ?></title>
-  <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/kwanza.css">
+  <?php require __DIR__ . '/includes/public_head.php'; ?>
 </head>
 
 <body>
@@ -132,28 +131,28 @@ $gallery_classes = [
         <div class="floating-pill"><span class="pill-dot"></span>Service in Action</div>
         <div class="hero-card-main">
           <?php if ($hero_image): ?>
-          <img src="<?= e(img_url($hero_image)) ?>" alt="Rotaract Club of Kwanza" class="hero-card-img">
+            <img src="<?= e(img_url($hero_image)) ?>" alt="Rotaract Club of Kwanza" class="hero-card-img">
           <?php else: ?>
-          <div class="hero-card-main-inner">
-            <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
-              <path d="M60 30 C60 30, 88 50, 88 68 C88 84 75 94 60 94 C45 94 32 84 32 68 C32 50 60 30 60 30Z"
-                fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" />
-              <circle cx="60" cy="58" r="14" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.8)"
-                stroke-width="1.5" />
-              <path d="M52 72 L60 64 L68 72" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2"
-                stroke-linecap="round" />
-              <circle cx="40" cy="44" r="6" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)"
-                stroke-width="1" />
-              <circle cx="80" cy="44" r="6" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)"
-                stroke-width="1" />
-            </svg>
-            <p>Empowering youth through service &amp; fellowship</p>
-          </div>
+            <div class="hero-card-main-inner">
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
+                <path d="M60 30 C60 30, 88 50, 88 68 C88 84 75 94 60 94 C45 94 32 84 32 68 C32 50 60 30 60 30Z"
+                  fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" />
+                <circle cx="60" cy="58" r="14" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.8)"
+                  stroke-width="1.5" />
+                <path d="M52 72 L60 64 L68 72" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2"
+                  stroke-linecap="round" />
+                <circle cx="40" cy="44" r="6" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)"
+                  stroke-width="1" />
+                <circle cx="80" cy="44" r="6" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)"
+                  stroke-width="1" />
+              </svg>
+              <p>Empowering youth through service &amp; fellowship</p>
+            </div>
           <?php endif; ?>
         </div>
         <?php if ($hero_badge_label): ?>
-        <div class="hero-badge"><strong><?= e($hero_badge_year) ?></strong><?= e($hero_badge_label) ?></div>
+          <div class="hero-badge"><strong><?= e($hero_badge_year) ?></strong><?= e($hero_badge_label) ?></div>
         <?php endif; ?>
       </div>
     </div>
@@ -172,21 +171,21 @@ $gallery_classes = [
         <div class="about-visual reveal">
           <div class="about-img-wrap">
             <?php if ($about_image): ?>
-            <img src="<?= e(img_url($about_image)) ?>" alt="Rotaract Club of Kwanza members" class="about-img">
+              <img src="<?= e(img_url($about_image)) ?>" alt="Rotaract Club of Kwanza members" class="about-img">
             <?php else: ?>
-            <svg viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="150" cy="150" r="120" fill="rgba(212,52,122,0.15)" />
-              <circle cx="150" cy="150" r="80" fill="rgba(212,52,122,0.2)" />
-              <circle cx="150" cy="100" r="28" fill="var(--pink-500)" opacity="0.7" />
-              <path d="M90 200 C90 165 110 148 150 148 C190 148 210 165 210 200" stroke="var(--pink-600)"
-                stroke-width="3" fill="none" stroke-linecap="round" />
-              <circle cx="100" cy="90" r="18" fill="var(--pink-400)" opacity="0.6" />
-              <circle cx="200" cy="90" r="18" fill="var(--pink-400)" opacity="0.6" />
-              <path d="M70 185 C70 160 82 150 100 150 C118 150 130 160 130 185" stroke="var(--pink-500)"
-                stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7" />
-              <path d="M170 185 C170 160 182 150 200 150 C218 150 230 160 230 185" stroke="var(--pink-500)"
-                stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7" />
-            </svg>
+              <svg viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="150" cy="150" r="120" fill="rgba(212,52,122,0.15)" />
+                <circle cx="150" cy="150" r="80" fill="rgba(212,52,122,0.2)" />
+                <circle cx="150" cy="100" r="28" fill="var(--pink-500)" opacity="0.7" />
+                <path d="M90 200 C90 165 110 148 150 148 C190 148 210 165 210 200" stroke="var(--pink-600)"
+                  stroke-width="3" fill="none" stroke-linecap="round" />
+                <circle cx="100" cy="90" r="18" fill="var(--pink-400)" opacity="0.6" />
+                <circle cx="200" cy="90" r="18" fill="var(--pink-400)" opacity="0.6" />
+                <path d="M70 185 C70 160 82 150 100 150 C118 150 130 160 130 185" stroke="var(--pink-500)"
+                  stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7" />
+                <path d="M170 185 C170 160 182 150 200 150 C218 150 230 160 230 185" stroke="var(--pink-500)"
+                  stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7" />
+              </svg>
             <?php endif; ?>
           </div>
           <div class="about-card-float">
@@ -199,17 +198,17 @@ $gallery_classes = [
           <h2 class="section-title reveal reveal-delay-1">Who We <em>Are</em></h2>
           <p class="section-lead reveal reveal-delay-2"><?= e($home_about_description) ?></p>
           <?php if ($club_values): ?>
-          <div class="about-values reveal reveal-delay-3">
-            <?php foreach ($club_values as $val): ?>
-              <div class="value-item">
-                <div class="value-icon" style="color:var(--pink-700)"><?= icon_svg($val['icon_key'], 'var(--pink-700)') ?></div>
-                <div>
-                  <h4><?= e($val['title']) ?></h4>
-                  <?php if ($val['description']): ?><p><?= e($val['description']) ?></p><?php endif; ?>
+            <div class="about-values reveal reveal-delay-3">
+              <?php foreach ($club_values as $val): ?>
+                <div class="value-item">
+                  <div class="value-icon" style="color:var(--pink-700)"><?= icon_svg($val['icon_key'], 'var(--pink-700)') ?></div>
+                  <div>
+                    <h4><?= e($val['title']) ?></h4>
+                    <?php if ($val['description']): ?><p><?= e($val['description']) ?></p><?php endif; ?>
+                  </div>
                 </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
+              <?php endforeach; ?>
+            </div>
           <?php endif; ?>
           <a href="about.php" class="btn-secondary" style="display:inline-block;margin-top:24px">Learn
             More &rarr;</a>
@@ -225,6 +224,7 @@ $gallery_classes = [
         <div>
           <div class="section-eyebrow reveal">Our Impact</div>
           <h2 class="section-title reveal reveal-delay-1">Featured <em>Projects</em></h2>
+          <p class="section-lead reveal reveal-delay-2"><?= e($home_projects_description) ?></p>
         </div>
         <a href="projects.php" class="btn-secondary reveal"
           style="color:#fff;border-color:rgba(255,255,255,0.3)">All Projects</a>
@@ -257,7 +257,8 @@ $gallery_classes = [
                 <?php endif; ?>
               </div>
             </a>
-          <?php endforeach; else: ?>
+          <?php endforeach;
+        else: ?>
           <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-soft)">
             <p style="font-size:1.1rem">Projects coming soon.</p>
           </div>
@@ -282,24 +283,22 @@ $gallery_classes = [
           foreach ($events as $i => $ev): ?>
             <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . $i : '' ?>">
               <?php if ($ev['image_path'] ?? ''): ?>
-              <div class="event-card-img" style="padding:0;overflow:hidden">
-                <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>"
-                     style="width:100%;height:100%;object-fit:cover">
-              </div>
-              <?php else: ?>
-              <div class="event-card-img <?= $event_colors[$i % 3] ?>">
-                <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-                  <rect x="16" y="20" width="28" height="22" rx="3" fill="rgba(255,255,255,0.25)"
-                    stroke="rgba(255,255,255,0.8)" stroke-width="1.5" />
-                  <path d="M22 20V17a2 2 0 014 0v3M34 20V17a2 2 0 014 0v3" stroke="rgba(255,255,255,0.8)" stroke-width="1.5"
-                    stroke-linecap="round" />
-                  <path d="M22 30h16M22 34h10" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" />
-                </svg>
-                <div class="event-date-badge">
-                  <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
-                  <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                <div class="event-card-img" style="padding:0;overflow:hidden">
+                  <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>"
+                    style="width:100%;height:100%;object-fit:cover">
+                  <div class="event-date-badge">
+                    <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
+                    <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                  </div>
                 </div>
-              </div>
+              <?php else: ?>
+                <div class="event-card-img <?= $event_colors[$i % 3] ?>">
+                  <div class="event-icon-badge"><?= icon_svg(event_category_icon($ev['category'] ?? ''), '#fff') ?></div>
+                  <div class="event-date-badge">
+                    <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
+                    <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
+                  </div>
+                </div>
               <?php endif; ?>
               <div class="event-card-body">
                 <span class="event-tag"><?= e($ev['category'] ?? 'General') ?></span>
@@ -311,7 +310,7 @@ $gallery_classes = [
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
-                  <?= e($ev['location'] ?? '') ?>     <?= ($ev['location'] && $ev['event_time']) ? ', ' : '' ?>
+                  <?= e($ev['location'] ?? '') ?> <?= ($ev['location'] && $ev['event_time']) ? ', ' : '' ?>
                   <?= e($ev['event_time'] ?? '') ?>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
@@ -322,7 +321,8 @@ $gallery_classes = [
                 </div>
               </div>
             </div>
-          <?php endforeach; else: ?>
+          <?php endforeach;
+        else: ?>
           <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-soft)">
             <p style="font-size:1.1rem">No upcoming events at the moment. Check back soon!</p>
           </div>
@@ -345,7 +345,7 @@ $gallery_classes = [
             $pal = avatar_palette($i);
             $initials = strtoupper(implode('', array_map(fn($w) => $w[0], array_filter(explode(' ', $tm['full_name'])))));
             $initials = substr($initials, 0, 2);
-            ?>
+        ?>
             <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . $i % 4 : '' ?>">
               <div class="team-avatar" style="background:<?= $pal['bg'] ?>">
                 <?php if ($tm['image_path']): ?>
@@ -358,23 +358,24 @@ $gallery_classes = [
                 <?php endif; ?>
               </div>
               <div class="team-card-body">
-                <h4><?= e($tm['full_name']) ?></h4>
                 <div class="role"><?= e($tm['role']) ?></div>
+                <h4><?= e($tm['full_name']) ?></h4>
                 <?php if ($tm['description']): ?>
                   <p><?= e($tm['description']) ?></p><?php endif; ?>
               </div>
             </div>
-          <?php endforeach; else: ?>
+          <?php endforeach;
+        else: ?>
           <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-soft)">
             <p>Team information coming soon.</p>
           </div>
         <?php endif; ?>
       </div>
       <?php if ($team): ?>
-      <div style="text-align:center;margin-top:40px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-        <a href="team.php" class="btn-secondary reveal">Meet the Full Team</a>
-        <a href="leadership_history.php" class="btn-secondary reveal">Leadership History</a>
-      </div>
+        <div style="text-align:center;margin-top:40px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+          <a href="team.php" class="btn-secondary reveal">Meet the Full Team</a>
+          <a href="leadership_history.php" class="btn-secondary reveal">Leadership History</a>
+        </div>
       <?php endif; ?>
     </div>
   </section>
@@ -387,6 +388,7 @@ $gallery_classes = [
         <div>
           <div class="section-eyebrow reveal">Our Moments</div>
           <h2 class="section-title reveal reveal-delay-1">Photo <em>Gallery</em></h2>
+          <p class="section-lead reveal reveal-delay-2"><?= e($home_gallery_description) ?></p>
         </div>
         <a href="gallery.php" class="btn-secondary reveal">View All Photos</a>
       </div>
@@ -394,7 +396,7 @@ $gallery_classes = [
         <?php if ($gallery):
           foreach ($gallery as $gi => $photo):
             $gc = $gallery_classes[$gi] ?? 'reveal';
-            ?>
+        ?>
             <div class="gallery-item <?= $gc ?>">
               <?php if ($photo['image_path']): ?>
                 <div class="gallery-inner"
@@ -414,7 +416,8 @@ $gallery_classes = [
               <?php endif; ?>
               <div class="gallery-overlay"><?= e($photo['title']) ?></div>
             </div>
-          <?php endforeach; else: ?>
+          <?php endforeach;
+        else: ?>
           <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-soft)">
             <p style="font-size:1.1rem">Gallery photos coming soon.</p>
           </div>
@@ -432,6 +435,7 @@ $gallery_classes = [
           <div>
             <div class="section-eyebrow reveal">Club Updates</div>
             <h2 class="section-title reveal reveal-delay-1">Latest <em>News</em></h2>
+            <p class="section-lead reveal reveal-delay-2"><?= e($home_news_description) ?></p>
           </div>
           <a href="news.php" class="btn-secondary reveal">All Posts</a>
         </div>
@@ -498,26 +502,26 @@ $gallery_classes = [
             $initials = strtoupper(substr($dm['first_name'], 0, 1) . substr($dm['last_name'], 0, 1));
             $av_class = 'av-' . ($di % 7);
           ?>
-          <div class="dir-card reveal<?= $di > 0 ? ' reveal-delay-' . ($di % 4) : '' ?>">
-            <?php if ($dm['photo_path']): ?>
-              <div class="dir-avatar dir-avatar-photo">
-                <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($initials) ?>"
-                     style="width:100%;height:100%;object-fit:cover;border-radius:50%">
-              </div>
-            <?php else: ?>
-              <div class="dir-avatar <?= $av_class ?>"><?= e($initials) ?></div>
-            <?php endif; ?>
-            <div class="dir-name"><?= e($dm['first_name'] . ' ' . $dm['last_name']) ?></div>
-            <?php if ($dm['occupation']): ?>
-              <div class="dir-role"><?= e($dm['occupation']) ?></div>
-            <?php endif; ?>
-          </div>
+            <div class="dir-card reveal<?= $di > 0 ? ' reveal-delay-' . ($di % 4) : '' ?>">
+              <?php if ($dm['photo_path']): ?>
+                <div class="dir-avatar dir-avatar-photo">
+                  <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($initials) ?>"
+                    style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+                </div>
+              <?php else: ?>
+                <div class="dir-avatar <?= $av_class ?>"><?= e($initials) ?></div>
+              <?php endif; ?>
+              <div class="dir-name"><?= e($dm['first_name'] . ' ' . $dm['last_name']) ?></div>
+              <?php if ($dm['occupation']): ?>
+                <div class="dir-role"><?= e($dm['occupation']) ?></div>
+              <?php endif; ?>
+            </div>
           <?php endforeach; ?>
         </div>
       <?php else: ?>
         <div style="text-align:center;padding:60px 20px;color:var(--text-soft)">
           <p style="font-size:1.1rem">No members listed yet.</p>
-          <a href="directory.php" style="color:var(--pink-700);font-weight:600;margin-top:8px;display:inline-block">Browse Directory</a>
+          <a href="directory.php" style="color:var(--pink-700); font-weight: 600; margin-top: 8px; display: inline-block; text-decoration: none;">Browse Directory</a>
         </div>
       <?php endif; ?>
     </div>
@@ -532,14 +536,14 @@ $gallery_classes = [
           <h2 class="section-title reveal reveal-delay-1">Be Part of <em>Something</em> Greater</h2>
           <p class="section-lead reveal reveal-delay-2"><?= e($home_join_description) ?></p>
           <?php if ($perks): ?>
-          <div class="join-perks reveal reveal-delay-3">
-            <?php foreach ($perks as $perk): ?>
-              <div class="perk">
-                <div class="perk-icon" style="color:var(--pink-700)"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
-                <span><?= e($perk['title']) ?><?= $perk['description'] ? ' — ' . e($perk['description']) : '' ?></span>
-              </div>
-            <?php endforeach; ?>
-          </div>
+            <div class="join-perks reveal reveal-delay-3">
+              <?php foreach ($perks as $perk): ?>
+                <div class="perk">
+                  <div class="perk-icon" style="color:var(--pink-700)"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
+                  <span><?= e($perk['title']) ?><?= $perk['description'] ? ' — ' . e($perk['description']) : '' ?></span>
+                </div>
+              <?php endforeach; ?>
+            </div>
           <?php endif; ?>
         </div>
         <div class="join-form reveal reveal-delay-2">
@@ -561,8 +565,7 @@ $gallery_classes = [
         <div>
           <div class="section-eyebrow reveal">Get In Touch</div>
           <h2 class="section-title reveal reveal-delay-1">We'd Love to <em>Hear</em> From You</h2>
-          <p class="section-lead reveal reveal-delay-2">Whether you have a question, partnership opportunity, or just
-            want to say hello &mdash; our doors are always open.</p>
+          <p class="section-lead reveal reveal-delay-2"><?= e($contact_intro) ?></p>
           <div class="contact-info reveal reveal-delay-3">
             <div class="contact-item">
               <div class="contact-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)"
@@ -583,7 +586,7 @@ $gallery_classes = [
                 </svg></div>
               <div>
                 <h4>Call Us</h4>
-                <p><?= e($tel) ?><br><?= e($contact_hours) ?></p>
+                <p><a href="tel:<?= e(preg_replace('/[^\d+]/', '', $tel)) ?>"><?= e($tel) ?></a><br><?= e($contact_hours) ?></p>
               </div>
             </div>
             <div class="contact-item">
@@ -594,7 +597,7 @@ $gallery_classes = [
                 </svg></div>
               <div>
                 <h4>Email Us</h4>
-                <p><?= e($mail) ?></p>
+                <p><a href="mailto:<?= e($mail) ?>"><?= e($mail) ?></a></p>
               </div>
             </div>
           </div>
