@@ -203,6 +203,89 @@ function sanitize_rich_text(string $html): string
     return $out;
 }
 
+/**
+ * Absolute origin + project-root path for the current request, e.g.
+ * "https://host/Rotaract_Kwanza" — for building absolute links (emails,
+ * RSS, .ics files) where a page-relative href like "rsvp.php" won't
+ * resolve outside a browser tab actually on this site. Same
+ * detect-the-root-from-the-request trick as img_url() and sitemap.php.
+ * Also callable from admin/ scripts (e.g. to link back to a public page
+ * from a notification email) — steps up out of admin/ the same way
+ * img_url() does, so the /admin segment never leaks into the result.
+ */
+function site_origin(): string
+{
+    static $origin = null;
+    if ($origin === null) {
+        $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
+        $dir    = dirname($script);
+        if (basename($dir) === 'admin')    $dir = dirname($dir);
+        if (basename($dir) === 'includes') $dir = dirname($dir);
+        $base   = rtrim($dir, '/');
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $origin = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $base;
+    }
+    return $origin;
+}
+
+/** Builds a downloadable data: URI for a single-event .ics calendar file (1-hour default duration, floating local time — no stored timezone to convert from). */
+function build_ics_data_uri(string $title, string $description, string $location, string $event_date, string $event_time = ''): string
+{
+    $startTs = strtotime($event_date . ' ' . ($event_time ?: '09:00')) ?: strtotime($event_date) ?: time();
+    $endTs   = $startTs + 3600;
+
+    $esc = fn(string $s): string => addcslashes(str_replace(["\r\n", "\n"], '\\n', $s), ",;");
+
+    $ics = "BEGIN:VCALENDAR\r\n"
+        . "VERSION:2.0\r\n"
+        . "PRODID:-//Rotaract Kwanza//Events//EN\r\n"
+        . "BEGIN:VEVENT\r\n"
+        . "UID:" . md5($title . $event_date . $location) . "@rotaractkwanza\r\n"
+        . "DTSTAMP:" . gmdate('Ymd\THis\Z') . "\r\n"
+        . "DTSTART:" . date('Ymd\THis', $startTs) . "\r\n"
+        . "DTEND:" . date('Ymd\THis', $endTs) . "\r\n"
+        . "SUMMARY:" . $esc($title) . "\r\n"
+        . ($description !== '' ? "DESCRIPTION:" . $esc($description) . "\r\n" : '')
+        . ($location !== '' ? "LOCATION:" . $esc($location) . "\r\n" : '')
+        . "END:VEVENT\r\n"
+        . "END:VCALENDAR\r\n";
+
+    return 'data:text/calendar;charset=utf-8;base64,' . base64_encode($ics);
+}
+
+/** Absolute URL of the current request, reconstructed from the request itself (no hardcoded host). */
+function current_page_url(): string
+{
+    return site_origin() . '/' . basename($_SERVER['SCRIPT_NAME'] ?? '')
+        . (($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . $_SERVER['QUERY_STRING'] : '');
+}
+
+/**
+ * Renders a Facebook/X/WhatsApp/Instagram/TikTok/copy-link share row for a
+ * news post or event page.
+ *
+ * Instagram and TikTok have no web "share this URL" intent the way
+ * Facebook/X/WhatsApp do — neither platform accepts an arbitrary link to
+ * pre-fill a post/story with on the web. The standard workaround (what
+ * their own in-app share sheets effectively do) is: copy the link, then
+ * open the platform so the visitor can paste it into a Story/bio/DM
+ * themselves. See the .share-copy-open-btn handler in scripts.js.
+ */
+function render_share_buttons(string $url, string $title): string
+{
+    $u = rawurlencode($url);
+    $t = rawurlencode($title);
+    return '<div class="share-row">'
+        . '<span class="share-label">Share</span>'
+        . '<a href="https://www.facebook.com/sharer/sharer.php?u=' . $u . '" target="_blank" rel="noopener" class="share-btn">Facebook</a>'
+        . '<a href="https://twitter.com/intent/tweet?url=' . $u . '&text=' . $t . '" target="_blank" rel="noopener" class="share-btn">X</a>'
+        . '<a href="https://wa.me/?text=' . $t . '%20' . $u . '" target="_blank" rel="noopener" class="share-btn">WhatsApp</a>'
+        . '<button type="button" class="share-btn share-copy-open-btn" data-share-url="' . e($url) . '" data-open-url="https://www.instagram.com/">Instagram</button>'
+        . '<button type="button" class="share-btn share-copy-open-btn" data-share-url="' . e($url) . '" data-open-url="https://www.tiktok.com/">TikTok</button>'
+        . '<button type="button" class="share-btn share-copy-btn" data-share-url="' . e($url) . '">Copy Link</button>'
+        . '</div>';
+}
+
 function avatar_palette(int $i): array
 {
     $p = [
