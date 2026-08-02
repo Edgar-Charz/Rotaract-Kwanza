@@ -73,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           trim($_POST['birthday'] ?? '') ?: null
         );
         if (!empty($_FILES['photo']['name'])) {
+          // A fresh upload always wins over a same-request "remove" checkbox.
           $new_photo = upload_image('photo', 'members');
           if ($new_photo) {
             $old_photo = $m->getPhotoById($id);
@@ -80,6 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $m->updatePhoto($id, $new_photo);
           } else {
             flash('error', 'Member updated, but the new photo could not be uploaded (invalid file type or too large).');
+          }
+        } elseif (!empty($_POST['remove_photo'])) {
+          $old_photo = $m->getPhotoById($id);
+          if ($old_photo) {
+            delete_image($old_photo);
+            $m->updatePhoto($id, '');
           }
         }
         log_activity('edit_member', "Edited member ID $id: " . trim($_POST['first_name']) . " " . trim($_POST['last_name']));
@@ -756,7 +763,9 @@ include __DIR__ . '/includes/header.php';
     var prev = document.getElementById('edit-m-photo-prev');
     prev.style.display = 'none';
     prev.src = '';
-    cur.innerHTML = '<div class="thumb-col"><span class="thumb-col-label">Current</span>' + memberAvatar(m, 72) + '</div>';
+    cur.innerHTML = '<div class="thumb-col"><span class="thumb-col-label">Current</span>' + memberAvatar(m, 72)
+      + (m.photo_path ? '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px"><input type="checkbox" name="remove_photo" value="1" style="width:auto"> Remove</label>' : '')
+      + '</div>';
 
     openModal('edit-modal');
   }

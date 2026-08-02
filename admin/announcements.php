@@ -27,31 +27,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ann = new Announcement($conn);
 
     if ($action === 'add') {
-        $title   = trim($_POST['title']);
-        $content = sanitize_html_fragment(trim($_POST['content']), ANNOUNCEMENT_ALLOWED_TAGS);
-        $slug    = slugify($title) . '-' . substr(uniqid(), -4);
-        $img     = upload_image('image', 'announcements') ?: '';
-        $ann->create($title, $slug, $content, $img,
-            $_POST['category'] ?? 'news',
-            isset($_POST['is_published']) ? 1 : 0
-        );
+        $title     = trim($_POST['title']);
+        $content   = sanitize_html_fragment(trim($_POST['content']), ANNOUNCEMENT_ALLOWED_TAGS);
+        $slug      = slugify($title) . '-' . substr(uniqid(), -4);
+        $img       = upload_image('image', 'announcements') ?: '';
+        $published = isset($_POST['is_published']) ? 1 : 0;
+        $ann->create($title, $slug, $content, $img, $_POST['category'] ?? 'news', $published);
         log_activity('add_announcement', "Added: $title");
         flash('success', 'Announcement published.');
+        // Brand new post — no "was it already published" history to check,
+        // just notify if it went live immediately.
+        if ($published) notify_newsletter_subscribers_of_post($conn, ['title' => $title, 'content' => $content, 'slug' => $slug]);
     }
 
     if ($action === 'edit') {
-        $id      = (int)$_POST['id'];
-        $title   = trim($_POST['title']);
-        $content = sanitize_html_fragment(trim($_POST['content']), ANNOUNCEMENT_ALLOWED_TAGS);
-        $oldImg  = $ann->getImagePathById($id);
-        $img     = upload_image('image', 'announcements') ?: $oldImg;
-        $ann->update($id, $title, $content, $img,
-            $_POST['category'] ?? 'news',
-            isset($_POST['is_published']) ? 1 : 0
-        );
+        $id        = (int)$_POST['id'];
+        $title     = trim($_POST['title']);
+        $content   = sanitize_html_fragment(trim($_POST['content']), ANNOUNCEMENT_ALLOWED_TAGS);
+        $before    = $ann->findById($id);
+        $oldImg    = $before['image_path'] ?? '';
+        // A fresh upload always wins over a same-request "remove" checkbox.
+        if (!empty($_FILES['image']['name'])) {
+            $img = upload_image('image', 'announcements') ?: $oldImg;
+        } elseif (!empty($_POST['remove_image'])) {
+            $img = '';
+        } else {
+            $img = $oldImg;
+        }
+        $published = isset($_POST['is_published']) ? 1 : 0;
+        $ann->update($id, $title, $content, $img, $_POST['category'] ?? 'news', $published);
         if ($img !== $oldImg && $oldImg) delete_image($oldImg);
         log_activity('edit_announcement', "Edited: $title");
         flash('success', 'Announcement updated.');
+        // Only notify on the draft→published transition, never on an edit
+        // to an already-published post (that would re-spam every subscriber
+        // on every typo fix).
+        if ($published && $before && !(int)$before['is_published']) {
+            notify_newsletter_subscribers_of_post($conn, ['title' => $title, 'content' => $content, 'slug' => $before['slug']]);
+        }
     }
 
     if ($action === 'delete') {
@@ -64,8 +77,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'toggle') {
-        $ann->togglePublished((int)$_POST['id']);
+        $id     = (int)$_POST['id'];
+        $before = $ann->findById($id);
+        $ann->togglePublished($id);
         flash('success', 'Visibility toggled.');
+        if ($before && !(int)$before['is_published']) {
+            notify_newsletter_subscribers_of_post($conn, ['title' => $before['title'], 'content' => $before['content'], 'slug' => $before['slug']]);
+        }
     }
 
     if ($action === 'bulk_publish' || $action === 'bulk_unpublish') {
@@ -75,8 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($ids as $pid) {
             $p = $ann->findById($pid);
             if (!$p) continue;
+            $wasUnpublished = !(int)$p['is_published'];
             $ann->update($pid, $p['title'], $p['content'], $p['image_path'] ?? '', $p['category'], $published);
             $count++;
+            if ($published && $wasUnpublished) {
+                notify_newsletter_subscribers_of_post($conn, ['title' => $p['title'], 'content' => $p['content'], 'slug' => $p['slug']]);
+            }
         }
         log_activity('bulk_update_announcement', "Bulk set $count post(s) " . ($published ? 'published' : 'unpublished'));
         flash('success', "$count post(s) updated.");
@@ -401,7 +423,8 @@ function openEditModal(p) {
   document.getElementById('ea_pub').checked    = p.is_published == 1;
   const prev = document.getElementById('ea_img_preview');
   prev.innerHTML = p.image_path
-    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(p.image_path)+'" class="current-photo-thumb current-photo-thumb--wide"></div>'
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(p.image_path)+'" class="current-photo-thumb current-photo-thumb--wide">'
+      + '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px"><input type="checkbox" name="remove_image" value="1" style="width:auto"> Remove</label></div>'
     : '';
   // Load content into Quill (treat as HTML if it looks like HTML, else plain text)
   if (p.content && p.content.trim().startsWith('<')) {

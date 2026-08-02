@@ -49,9 +49,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $oldImg = $lt->getImagePathById($id);
-                $img    = upload_image('image', 'leadership') ?: $oldImg;
-                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
-                    flash('error', 'Term updated, but the new image could not be uploaded (invalid file type or too large).');
+                // A fresh upload always wins over a same-request "remove" checkbox.
+                if (!empty($_FILES['image']['name'])) {
+                    $img = upload_image('image', 'leadership') ?: $oldImg;
+                    if ($img === $oldImg) {
+                        flash('error', 'Term updated, but the new image could not be uploaded (invalid file type or too large).');
+                    }
+                } elseif (!empty($_POST['remove_image'])) {
+                    $img = '';
+                } else {
+                    $img = $oldImg;
                 }
                 $ys     = (int) ($_POST['year_start'] ?? 0) ?: null;
                 $ye     = (int) ($_POST['year_end'] ?? 0) ?: null;
@@ -62,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (int) ($_POST['display_order'] ?? 0),
                     isset($_POST['is_active']) ? 1 : 0
                 );
-                if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
+                if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_leadership_term', "Edited leadership term ID $id: $label");
                 if (!isset($_SESSION['flash'])) flash('success', 'Term updated.');
             } catch (mysqli_sql_exception $e) {
@@ -341,6 +348,9 @@ include __DIR__ . '/includes/header.php';
             <div class="thumb-col">
               <span class="thumb-col-label">Photo</span>
               <img id="edit-term-prev" src="" alt="Preview" class="image-thumb image-thumb--wide">
+              <label id="et_remove_wrap" style="display:none;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px">
+                <input type="checkbox" name="remove_image" value="1" style="width:auto"> Remove
+              </label>
             </div>
           </div>
         </div>
@@ -446,6 +456,11 @@ function openEditTermModal(t) {
   document.getElementById('et_order').value = t.display_order || 0;
   document.getElementById('et_active').checked = t.is_active == 1;
   const prev = document.getElementById('edit-term-prev');
+  const removeWrap = document.getElementById('et_remove_wrap');
+  if (removeWrap) {
+    removeWrap.style.display = t.image_path ? 'flex' : 'none';
+    removeWrap.querySelector('input[type="checkbox"]').checked = false;
+  }
   if (prev) {
     if (t.image_path) { prev.src = t.image_path; prev.style.display = 'block'; }
     else prev.style.display = 'none';

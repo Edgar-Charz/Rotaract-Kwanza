@@ -71,9 +71,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     flash('error', 'Officer not found.');
                 } else {
                     $oldImg = $record['photo_path'] ?? '';
-                    $img    = upload_image('image', 'leadership') ?: $oldImg;
-                    if ($img === $oldImg && !empty($_FILES['image']['name'])) {
-                        flash('error', 'Officer updated, but the new photo could not be uploaded (invalid file type or too large).');
+                    // A fresh upload always wins over a same-request "remove" checkbox.
+                    if (!empty($_FILES['image']['name'])) {
+                        $img = upload_image('image', 'leadership') ?: $oldImg;
+                        if ($img === $oldImg) {
+                            flash('error', 'Officer updated, but the new photo could not be uploaded (invalid file type or too large).');
+                        }
+                    } elseif (!empty($_POST['remove_image'])) {
+                        $img = '';
+                    } else {
+                        $img = $oldImg;
                     }
                     $lm->update(
                         $id, $full_name, '',
@@ -85,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         clean_url($_POST['instagram_url'] ?? ''),
                         $role_id
                     );
-                    if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
+                    if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                     log_activity('edit_leadership_member', "Edited officer ID $id: $full_name");
                     if (!isset($_SESSION['flash'])) flash('success', 'Officer updated.');
                 }
@@ -217,6 +224,13 @@ include __DIR__ . '/includes/header.php';
   </form>
   <?php endif; ?>
 
+  <?php
+    // The checkbox column only exists for editors, so the real column count
+    // is 6 for viewers and 7 for editors — used below for the "no officers"
+    // row's colspan, which a hardcoded number can't track without risking
+    // DataTables' "Incorrect column count" warning for viewer-role admins.
+    $colcount = 6 + (has_role('editor') ? 1 : 0);
+  ?>
   <div class="table-wrap">
     <table id="dt-members">
       <thead>
@@ -258,7 +272,7 @@ include __DIR__ . '/includes/header.php';
           </td>
         </tr>
         <?php endforeach; else: ?>
-        <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px">No officers yet. Add the leadership team for this term.</td></tr>
+        <tr><td colspan="<?= $colcount ?>" class="text-muted" style="text-align:center;padding:24px">No officers yet. Add the leadership team for this term.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
@@ -368,6 +382,9 @@ include __DIR__ . '/includes/header.php';
             <div class="thumb-col">
               <span class="thumb-col-label">Photo</span>
               <img id="edit-member-prev" src="" alt="Preview" class="image-thumb image-thumb--avatar">
+              <label id="em_remove_wrap" style="display:none;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px">
+                <input type="checkbox" name="remove_image" value="1" style="width:auto"> Remove
+              </label>
             </div>
           </div>
         </div>
@@ -447,6 +464,11 @@ function openEditMemberModal(m) {
   document.getElementById('em_instagram').value = m.instagram_url || '';
   document.getElementById('em_active').checked = m.is_active == 1;
   const prev = document.getElementById('edit-member-prev');
+  const removeWrap = document.getElementById('em_remove_wrap');
+  if (removeWrap) {
+    removeWrap.style.display = m.photo_path ? 'flex' : 'none';
+    removeWrap.querySelector('input[type="checkbox"]').checked = false;
+  }
   if (prev) {
     if (m.photo_path) { prev.src = m.photo_path; prev.style.display = 'block'; }
     else prev.style.display = 'none';

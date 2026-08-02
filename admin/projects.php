@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/Project.php';
 require_once dirname(__DIR__) . '/classes/ProjectPhoto.php';
+require_once dirname(__DIR__) . '/classes/Pledge.php';
 require_once dirname(__DIR__) . '/includes/helpers.php';
 
 $page_title = 'Projects';
@@ -25,12 +26,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $start_date = trim($_POST['start_date'] ?? '') ?: null;
                 $end_date   = trim($_POST['end_date'] ?? '') ?: null;
+                $funding_goal = money_or_null($_POST['funding_goal'] ?? '');
                 $proj->create(
                     $title, trim($_POST['description']), trim($_POST['impact_stat']),
                     trim($_POST['impact_label']), trim($_POST['icon_type']) ?: 'heart',
                     $_POST['status'] ?? 'active', isset($_POST['is_featured']) ? 1 : 0, $img,
                     clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''),
-                    $start_date, $end_date
+                    clean_url($_POST['x_url'] ?? ''), $start_date, $end_date, $funding_goal
                 );
                 log_activity('add_project', "Added project: $title");
                 if (!isset($_SESSION['flash'])) flash('success', 'Project added.');
@@ -47,20 +49,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Title is required.');
         } else {
             try {
-                $oldImg     = $proj->getImagePathById($id);
-                $img        = upload_image('image', 'projects') ?: $oldImg;
-                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
-                    flash('error', 'Project updated, but the new image could not be uploaded (invalid file type or too large).');
+                $oldImg = $proj->getImagePathById($id);
+                if (!empty($_FILES['image']['name'])) {
+                    // A fresh upload always wins over a same-request "remove" checkbox.
+                    $img = upload_image('image', 'projects') ?: $oldImg;
+                    if ($img === $oldImg) {
+                        flash('error', 'Project updated, but the new image could not be uploaded (invalid file type or too large).');
+                    }
+                } elseif (!empty($_POST['remove_image'])) {
+                    $img = '';
+                } else {
+                    $img = $oldImg;
                 }
                 $start_date = trim($_POST['start_date'] ?? '') ?: null;
                 $end_date   = trim($_POST['end_date'] ?? '') ?: null;
+                $funding_goal = money_or_null($_POST['funding_goal'] ?? '');
                 $proj->update(
                     $id,
                     $title, trim($_POST['description']), trim($_POST['impact_stat']),
                     trim($_POST['impact_label']), trim($_POST['icon_type']) ?: 'heart',
                     $_POST['status'], isset($_POST['is_featured']) ? 1 : 0, $img,
                     clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''),
-                    $start_date, $end_date
+                    clean_url($_POST['x_url'] ?? ''), $start_date, $end_date, $funding_goal
                 );
                 if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_project', "Edited project ID $id: $title");
@@ -95,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pid, $p['title'], $p['description'] ?? '', $p['impact_stat'] ?? '', $p['impact_label'] ?? '',
                     $p['icon_type'] ?: 'heart', $status, (int)$p['is_featured'],
                     $p['image_path'] ?? '', $p['instagram_url'] ?? '', $p['tiktok_url'] ?? '',
-                    $p['start_date'] ?? null, $p['end_date'] ?? null
+                    $p['x_url'] ?? '', $p['start_date'] ?? null, $p['end_date'] ?? null, $p['funding_goal'] ?? null
                 );
                 $count++;
             }
@@ -127,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $projects = (new Project($conn))->getAll();
 $icons    = icon_options();
+$raised_by_project = (new Pledge($conn))->getConfirmedAmountsByProject();
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -165,7 +176,7 @@ include __DIR__ . '/includes/header.php';
       <thead>
         <tr>
           <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
-          <th>Icon</th><th>Title</th><th>Impact</th><th>Timeline</th><th>Status</th><th>Featured</th><th>Created</th><th>Actions</th>
+          <th>Icon</th><th>Title</th><th>Impact</th><th>Timeline</th><th>Funding</th><th>Status</th><th>Featured</th><th>Created</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -187,6 +198,12 @@ include __DIR__ . '/includes/header.php';
             <?php if ($p['start_date'] || $p['end_date']): ?>
               <?= $p['start_date'] ? date('M Y', strtotime($p['start_date'])) : '?' ?> &ndash; <?= $p['end_date'] ? date('M Y', strtotime($p['end_date'])) : 'ongoing' ?>
             <?php else: ?>—<?php endif; ?>
+          </td>
+          <td style="font-size:12px">
+            <?php if ($p['funding_goal']): ?>
+              <span class="fw-bold"><?= number_format((float)($raised_by_project[$p['id']] ?? 0), 2) ?></span>
+              <span class="text-muted"> / <?= number_format((float)$p['funding_goal'], 2) ?></span>
+            <?php else: ?><span class="text-muted">—</span><?php endif; ?>
           </td>
           <td><span class="badge badge-<?= h($p['status']) ?>"><?= h($p['status']) ?></span></td>
           <td><?= $p['is_featured'] ? '<span class="badge badge-featured">Featured</span>' : '<span class="text-muted">No</span>' ?></td>
@@ -249,6 +266,10 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>Start Date <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="date" name="start_date"></div>
           <div class="form-group"><label>End Date <span class="text-muted" style="font-weight:400">(optional, blank = ongoing)</span></label><input type="date" name="end_date"></div>
         </div>
+        <div class="form-group mb-2">
+          <label>Funding Goal <span class="text-muted" style="font-weight:400">(optional)</span></label>
+          <input type="text" inputmode="decimal" class="money-input" name="funding_goal" placeholder="Leave blank if not seeking sponsorship">
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Icon <span class="text-muted" style="font-weight:400">(shown when there's no cover image)</span></label>
             <select name="icon_type">
@@ -265,6 +286,9 @@ include __DIR__ . '/includes/header.php';
         <div class="form-row">
           <div class="form-group"><label>Instagram URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="instagram_url" placeholder="https://instagram.com/p/..."></div>
           <div class="form-group"><label>TikTok URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="tiktok_url" placeholder="https://tiktok.com/@.../video/..."></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>X URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="x_url" placeholder="https://x.com/.../status/..."></div>
         </div>
         <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;margin-top:8px">
           <input type="checkbox" name="is_featured" id="a_feat" style="width:auto">
@@ -316,6 +340,10 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>Start Date <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="date" name="start_date" id="ep_start_date"></div>
           <div class="form-group"><label>End Date <span class="text-muted" style="font-weight:400">(optional, blank = ongoing)</span></label><input type="date" name="end_date" id="ep_end_date"></div>
         </div>
+        <div class="form-group mb-2">
+          <label>Funding Goal <span class="text-muted" style="font-weight:400">(optional)</span></label>
+          <input type="text" inputmode="decimal" class="money-input" name="funding_goal" id="ep_funding_goal" placeholder="Leave blank if not seeking sponsorship">
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Icon <span class="text-muted" style="font-weight:400">(shown when there's no cover image)</span></label>
             <select name="icon_type" id="ep_icon_type">
@@ -332,6 +360,9 @@ include __DIR__ . '/includes/header.php';
         <div class="form-row">
           <div class="form-group"><label>Instagram URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="instagram_url" id="ep_instagram"></div>
           <div class="form-group"><label>TikTok URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="tiktok_url" id="ep_tiktok"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>X URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="x_url" id="ep_x"></div>
         </div>
         <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;margin-top:8px">
           <input type="checkbox" name="is_featured" id="ep_feat" style="width:auto">
@@ -378,6 +409,7 @@ function openViewModal(p) {
       <div><div class="view-dt">Impact Label</div><div class="view-dd">${esc(p.impact_label) || '—'}</div></div>
       <div><div class="view-dt">Start Date</div><div class="view-dd">${p.start_date ? esc(p.start_date) : '—'}</div></div>
       <div><div class="view-dt">End Date</div><div class="view-dd">${p.end_date ? esc(p.end_date) : (p.start_date ? 'Ongoing' : '—')}</div></div>
+      <div><div class="view-dt">Funding Goal</div><div class="view-dd">${p.funding_goal ? esc(p.funding_goal) : 'Not seeking sponsorship'}</div></div>
       <div><div class="view-dt">Status</div><div class="view-dd">${esc(p.status)}</div></div>
       <div><div class="view-dt">Created</div><div class="view-dd">${esc(p.created_at ? p.created_at.substring(0,10) : '')}</div></div>
     </div>
@@ -388,6 +420,7 @@ function openViewModal(p) {
     <div class="view-dl">
       <div><div class="view-dt">Instagram</div><div class="view-dd">${p.instagram_url ? `<a href="${esc(p.instagram_url)}" target="_blank" rel="noopener">${esc(p.instagram_url)}</a>` : '—'}</div></div>
       <div><div class="view-dt">TikTok</div><div class="view-dd">${p.tiktok_url ? `<a href="${esc(p.tiktok_url)}" target="_blank" rel="noopener">${esc(p.tiktok_url)}</a>` : '—'}</div></div>
+      <div><div class="view-dt">X</div><div class="view-dd">${p.x_url ? `<a href="${esc(p.x_url)}" target="_blank" rel="noopener">${esc(p.x_url)}</a>` : '—'}</div></div>
     </div>`;
   openModal('view-modal');
 }
@@ -396,7 +429,7 @@ $(document).ready(function() {
   $('#dt-projects').DataTable({
     pageLength: 25,
     columnDefs: [
-      { orderable: false, targets: <?= has_role('editor') ? '[0, 1, 8]' : '[0, 7]' ?> }
+      { orderable: false, targets: <?= has_role('editor') ? '[0, 1, 9]' : '[0, 8]' ?> }
     ]
   });
 });
@@ -408,14 +441,19 @@ function openEditModal(p) {
   document.getElementById('ep_impact_label').value = p.impact_label || '';
   document.getElementById('ep_start_date').value   = p.start_date || '';
   document.getElementById('ep_end_date').value     = p.end_date || '';
+  var epFundingGoal = document.getElementById('ep_funding_goal');
+  epFundingGoal.value = p.funding_goal || '';
+  epFundingGoal.dispatchEvent(new Event('input'));
   document.getElementById('ep_icon_type').value    = p.icon_type || 'heart';
   document.getElementById('ep_status').value       = p.status;
   document.getElementById('ep_instagram').value    = p.instagram_url || '';
   document.getElementById('ep_tiktok').value       = p.tiktok_url || '';
+  document.getElementById('ep_x').value            = p.x_url || '';
   document.getElementById('ep_feat').checked       = p.is_featured == 1;
   const prev = document.getElementById('ep_img_preview');
   prev.innerHTML = p.image_path
-    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(p.image_path)+'" class="current-photo-thumb current-photo-thumb--wide"></div>'
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(p.image_path)+'" class="current-photo-thumb current-photo-thumb--wide">'
+      + '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px"><input type="checkbox" name="remove_image" value="1" style="width:auto"> Remove</label></div>'
     : '';
   document.getElementById('edit-proj-prev').style.display = 'none';
   openModal('edit-modal');
@@ -431,6 +469,7 @@ function duplicateProject(p) {
   form.querySelector('[name="icon_type"]').value      = p.icon_type || 'heart';
   form.querySelector('[name="instagram_url"]').value  = p.instagram_url || '';
   form.querySelector('[name="tiktok_url"]').value     = p.tiktok_url || '';
+  form.querySelector('[name="x_url"]').value          = p.x_url || '';
   openModal('add-modal');
 }
 

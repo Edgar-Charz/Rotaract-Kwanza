@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save') {
         $member_id    = (int)$_POST['member_id'];
         $year         = max(2020, min((int)date('Y') + 1, (int)$_POST['year']));
-        $amount_due   = max(0, (float)$_POST['amount_due']);
-        $amount_paid  = max(0, (float)$_POST['amount_paid']);
+        $amount_due   = money_or_zero($_POST['amount_due'] ?? '');
+        $amount_paid  = money_or_zero($_POST['amount_paid'] ?? '');
         $payment_date = $_POST['payment_date'] ?: '';
         $notes        = trim($_POST['notes']);
 
@@ -148,8 +148,8 @@ include __DIR__ . '/includes/header.php';
         <input type="hidden" name="member_id" id="dm_member_id">
         <input type="hidden" name="year" value="<?= $year ?>">
         <div class="form-row">
-          <div class="form-group"><label>Amount Due</label><input type="number" name="amount_due" id="dm_amount_due" step="0.01" min="0" value="0"></div>
-          <div class="form-group"><label>Amount Paid</label><input type="number" name="amount_paid" id="dm_amount_paid" step="0.01" min="0" value="0"></div>
+          <div class="form-group"><label>Amount Due</label><input type="text" inputmode="decimal" class="money-input" name="amount_due" id="dm_amount_due" value="0"></div>
+          <div class="form-group"><label>Amount Paid</label><input type="text" inputmode="decimal" class="money-input" name="amount_paid" id="dm_amount_paid" value="0"></div>
         </div>
         <div class="form-group mb-2"><label>Payment Date</label><input type="date" name="payment_date" id="dm_payment_date"></div>
         <div class="form-group"><label>Notes</label><textarea name="notes" id="dm_notes" style="min-height:70px"></textarea></div>
@@ -173,8 +173,12 @@ function openDuesModalFromBtn(btn) {
   const d = btn.dataset;
   document.getElementById('dm_member_id').value    = d.memberId;
   document.getElementById('dm_name').textContent   = d.name;
-  document.getElementById('dm_amount_due').value   = d.amountDue  || 0;
-  document.getElementById('dm_amount_paid').value  = d.amountPaid || 0;
+  const dueEl  = document.getElementById('dm_amount_due');
+  const paidEl = document.getElementById('dm_amount_paid');
+  dueEl.value  = d.amountDue  || 0;
+  paidEl.value = d.amountPaid || 0;
+  dueEl.dispatchEvent(new Event('input'));
+  paidEl.dispatchEvent(new Event('input'));
   document.getElementById('dm_payment_date').value = d.paymentDate || '';
   document.getElementById('dm_notes').value        = d.notes || '';
   openModal('dues-modal');

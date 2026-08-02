@@ -157,6 +157,18 @@ include __DIR__ . '/includes/header.php';
       </form>
       <?php endif; ?>
 
+      <?php
+        // Checkbox and Project are mutually exclusive (opposite $project_id
+        // conditions) so the real column count is never the naive "all
+        // columns" total — it varies by role and whether a project is
+        // selected. Used below for the "no results" row's colspan, which a
+        // hardcoded number can't track without risking DataTables' "Incorrect
+        // column count" warning whenever the header shrinks.
+        $colcount = 7
+          + ($project_id && has_role('editor') ? 1 : 0)
+          + (!$project_id ? 1 : 0)
+          + ($project_id ? 1 : 0);
+      ?>
       <div class="table-wrap">
         <table id="dt-signups">
           <thead>
@@ -213,7 +225,7 @@ include __DIR__ . '/includes/header.php';
               </td>
             </tr>
             <?php endforeach; else: ?>
-            <tr><td colspan="10" class="text-muted" style="text-align:center;padding:30px">No sign-ups found.</td></tr>
+            <tr><td colspan="<?= $colcount ?>" class="text-muted" style="text-align:center;padding:30px">No sign-ups found.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>

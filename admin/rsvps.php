@@ -216,6 +216,18 @@ include __DIR__ . '/includes/header.php';
       </form>
       <?php endif; ?>
 
+      <?php
+        // Checkbox and Event are mutually exclusive (opposite $event_id
+        // conditions) so the real column count is never the naive "all
+        // columns" total — it varies by role and whether an event is
+        // selected. Used below for the "no results" row's colspan, which a
+        // hardcoded number can't track without risking DataTables' "Incorrect
+        // column count" warning whenever the header shrinks.
+        $colcount = 8
+          + ($event_id && has_role('editor') ? 1 : 0)
+          + (!$event_id ? 1 : 0)
+          + ($event_id ? 1 : 0);
+      ?>
       <div class="table-wrap">
         <table id="dt-rsvps">
           <thead>
@@ -273,7 +285,7 @@ include __DIR__ . '/includes/header.php';
               </td>
             </tr>
             <?php endforeach; else: ?>
-            <tr><td colspan="11" class="text-muted" style="text-align:center;padding:30px">No RSVPs found.</td></tr>
+            <tr><td colspan="<?= $colcount ?>" class="text-muted" style="text-align:center;padding:30px">No RSVPs found.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>

@@ -52,9 +52,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $oldImg = $tm->getImagePathById($id);
-                $img    = upload_image('image', 'team') ?: $oldImg;
-                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
-                    flash('error', 'Team member updated, but the new photo could not be uploaded (invalid file type or too large).');
+                // A fresh upload always wins over a same-request "remove" checkbox.
+                if (!empty($_FILES['image']['name'])) {
+                    $img = upload_image('image', 'team') ?: $oldImg;
+                    if ($img === $oldImg) {
+                        flash('error', 'Team member updated, but the new photo could not be uploaded (invalid file type or too large).');
+                    }
+                } elseif (!empty($_POST['remove_image'])) {
+                    $img = '';
+                } else {
+                    $img = $oldImg;
                 }
                 $tm->update(
                     $id,
@@ -63,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     isset($_POST['is_active']) ? 1 : 0,
                     trim($_POST['term'] ?? ''), clean_url($_POST['linkedin_url'] ?? ''), clean_url($_POST['instagram_url'] ?? '')
                 );
-                if ($img && $img !== $oldImg && $oldImg) delete_image($oldImg);
+                if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_team', "Edited team member ID $id: $full_name");
                 if (!isset($_SESSION['flash'])) flash('success', 'Team member updated.');
             } catch (mysqli_sql_exception $e) {
@@ -682,7 +689,8 @@ function openEditModal(t) {
   document.getElementById('et_active').checked = t.is_active == 1;
   const ph = document.getElementById('et_current_photo');
   ph.innerHTML = t.image_path
-    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="' + esc(t.image_path) + '" class="current-photo-thumb current-photo-thumb--avatar"></div>'
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="' + esc(t.image_path) + '" class="current-photo-thumb current-photo-thumb--avatar">'
+      + '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px"><input type="checkbox" name="remove_image" value="1" style="width:auto"> Remove</label></div>'
     : '';
   openModal('edit-modal');
 }

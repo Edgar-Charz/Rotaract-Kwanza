@@ -18,6 +18,7 @@ const TEXT_SETTING_KEYS = [
   'facebook_url',
   'instagram_url',
   'twitter_url',
+  'tiktok_url',
   'linkedin_url',
   'about_text',
   'hero_stats_members',
@@ -34,6 +35,7 @@ const TEXT_SETTING_KEYS = [
   'meeting_location',
   'hero_badge_year',
   'hero_badge_label',
+  'hero_pill_text',
   'mail_from_name',
   'mail_from_email',
   'brand_initials',
@@ -54,8 +56,7 @@ const TEXT_SETTING_KEYS = [
   'home_gallery_description',
   'contact_intro',
   'donate_intro',
-  'donate_bank_details',
-  'donate_mobile_money',
+  'donate_gratitude_message',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -112,6 +113,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_role('editor');
     $keys = TEXT_SETTING_KEYS;
     $ss = new SiteSettings($conn);
+
+    // Freeform donate-page field gets a length cap — nothing else on this
+    // form is admin-typed prose meant to render publicly at this size, so
+    // this guard is scoped to just this one rather than every text key.
+    // (Bank/mobile-money account details now live in admin/payment_accounts.php.)
+    $donate_limits = ['donate_gratitude_message' => 300];
+    foreach ($donate_limits as $dkey => $max) {
+      if (isset($_POST[$dkey]) && mb_strlen(trim($_POST[$dkey])) > $max) {
+        flash('error', ucfirst(str_replace('_', ' ', $dkey)) . " must be $max characters or fewer.");
+        unset($_POST[$dkey]);
+      }
+    }
+
     foreach ($keys as $key) {
       if (isset($_POST[$key])) {
         $value = str_ends_with($key, '_url') ? clean_url($_POST[$key]) : trim($_POST[$key]);
@@ -119,20 +133,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
-    foreach (['hero_image', 'about_image'] as $img_key) {
-      if (empty($_FILES[$img_key]['name'])) continue;
-      $img = upload_image($img_key, 'site');
-      if ($img) {
-        $old = $ss->get($img_key);
-        $ss->set($img_key, $img);
-        if ($old) delete_image($old);
-      } else {
-        flash('error', ucfirst(str_replace('_', ' ', $img_key)) . ' could not be uploaded (invalid file type or too large).');
+    foreach (['hero_image', 'about_image', 'site_logo'] as $img_key) {
+      if (!empty($_FILES[$img_key]['name'])) {
+        $img = upload_image($img_key, 'site');
+        if ($img) {
+          $old = $ss->get($img_key);
+          $ss->set($img_key, $img);
+          if ($old) delete_image($old);
+        } else {
+          flash('error', ucfirst(str_replace('_', ' ', $img_key)) . ' could not be uploaded (invalid file type or too large).');
+        }
       }
     }
 
     log_activity('update_settings', 'Updated site settings');
     if (!isset($_SESSION['flash'])) flash('success', 'Settings saved.');
+  }
+
+  // Removing an image and choosing where the logo displays both take effect
+  // immediately (their own action + redirect) instead of waiting on the big
+  // "Save Settings" button below — auto-submitting *that* whole form on every
+  // click would also save whatever else the admin happens to be mid-editing
+  // elsewhere on this page at that moment.
+  if ($action === 'remove_setting_image') {
+    require_role('editor');
+    $img_key = $_POST['key'] ?? '';
+    if (!in_array($img_key, ['hero_image', 'about_image', 'site_logo'], true)) {
+      flash('error', 'Invalid image field.');
+    } else {
+      $ss  = new SiteSettings($conn);
+      $old = $ss->get($img_key);
+      if ($old) {
+        delete_image($old);
+        $ss->set($img_key, '');
+        log_activity('update_settings', 'Removed ' . str_replace('_', ' ', $img_key));
+      }
+      flash('success', ucfirst(str_replace('_', ' ', $img_key)) . ' removed.');
+    }
+    header('Location: ' . ADMIN_URL . '/settings.php#branding');
+    exit;
+  }
+
+  if ($action === 'update_logo_display') {
+    require_role('editor');
+    $location = $_POST['location'] ?? '';
+    $value    = $_POST['value'] ?? '';
+    $field    = $location === 'navbar' ? 'navbar_logo_display' : ($location === 'footer' ? 'footer_logo_display' : '');
+    if ($field === '' || !in_array($value, ['logo', 'initials'], true)) {
+      flash('error', 'Invalid selection.');
+    } else {
+      (new SiteSettings($conn))->set($field, $value);
+      log_activity('update_settings', "Set $field to $value");
+      flash('success', ($location === 'navbar' ? 'Topbar' : 'Footer') . ' display updated.');
+    }
+    header('Location: ' . ADMIN_URL . '/settings.php#branding');
+    exit;
   }
 
   if ($action === 'save_security_settings') {
@@ -185,6 +240,9 @@ $s_keys = [
   ...TEXT_SETTING_KEYS,
   'hero_image',
   'about_image',
+  'site_logo',
+  'navbar_logo_display',
+  'footer_logo_display',
   'login_max_attempts',
   'login_lockout_minutes',
   'session_idle_minutes',
@@ -199,6 +257,9 @@ $setting_defaults = [
   'hero_title'              => 'Serving Communities, Changing Lives',
   'hero_subtitle'           => 'Together we make a difference',
   'hero_description'        => 'The Rotaract Club of Kwanza is a vibrant community of young leaders committed to fellowship, professional development, and meaningful service to our community and beyond.',
+  'hero_pill_text'          => 'Service in Action',
+  'navbar_logo_display'     => 'logo',
+  'footer_logo_display'     => 'logo',
   'home_about_highlight'    => 'Over a decade of community service and fellowship in Kwanza',
   'home_about_description'  => 'The Rotaract Club of Kwanza is a Rotary International-sponsored organization bringing together young professionals and leaders aged 18–30 to create lasting change in our community.',
   'home_events_description' => 'Discover our next service days, leadership forums, and fellowship celebrations. Join Rotaract Kwanza for meaningful impact.',
@@ -209,8 +270,7 @@ $setting_defaults = [
   'home_gallery_description' => 'A glimpse into our community service, events, and fellowship moments.',
   'contact_intro'           => 'Whether you have a question, partnership opportunity, or just want to say hello — our doors are always open.',
   'donate_intro'            => 'Every contribution helps us fund community service projects, from clean water initiatives to educational scholarships. Your generosity directly changes lives in Kwanza.',
-  'donate_bank_details'     => '',
-  'donate_mobile_money'     => '',
+  'donate_gratitude_message' => 'Thank you for even considering a gift — every contribution, big or small, helps us keep serving Kwanza.',
   'login_max_attempts'      => '5',
   'login_lockout_minutes'   => '15',
   'session_idle_minutes'    => '30',
@@ -439,6 +499,48 @@ include __DIR__ . '/includes/header.php';
         <div class="card mb-2">
           <div class="card-header"><span class="card-title">Branding &amp; Footer</span></div>
           <div class="card-body">
+            <div class="form-group mb-2">
+              <label>Site Logo</label>
+              <p class="text-muted" style="font-size:12.5px;margin-bottom:10px">
+                Uploading a logo doesn't switch it on everywhere automatically — pick where it should appear below. Leave unset (or pick Initials) to keep the badge instead. A square/round image works best.
+              </p>
+              <div class="image-field">
+                <label class="upload-area" for="site_logo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <p><strong>Click to upload</strong></p>
+                  <p style="font-size:11px;margin-top:4px">JPG, PNG, GIF, WEBP — max 5 MB</p>
+                </label>
+                <input type="file" id="site_logo" name="site_logo" accept="image/*" style="display:none" onchange="previewImage(this,'logo-img-preview')">
+                <div class="thumb-col">
+                  <span class="thumb-col-label">Current</span>
+                  <img id="logo-img-preview" src="<?= h($settings['site_logo']) ?>" alt="Logo preview" class="image-thumb image-thumb--avatar" style="<?= $settings['site_logo'] ? 'display:block' : '' ?>">
+                  <?php if ($settings['site_logo']): ?>
+                    <button type="submit" form="rm-site_logo-form" class="btn btn-sm btn-danger" style="margin-top:6px;font-size:11px;padding:4px 10px" onclick="return confirm('Remove the current site logo?')">Remove</button>
+                  <?php endif; ?>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Show in Topbar</label>
+                <select name="value" form="navbar-logo-display-form" onchange="this.form.requestSubmit()">
+                  <option value="logo" <?= $settings['navbar_logo_display'] === 'logo' ? 'selected' : '' ?>>Logo image</option>
+                  <option value="initials" <?= $settings['navbar_logo_display'] === 'initials' ? 'selected' : '' ?>>Initials badge</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Show in Footer</label>
+                <select name="value" form="footer-logo-display-form" onchange="this.form.requestSubmit()">
+                  <option value="logo" <?= $settings['footer_logo_display'] === 'logo' ? 'selected' : '' ?>>Logo image</option>
+                  <option value="initials" <?= $settings['footer_logo_display'] === 'initials' ? 'selected' : '' ?>>Initials badge</option>
+                </select>
+              </div>
+            </div>
+            <p class="text-muted" style="font-size:11.5px;margin:-6px 0 14px">These two save instantly when changed. If no logo has been uploaded yet, the initials badge always shows regardless of this choice.</p>
             <div class="form-row">
               <div class="form-group"><label>Logo Initials</label><input type="text" name="brand_initials" value="<?= h($settings['brand_initials']) ?>" maxlength="4" placeholder="RK"></div>
               <div class="form-group"><label>Footer Tagline</label><input type="text" name="footer_tagline" value="<?= h($settings['footer_tagline']) ?>" placeholder="Made with ♥ for community &amp; service"></div>
@@ -457,6 +559,7 @@ include __DIR__ . '/includes/header.php';
               <div class="form-group"><label>Badge Year</label><input type="text" name="hero_badge_year" value="<?= h($settings['hero_badge_year']) ?>" placeholder="2025"></div>
               <div class="form-group"><label>Badge Label</label><input type="text" name="hero_badge_label" value="<?= h($settings['hero_badge_label']) ?>" placeholder="Outstanding Club Award"></div>
             </div>
+            <div class="form-group mt-1"><label>Floating Pill Text</label><input type="text" name="hero_pill_text" value="<?= h($settings['hero_pill_text']) ?>" placeholder="Service in Action"></div>
           </div>
         </div>
 
@@ -483,6 +586,9 @@ include __DIR__ . '/includes/header.php';
                   <div class="thumb-col">
                     <span class="thumb-col-label">Current</span>
                     <img id="hero-img-preview" src="<?= h($settings['hero_image']) ?>" alt="Hero preview" class="image-thumb image-thumb--hero" style="<?= $settings['hero_image'] ? 'display:block' : '' ?>">
+                    <?php if ($settings['hero_image']): ?>
+                      <button type="submit" form="rm-hero_image-form" class="btn btn-sm btn-danger" style="margin-top:6px;font-size:11px;padding:4px 10px" onclick="return confirm('Remove the current hero image?')">Remove</button>
+                    <?php endif; ?>
                   </div>
                 </div>
               </div>
@@ -502,6 +608,9 @@ include __DIR__ . '/includes/header.php';
                   <div class="thumb-col">
                     <span class="thumb-col-label">Current</span>
                     <img id="about-img-preview" src="<?= h($settings['about_image']) ?>" alt="About preview" class="image-thumb image-thumb--hero" style="<?= $settings['about_image'] ? 'display:block' : '' ?>">
+                    <?php if ($settings['about_image']): ?>
+                      <button type="submit" form="rm-about_image-form" class="btn btn-sm btn-danger" style="margin-top:6px;font-size:11px;padding:4px 10px" onclick="return confirm('Remove the current about image?')">Remove</button>
+                    <?php endif; ?>
                   </div>
                 </div>
               </div>
@@ -595,11 +704,12 @@ include __DIR__ . '/includes/header.php';
           <div class="card-header"><span class="card-title">Donate / Support Us</span></div>
           <div class="card-body">
             <div class="form-group"><label>Donate Page Intro</label><textarea name="donate_intro" style="min-height:72px"><?= h($settings['donate_intro']) ?></textarea></div>
-            <div class="form-row">
-              <div class="form-group mt-1"><label>Bank Transfer Details</label><textarea name="donate_bank_details" style="min-height:72px" placeholder="Account name, number, bank, branch..."><?= h($settings['donate_bank_details']) ?></textarea></div>
-              <div class="form-group mt-1"><label>Mobile Money Details</label><textarea name="donate_mobile_money" style="min-height:72px" placeholder="Provider, number, account name..."><?= h($settings['donate_mobile_money']) ?></textarea></div>
+            <div class="form-group mt-1">
+              <label>Gratitude Message</label>
+              <textarea name="donate_gratitude_message" style="min-height:56px" maxlength="300" placeholder="Shown above the payment cards, only when at least one payment method is filled in below."><?= h($settings['donate_gratitude_message']) ?></textarea>
+              <p class="text-muted" style="font-size:11.5px;margin-top:2px">Max 300 characters.</p>
             </div>
-            <p class="text-muted" style="font-size:12.5px;margin-top:4px">Leave either blank to hide that payment method on the public Donate page.</p>
+            <p class="text-muted" style="font-size:12.5px">Bank accounts and mobile-money numbers are managed on the <a href="payment_accounts.php">Payment Accounts</a> page — add as many as needed.</p>
           </div>
         </div>
 
@@ -611,7 +721,10 @@ include __DIR__ . '/includes/header.php';
               <div class="form-group"><label>Instagram URL</label><input type="text" name="instagram_url" value="<?= h($settings['instagram_url']) ?>"></div>
             </div>
             <div class="form-row">
-              <div class="form-group"><label>Twitter / X URL</label><input type="text" name="twitter_url" value="<?= h($settings['twitter_url']) ?>"></div>
+              <div class="form-group"><label>X (Twitter) URL</label><input type="text" name="twitter_url" value="<?= h($settings['twitter_url']) ?>"></div>
+              <div class="form-group"><label>TikTok URL</label><input type="text" name="tiktok_url" value="<?= h($settings['tiktok_url']) ?>"></div>
+            </div>
+            <div class="form-row">
               <div class="form-group"><label>LinkedIn URL</label><input type="text" name="linkedin_url" value="<?= h($settings['linkedin_url']) ?>"></div>
             </div>
           </div>
@@ -641,6 +754,27 @@ include __DIR__ . '/includes/header.php';
 
       <button type="submit" class="btn btn-primary">Save All Settings</button>
     </form>
+
+    <!-- Standalone forms for the branding controls that act immediately
+         (image remove buttons, logo-display selects) instead of waiting on
+         the big form's Save button above. Associated to their trigger
+         elements — which stay visually inside the branding card — via the
+         HTML5 form="" attribute rather than DOM nesting, since a <form>
+         can't nest inside another <form>. -->
+    <?php foreach (['site_logo', 'hero_image', 'about_image'] as $img_key): ?>
+    <form method="POST" id="rm-<?= $img_key ?>-form" style="display:none">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="remove_setting_image">
+      <input type="hidden" name="key" value="<?= $img_key ?>">
+    </form>
+    <?php endforeach; ?>
+    <?php foreach (['navbar', 'footer'] as $loc): ?>
+    <form method="POST" id="<?= $loc ?>-logo-display-form" style="display:none">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="update_logo_display">
+      <input type="hidden" name="location" value="<?= $loc ?>">
+    </form>
+    <?php endforeach; ?>
 
     <div class="settings-panel" data-panel="security">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;align-items:start">

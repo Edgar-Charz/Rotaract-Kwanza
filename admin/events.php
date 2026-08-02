@@ -33,7 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     trim($_POST['location']), trim($_POST['description']),
                     trim($_POST['category']) ?: 'General', $_POST['status'] ?? 'upcoming',
                     isset($_POST['is_featured']) ? 1 : 0, $img,
-                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''), $capacity
+                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''),
+                    clean_url($_POST['x_url'] ?? ''), $capacity
                 );
                 log_activity('add_event', "Created event: $title on " . $_POST['event_date']);
                 if (!isset($_SESSION['flash'])) flash('success', 'Event created.');
@@ -53,10 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Please provide a valid event date.');
         } else {
             try {
-                $oldImg   = $ev->getImagePathById($id);
-                $img      = upload_image('image', 'events') ?: $oldImg;
-                if ($img === $oldImg && !empty($_FILES['image']['name'])) {
-                    flash('error', 'Event updated, but the new image could not be uploaded (invalid file type or too large).');
+                $oldImg = $ev->getImagePathById($id);
+                if (!empty($_FILES['image']['name'])) {
+                    // A fresh upload always wins over a same-request "remove" checkbox.
+                    $img = upload_image('image', 'events') ?: $oldImg;
+                    if ($img === $oldImg) {
+                        flash('error', 'Event updated, but the new image could not be uploaded (invalid file type or too large).');
+                    }
+                } elseif (!empty($_POST['remove_image'])) {
+                    $img = '';
+                } else {
+                    $img = $oldImg;
                 }
                 $capacity = trim($_POST['capacity'] ?? '') !== '' ? max(0, (int) $_POST['capacity']) : null;
                 $ev->update(
@@ -65,7 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     trim($_POST['location']), trim($_POST['description']),
                     trim($_POST['category']) ?: 'General', $_POST['status'],
                     isset($_POST['is_featured']) ? 1 : 0, $img,
-                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''), $capacity
+                    clean_url($_POST['instagram_url'] ?? ''), clean_url($_POST['tiktok_url'] ?? ''),
+                    clean_url($_POST['x_url'] ?? ''), $capacity
                 );
                 if ($img !== $oldImg && $oldImg) delete_image($oldImg);
                 log_activity('edit_event', "Edited event ID $id: $title");
@@ -100,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $eid, $e['title'], $e['event_date'], $e['event_time'], $e['location'],
                     $e['description'], $e['category'], $status, (int)$e['is_featured'],
                     $e['image_path'] ?? '', $e['instagram_url'] ?? '', $e['tiktok_url'] ?? '',
-                    $e['capacity'] !== null ? (int)$e['capacity'] : null
+                    $e['x_url'] ?? '', $e['capacity'] !== null ? (int)$e['capacity'] : null
                 );
                 $count++;
             }
@@ -298,6 +307,9 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>TikTok URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="tiktok_url" placeholder="https://tiktok.com/@.../video/..."></div>
         </div>
         <div class="form-row">
+          <div class="form-group"><label>X URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="x_url" placeholder="https://x.com/.../status/..."></div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>Status</label>
             <select name="status">
@@ -368,6 +380,9 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>TikTok URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="tiktok_url" id="e_tiktok"></div>
         </div>
         <div class="form-row">
+          <div class="form-group"><label>X URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="x_url" id="e_x"></div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>Status</label>
             <select name="status" id="e_status">
@@ -431,6 +446,7 @@ function openViewModal(e) {
     <div class="view-dl">
       <div><div class="view-dt">Instagram</div><div class="view-dd">${e.instagram_url ? `<a href="${esc(e.instagram_url)}" target="_blank" rel="noopener">${esc(e.instagram_url)}</a>` : '—'}</div></div>
       <div><div class="view-dt">TikTok</div><div class="view-dd">${e.tiktok_url ? `<a href="${esc(e.tiktok_url)}" target="_blank" rel="noopener">${esc(e.tiktok_url)}</a>` : '—'}</div></div>
+      <div><div class="view-dt">X</div><div class="view-dd">${e.x_url ? `<a href="${esc(e.x_url)}" target="_blank" rel="noopener">${esc(e.x_url)}</a>` : '—'}</div></div>
     </div>`;
   openModal('view-modal');
 }
@@ -499,10 +515,12 @@ function openEditModal(e) {
   document.getElementById('e_status').value      = e.status;
   document.getElementById('e_instagram').value   = e.instagram_url || '';
   document.getElementById('e_tiktok').value      = e.tiktok_url || '';
+  document.getElementById('e_x').value           = e.x_url || '';
   document.getElementById('e_featured').checked  = e.is_featured == 1;
   const prev = document.getElementById('e_img_preview');
   prev.innerHTML = e.image_path
-    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(e.image_path)+'" class="current-photo-thumb current-photo-thumb--wide"></div>'
+    ? '<div class="thumb-col"><span class="thumb-col-label">Current</span><img src="'+esc(e.image_path)+'" class="current-photo-thumb current-photo-thumb--wide">'
+      + '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px"><input type="checkbox" name="remove_image" value="1" style="width:auto"> Remove</label></div>'
     : '';
   document.getElementById('edit-ev-prev').style.display = 'none';
   openModal('edit-modal');
@@ -517,6 +535,7 @@ function duplicateEvent(e) {
   document.getElementById('add-modal').querySelector('[name="description"]').value = e.description || '';
   document.getElementById('add-modal').querySelector('[name="instagram_url"]').value = e.instagram_url || '';
   document.getElementById('add-modal').querySelector('[name="tiktok_url"]').value    = e.tiktok_url || '';
+  document.getElementById('add-modal').querySelector('[name="x_url"]').value         = e.x_url || '';
   document.getElementById('add-modal').querySelector('[name="event_time"]').value    = e.event_time || '';
   openModal('add-modal');
 }
