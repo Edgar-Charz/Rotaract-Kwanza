@@ -29,13 +29,14 @@ class Event
         string $image_path = '',
         string $instagram_url = '',
         string $tiktok_url = '',
+        string $x_url = '',
         ?int $capacity = null
     ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO events (title, event_date, event_time, location, description, category, status, is_featured, image_path, instagram_url, tiktok_url, capacity)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events (title, event_date, event_time, location, description, category, status, is_featured, image_path, instagram_url, tiktok_url, x_url, capacity)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('sssssssisssi', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $capacity);
+        $stmt->bind_param('sssssssissssi', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $x_url, $capacity);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -143,6 +144,25 @@ class Event
         return $rows;
     }
 
+    /**
+     * Featured-first, then soonest-upcoming — for the homepage preview grid,
+     * which always wants a full row of cards instead of only truly-featured
+     * events (same reasoning as Project::getAll()'s "is_featured DESC, then
+     * recent" ordering).
+     */
+    public function getFeaturedOrNextUpcoming(int $limit): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM events WHERE status = 'upcoming'
+             ORDER BY is_featured DESC, event_date ASC LIMIT ?"
+        );
+        $stmt->bind_param('i', $limit);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
     public function getUpcoming(int $limit = 0, string $search = ''): array
     {
         $sql = "SELECT * FROM events WHERE status = 'upcoming'";
@@ -205,13 +225,14 @@ class Event
         string $image_path = '',
         string $instagram_url = '',
         string $tiktok_url = '',
+        string $x_url = '',
         ?int $capacity = null
     ): bool {
         $stmt = $this->db->prepare(
             'UPDATE events SET title=?, event_date=?, event_time=?, location=?, description=?,
-             category=?, status=?, is_featured=?, image_path=?, instagram_url=?, tiktok_url=?, capacity=? WHERE id=?'
+             category=?, status=?, is_featured=?, image_path=?, instagram_url=?, tiktok_url=?, x_url=?, capacity=? WHERE id=?'
         );
-        $stmt->bind_param('sssssssisssii', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $capacity, $id);
+        $stmt->bind_param('sssssssissssii', $title, $event_date, $event_time, $location, $description, $category, $status, $is_featured, $image_path, $instagram_url, $tiktok_url, $x_url, $capacity, $id);
         $stmt->execute();
         $stmt->close();
         return true;

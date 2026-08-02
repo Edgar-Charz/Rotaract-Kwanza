@@ -28,7 +28,7 @@ class SiteSettings
         $result = [];
         $res = $this->db->query('SELECT setting_key, setting_value FROM site_settings');
         while ($row = $res->fetch_assoc()) {
-            $result[$row['setting_key']] = $row['setting_value'];
+            $result[$row['setting_key']] = (string) $row['setting_value'];
         }
         return $result;
     }

@@ -139,6 +139,33 @@ $cancelLine"
         return $this->send($to, $name, "Thanks for volunteering — $title", $html);
     }
 
+    public function newsletterConfirmation(string $to, string $unsubscribeUrl, string $clubName = ''): bool
+    {
+        $club = htmlspecialchars($clubName ?: $this->siteName);
+        $html = "<p>You're subscribed!</p>
+<p>We'll email you whenever <strong>$club</strong> posts news, meeting minutes, or announcements.</p>
+<p style='color:#636e72;font-size:13px;margin-top:24px'>Didn't sign up for this? <a href='" . htmlspecialchars($unsubscribeUrl) . "'>Unsubscribe here</a> — no hard feelings.</p>";
+        return $this->send($to, $to, "You're subscribed to $club updates", $html);
+    }
+
+    public function announcementNotification(string $to, array $post, string $unsubscribeUrl, string $clubName = ''): bool
+    {
+        $club   = htmlspecialchars($clubName ?: $this->siteName);
+        $title  = htmlspecialchars($post['title']);
+        $excerpt = htmlspecialchars(mb_strimwidth(trim(strip_tags($post['content'])), 0, 220, '…'));
+        $link   = htmlspecialchars($post['url']);
+
+        $html = "<p>New from <strong>$club</strong>:</p>
+<div style='background:#fce4ef;border-radius:10px;padding:16px 20px;margin:16px 0'>
+  <div style='font-size:17px;font-weight:700;color:#C0396B'>$title</div>
+  <p style='margin:10px 0 0;color:#2d3436'>$excerpt</p>
+</div>
+<p><a href='$link'>Read the full post &rarr;</a></p>
+<p style='color:#636e72;font-size:13px;margin-top:24px'><a href='" . htmlspecialchars($unsubscribeUrl) . "'>Unsubscribe</a> from these updates at any time.</p>";
+
+        return $this->send($to, $to, "$title — $club", $html);
+    }
+
     public function contactNotification(string $to, string $senderName, string $senderEmail, string $subject, string $msg): bool
     {
         $n    = htmlspecialchars($senderName);
@@ -165,6 +192,23 @@ $cancelLine"
 <p style='color:#636e72;font-size:13px;margin-top:24px'>The Rotaract Kwanza Team</p>";
 
         return $this->send($to, $name, "We received your message — {$this->siteName}", $html);
+    }
+
+    public function donationPledgeThanks(string $to, string $name, string $methodLabel, ?float $amount, ?string $projectTitle = null): bool
+    {
+        $n = htmlspecialchars($name);
+        $methodLabel = htmlspecialchars($methodLabel);
+        $amountLine = $amount ? "<p>Pledged amount: <strong>" . htmlspecialchars(number_format($amount, 2)) . "</strong></p>" : '';
+        $purposeLine = $projectTitle
+            ? "<p>Thank you so much for your generosity! We've noted your gift towards <strong>" . htmlspecialchars($projectTitle) . "</strong>, via <strong>$methodLabel</strong>.</p>"
+            : "<p>Thank you so much for your generosity! We've noted your donation via <strong>$methodLabel</strong>.</p>";
+        $html = "<p>Hi <strong>$n</strong>,</p>
+$purposeLine
+$amountLine
+<p>This is an unverified pledge — one of our officers will follow up shortly to confirm receipt. If you haven't sent the funds yet, no rush; this is just so we know to expect it.</p>
+<p style='color:#636e72;font-size:13px;margin-top:24px'>With gratitude,<br>The Rotaract Kwanza Team</p>";
+
+        return $this->send($to, $name, "Thank you for your donation — {$this->siteName}", $html);
     }
 
     // ── Private template wrapper ──────────────────────────────────────────────
