@@ -60,6 +60,7 @@ if (!defined('ROTARACT_ERROR_HANDLER_ACTIVE')) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Something Went Wrong</title>
+<link rel="icon" type="image/png" href="<?= $isAdmin ? '../assets/img/logo1.jpg' : 'assets/img/logo1.jpg' ?>">
 <style>
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Nunito,sans-serif;color:#2d3436}
   .box{max-width:440px;text-align:center;padding:40px}
