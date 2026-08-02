@@ -96,6 +96,25 @@ function clean_url(string $url): string {
     return filter_var($url, FILTER_VALIDATE_URL) ? $url : '';
 }
 
+// ── Money input parsing ─────────────────────────────────────────────────────────
+// Strips thousands separators from the money-input formatter's display value
+// (assets/js/scripts.js / admin/assets/admin.js) — a backstop that holds even
+// with JS disabled or a malformed paste.
+
+/** For optional "goal"-style fields where 0 means the same thing as blank (not set). */
+function money_or_null(?string $raw): ?float {
+    $clean = str_replace(',', '', trim($raw ?? ''));
+    if ($clean === '' || !is_numeric($clean)) return null;
+    $val = (float) $clean;
+    return $val > 0 ? $val : null;
+}
+
+/** For fields where 0 is a legitimate value in its own right (e.g. dues owed/paid). */
+function money_or_zero(?string $raw): float {
+    $clean = str_replace(',', '', trim($raw ?? ''));
+    return is_numeric($clean) ? max(0.0, (float) $clean) : 0.0;
+}
+
 // ── File upload ───────────────────────────────────────────────────────────────
 
 function upload_image(string $input_name, string $subdir): string|false {
@@ -331,6 +350,42 @@ function log_activity(string $action, string $description): void {
             substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
         );
     } catch (Throwable $e) {}
+}
+
+/**
+ * Emails every newsletter subscriber that a post just went live. Call this
+ * only on the draft→published transition (not on every edit of an already-
+ * published post, and not on unpublish) — callers are responsible for that
+ * check, since only they know the before/after state.
+ */
+function notify_newsletter_subscribers_of_post(mysqli $conn, array $post): void {
+    require_once dirname(__DIR__, 2) . '/classes/NewsletterSubscriber.php';
+    require_once dirname(__DIR__, 2) . '/classes/Mailer.php';
+    require_once dirname(__DIR__, 2) . '/includes/helpers.php'; // site_origin()
+
+    $subscribers = (new NewsletterSubscriber($conn))->getAll();
+    if (!$subscribers) return;
+
+    $club   = get_setting('site_name', 'Rotaract Kwanza');
+    $mailer = Mailer::fromSettings($conn);
+    $url    = site_origin() . '/news.php?slug=' . rawurlencode($post['slug']);
+    $sent   = 0;
+
+    foreach ($subscribers as $sub) {
+        $unsubscribe = site_origin() . '/unsubscribe.php?token=' . urlencode($sub['unsubscribe_token']);
+        try {
+            $ok = $mailer->announcementNotification(
+                $sub['email'],
+                ['title' => $post['title'], 'content' => $post['content'], 'url' => $url],
+                $unsubscribe,
+                $club
+            );
+            if ($ok) $sent++;
+        } catch (Throwable $e) {
+        }
+    }
+
+    log_activity('newsletter_notify', "Notified $sent subscriber(s) of new post: {$post['title']}");
 }
 
 // ── CSV export ────────────────────────────────────────────────────────────────

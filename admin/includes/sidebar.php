@@ -36,15 +36,37 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Dues
       </a>
-      <a href="messages.php" class="nav-item <?= active_nav('messages.php') ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Messages
-        <?php
-          try {
-              $u = (new ContactMessage($conn))->count('unread');
-              if ($u > 0) echo '<span class="badge-count">' . $u . '</span>';
-          } catch (Throwable $e) {}
-        ?>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-section-label">Events</span>
+      <a href="events.php" class="nav-item <?= active_nav('events.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Events
+      </a>
+      <a href="rsvps.php" class="nav-item <?= active_nav('rsvps.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+        RSVPs
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-section-label">Projects &amp; Fundraising</span>
+      <a href="projects.php" class="nav-item <?= active_nav('projects.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Projects
+      </a>
+      <a href="project_signups.php" class="nav-item <?= active_nav('project_signups.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Get Involved Sign-Ups
+      </a>
+      <a href="pledges.php" class="nav-item <?= active_nav('pledges.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0L12 5.34l-.77-.76a5.4 5.4 0 0 0-7.65 7.65L12 21l8.42-8.77a5.4 5.4 0 0 0 0-7.65z"/></svg>
+        Pledges
+      </a>
+      <a href="payment_accounts.php" class="nav-item <?= active_nav('payment_accounts.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16"/></svg>
+        Payment Accounts
       </a>
     </div>
 
@@ -69,26 +91,6 @@
     </div>
 
     <div class="nav-section">
-      <span class="nav-section-label">Events &amp; Projects</span>
-      <a href="events.php" class="nav-item <?= active_nav('events.php') ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Events
-      </a>
-      <a href="rsvps.php" class="nav-item <?= active_nav('rsvps.php') ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-        RSVPs
-      </a>
-      <a href="projects.php" class="nav-item <?= active_nav('projects.php') ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Projects
-      </a>
-      <a href="project_signups.php" class="nav-item <?= active_nav('project_signups.php') ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Get Involved Sign-Ups
-      </a>
-    </div>
-
-    <div class="nav-section">
       <span class="nav-section-label">Site Content</span>
       <a href="gallery.php" class="nav-item <?= active_nav('gallery.php') ?>">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -98,10 +100,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41L13.17 20.6a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
         Categories
       </a>
-      <a href="announcements.php" class="nav-item <?= active_nav('announcements.php') ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Announcements
-      </a>
       <a href="values.php" class="nav-item <?= active_nav('values.php') ?>">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/></svg>
         Club Values
@@ -109,6 +107,28 @@
       <a href="perks.php" class="nav-item <?= active_nav('perks.php') ?>">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
         Membership Perks
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-section-label">Communications</span>
+      <a href="messages.php" class="nav-item <?= active_nav('messages.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Messages
+        <?php
+          try {
+              $u = (new ContactMessage($conn))->count('unread');
+              if ($u > 0) echo '<span class="badge-count">' . $u . '</span>';
+          } catch (Throwable $e) {}
+        ?>
+      </a>
+      <a href="announcements.php" class="nav-item <?= active_nav('announcements.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Announcements
+      </a>
+      <a href="newsletter.php" class="nav-item <?= active_nav('newsletter.php') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Newsletter Subscribers
       </a>
     </div>
 
