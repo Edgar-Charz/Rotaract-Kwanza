@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Project.php';
+require_once __DIR__ . '/classes/Pledge.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db   = new Database();
@@ -11,11 +12,16 @@ $project_obj = new Project($conn);
 $search = trim($_GET['q'] ?? '');
 $limit  = 12;
 $page   = max(1, (int) ($_GET['page'] ?? 1));
-$total  = $project_obj->count($search);
+$total  = $project_obj->countActive($search);
 $pages  = max(1, (int) ceil($total / $limit));
 $page   = min($page, $pages);
 $offset = ($page - 1) * $limit;
-$projects = $project_obj->getPage($limit, $offset, $search);
+$projects = $project_obj->getActivePage($limit, $offset, $search);
+// Completed projects get their own section below, out of the main grid —
+// same reasoning as events.php keeping past events below upcoming ones.
+// Hidden during a search, same as events.php hides its past section then.
+$completed = $search === '' ? $project_obj->getCompleted(6) : [];
+$raised_by_project = (new Pledge($conn))->getConfirmedAmountsByProject();
 
 $page_title = site_title($conn, 'Projects');
 $page_description = 'All the community service and impact initiatives run by the Rotaract Club of Kwanza.';
@@ -79,6 +85,17 @@ $page_description = 'All the community service and impact initiatives run by the
                   <div class="impact-label">Status</div>
                 </div>
               </div>
+              <?php if ($pj['funding_goal']): $pj_raised = $raised_by_project[$pj['id']] ?? 0; ?>
+                <div style="margin-top:16px">
+                  <div style="display:flex;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,.7);margin-bottom:5px">
+                    <span><?= e(number_format($pj_raised, 0)) ?> raised</span>
+                    <span>of <?= e(number_format((float) $pj['funding_goal'], 0)) ?></span>
+                  </div>
+                  <div style="background:rgba(255,255,255,.12);border-radius:20px;height:7px;overflow:hidden">
+                    <div style="background:linear-gradient(90deg,var(--gold, #D4882A),var(--gold-light, #e0a34f));height:100%;border-radius:20px;width:<?= min(100, $pj['funding_goal'] > 0 ? ($pj_raised / $pj['funding_goal']) * 100 : 0) ?>%"></div>
+                  </div>
+                </div>
+              <?php endif; ?>
               <span style="display:inline-block;margin-top:16px;padding:9px 20px;background:linear-gradient(135deg,var(--gold, #D4882A),#b06a1e);color:#fff;border-radius:8px;font-size:13px;font-weight:700">View Details &rarr;</span>
             </a>
           <?php endforeach; ?>
@@ -102,6 +119,40 @@ $page_description = 'All the community service and impact initiatives run by the
             <p style="font-size:1.2rem;font-weight:600">No projects yet</p>
             <p style="margin-top:8px">Projects will appear here once added through the admin dashboard.</p>
           <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($completed): ?>
+        <div style="margin-top:60px">
+          <h3 class="section-title" style="font-size:1.6rem;margin-bottom:24px;color:#fff">Completed <em>Projects</em></h3>
+          <div class="projects-grid">
+            <?php foreach ($completed as $pj): ?>
+              <a href="project.php?id=<?= $pj['id'] ?>" class="project-card reveal" style="display:block;color:inherit;text-decoration:none;opacity:.75">
+                <?php if ($pj['image_path'] ?? ''): ?>
+                  <div class="project-icon" style="width:100%;height:140px;border-radius:12px;overflow:hidden;margin-bottom:20px;filter:grayscale(30%)">
+                    <img src="<?= e(img_url($pj['image_path'])) ?>" alt="<?= e($pj['title']) ?>" style="width:100%;height:100%;object-fit:cover">
+                  </div>
+                <?php else: ?>
+                  <div class="project-icon"><?= icon_svg($pj['icon_type'] ?: 'heart', 'var(--gold-light)') ?></div>
+                <?php endif; ?>
+                <h3><?= e($pj['title']) ?></h3>
+                <?php if ($pj['description']): ?><p><?= e($pj['description']) ?></p><?php endif; ?>
+                <div class="project-impact">
+                  <?php if ($pj['impact_stat']): ?>
+                    <div class="impact-stat">
+                      <div class="impact-num"><?= e($pj['impact_stat']) ?></div>
+                      <div class="impact-label"><?= e($pj['impact_label'] ?? '') ?></div>
+                    </div>
+                  <?php endif; ?>
+                  <div class="impact-stat">
+                    <div class="impact-num" style="font-size:1rem;text-transform:capitalize"><?= e($pj['status']) ?></div>
+                    <div class="impact-label">Status</div>
+                  </div>
+                </div>
+                <span style="display:inline-block;margin-top:16px;font-size:13px;font-weight:700;color:var(--gold-light, #D4882A)">View Details &rarr;</span>
+              </a>
+            <?php endforeach; ?>
+          </div>
         </div>
       <?php endif; ?>
     </div>
