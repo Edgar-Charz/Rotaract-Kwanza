@@ -74,6 +74,7 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 0 5%;
   height: 72px;
   background: rgba(255, 248, 245, 0.92);
@@ -90,6 +91,13 @@ nav.scrolled {
   align-items: center;
   gap: 12px;
   text-decoration: none;
+  /* Lets the brand block shrink below its text's natural width instead of
+     wrapping "Rotaract Club of Kwanza - UDSM" onto several lines and
+     blowing out the fixed-height navbar at in-between viewport widths
+     (wide enough to still show the full pill nav, too narrow for the
+     brand text at full size). */
+  min-width: 0;
+  flex-shrink: 1;
 }
 .nav-logo {
   width: 42px;
@@ -105,6 +113,13 @@ nav.scrolled {
   color: #fff;
   letter-spacing: -0.5px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.nav-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .nav-name {
   font-family: "Cormorant Garamond", serif;
@@ -112,6 +127,10 @@ nav.scrolled {
   font-weight: 600;
   color: var(--pink-800);
   line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .nav-name span {
   display: block;
@@ -121,12 +140,16 @@ nav.scrolled {
   color: var(--text-soft);
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .nav-links {
   display: flex;
   gap: 8px;
   list-style: none;
+  flex-shrink: 0;
 }
 .nav-links a {
   display: inline-flex;
@@ -146,6 +169,7 @@ nav.scrolled {
   letter-spacing: 0.35px;
   background: rgba(217, 74, 128, 0.08);
   border: 1px solid rgba(217, 74, 128, 0.18);
+  white-space: nowrap;
 }
 .nav-links a:hover {
   background: rgba(217, 74, 128, 0.14);
@@ -212,6 +236,31 @@ nav.scrolled {
   background: var(--pink-700);
   border-radius: 2px;
   transition: 0.3s;
+}
+
+/* ── NAV "SQUEEZE ZONE" (≤1300px, above the 768px hamburger collapse) ──
+   Full nav-links row still shows here, but there isn't enough width for
+   both it and the full brand name at their normal desktop size — this
+   is what was wrapping "Rotaract Club of Kwanza - UDSM" onto several
+   lines and blowing out the fixed-height navbar. Shrink the pills/gaps
+   only in this range so large screens keep their original spacing. */
+@media (max-width: 1300px) {
+  nav {
+    padding: 0 3%;
+    gap: 10px;
+  }
+  .nav-links {
+    gap: 4px;
+  }
+  .nav-links a {
+    min-width: 0;
+    font-size: 12px;
+    padding: 9px 12px;
+    letter-spacing: 0.15px;
+  }
+  .nav-links a.nav-admin {
+    padding: 9px 11px;
+  }
 }
 
 /* ── PROGRESS BAR ───────────────────────────────── */
@@ -610,6 +659,23 @@ input[type="submit"].is-submitting {
   font-weight: 600;
   color: var(--text-dark);
   animation: float 3s ease-in-out infinite;
+}
+/* Static, non-floating twin of .floating-pill for phones — .hero-visual
+   (which .floating-pill lives inside) is hidden below 768px, so without
+   this the "Service in Action" text never renders on mobile at all. */
+.hero-pill-mobile {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+  width: fit-content;
+  margin-bottom: 16px;
 }
 .pill-dot {
   width: 10px;
@@ -1034,7 +1100,7 @@ section {
 
 .projects-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 28px;
 }
 
@@ -1655,6 +1721,15 @@ section {
   height: 18px;
   stroke: var(--pink-700);
 }
+/* Solid-glyph logos (X, TikTok) use fill="currentColor" instead of a stroke
+   outline — scoped to that attribute so it never repaints the outline icons
+   above, which rely on fill="none" from their own markup. */
+.social-btn svg[fill="currentColor"] {
+  fill: var(--pink-700);
+}
+.social-btn:hover svg[fill="currentColor"] {
+  fill: #fff;
+}
 
 .contact-form {
   background: var(--cream);
@@ -1707,6 +1782,13 @@ footer {
   font-size: 16px;
   color: #fff;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.footer-brand .logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .footer-brand .logo-text {
   font-family: "Cormorant Garamond", serif;
@@ -1873,6 +1955,9 @@ footer {
   .hero-visual {
     display: none;
   }
+  .hero-pill-mobile {
+    display: inline-flex;
+  }
   .hero-stats {
     gap: 20px;
   }
@@ -1891,18 +1976,12 @@ footer {
   .events-header {
     margin-bottom: 32px;
   }
-  .events-grid {
-    grid-template-columns: 1fr;
-  }
   .events-summary-grid {
     grid-template-columns: 1fr;
   }
 
   .projects-header {
     margin-bottom: 32px;
-  }
-  .projects-grid {
-    grid-template-columns: 1fr;
   }
 
   .team-grid {
@@ -2216,5 +2295,28 @@ footer {
     width: 60px;
     height: 60px;
     font-size: 22px;
+  }
+}
+
+/* ── Projects / Events grids: step the column count down as the viewport
+   narrows so cards always sit in one clean row, instead of jumping straight
+   from the full count to a single column (which either crams everything or
+   leaves an awkward wrapped second row). Kept last in the file so these
+   rules win over the base .projects-grid/.events-grid declarations above at
+   each width. ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .projects-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .events-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+  .events-grid {
+    grid-template-columns: 1fr;
   }
 }

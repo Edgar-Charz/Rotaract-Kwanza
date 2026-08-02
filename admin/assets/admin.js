@@ -43,6 +43,12 @@ function previewImage(input, previewId) {
       preview.style.display = 'block';
     };
     reader.readAsDataURL(input.files[0]);
+    // Picking a replacement makes any pending "remove image" checkbox moot —
+    // uncheck it so the two controls can't silently contradict each other
+    // (the server would honor the new upload over "remove" anyway, but a
+    // checked box next to a fresh preview reads as a mistake waiting to happen).
+    const removeBox = input.closest('.image-field')?.querySelector('input[type="checkbox"][name^="remove_"]');
+    if (removeBox) removeBox.checked = false;
   }
 }
 
@@ -66,6 +72,51 @@ function populateEditModal(fields) {
     if (el) el.value = val;
   });
 }
+
+/* Thousands-separator formatting for money amount fields (class="money-input").
+   Fields are type="text" so commas can display; the value is stripped back to
+   a plain number on submit, and again server-side as a defense-in-depth check. */
+(function () {
+  function formatIntPart(digits) {
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function reformat(el) {
+    var before = el.value;
+    var caret = el.selectionStart == null ? before.length : el.selectionStart;
+
+    var cleaned = before.replace(/[^\d.]/g, '');
+    var firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+    }
+    var split = cleaned.split('.');
+    var intPart = formatIntPart(split[0] || '');
+    var next = split.length > 1 ? intPart + '.' + split[1].slice(0, 2) : intPart;
+
+    el.value = next;
+    var pos = Math.min(next.length, Math.max(0, caret + (next.length - before.length)));
+    el.setSelectionRange(pos, pos);
+  }
+
+  document.addEventListener('input', function (e) {
+    if (e.target.matches && e.target.matches('.money-input')) reformat(e.target);
+  });
+
+  document.addEventListener('blur', function (e) {
+    if (!(e.target.matches && e.target.matches('.money-input'))) return;
+    var el = e.target;
+    var num = parseFloat(el.value.replace(/,/g, ''));
+    el.value = isNaN(num) ? '' : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }, true);
+
+  document.addEventListener('submit', function (e) {
+    if (!e.target.querySelectorAll) return;
+    e.target.querySelectorAll('.money-input').forEach(function (el) {
+      el.value = el.value.replace(/,/g, '');
+    });
+  });
+})();
 
 (function() {
   const flash = document.getElementById('flash-msg');
