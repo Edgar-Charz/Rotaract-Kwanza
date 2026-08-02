@@ -84,10 +84,11 @@ $old = $_SESSION['flash_old_input'] ?? [];
 unset($_SESSION['flash_old_input']);
 
 $settings = new SiteSettings($conn);
-$fb = $settings->get('facebook_url',  '#');
-$ig = $settings->get('instagram_url', '#');
-$tw = $settings->get('twitter_url',   '#');
-$li = $settings->get('linkedin_url',  '#');
+$fb = $settings->get('facebook_url',  '');
+$ig = $settings->get('instagram_url', '');
+$tw = $settings->get('twitter_url',   '');
+$tt = $settings->get('tiktok_url',    '');
+$li = $settings->get('linkedin_url',  '');
 $perks = (new MembershipPerk($conn))->getActive();
 
 $page_title = site_title($conn, 'Join Us');
@@ -129,22 +130,35 @@ $page_description = 'Join a global network of young leaders committed to service
           <?php endif; ?>
 
           <div class="socials reveal">
-            <a href="<?= e($fb) ?>" class="social-btn" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+            <?php if ($fb): ?>
+            <a href="<?= e($fb) ?>" class="social-btn" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
                 <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
               </svg></a>
-            <a href="<?= e($ig) ?>" class="social-btn" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+            <?php endif; ?>
+            <?php if ($ig): ?>
+            <a href="<?= e($ig) ?>" class="social-btn" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                 <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
               </svg></a>
-            <a href="<?= e($tw) ?>" class="social-btn" aria-label="Twitter / X"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
-                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
+            <?php endif; ?>
+            <?php if ($tw): ?>
+            <a href="<?= e($tw) ?>" class="social-btn" aria-label="X" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
               </svg></a>
-            <a href="<?= e($li) ?>" class="social-btn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+            <?php endif; ?>
+            <?php if ($tt): ?>
+            <a href="<?= e($tt) ?>" class="social-btn" aria-label="TikTok" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0115.54 3h-3.09v12.4a2.592 2.592 0 01-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 004.3 1.38V7.3s-1.88.09-3.24-1.48z" />
+              </svg></a>
+            <?php endif; ?>
+            <?php if ($li): ?>
+            <a href="<?= e($li) ?>" class="social-btn" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
                 <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
                 <rect x="2" y="9" width="4" height="12" />
                 <circle cx="4" cy="4" r="2" />
               </svg></a>
+            <?php endif; ?>
           </div>
         </div>
 

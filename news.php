@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/Announcement.php';
+require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db   = new Database();
@@ -245,6 +246,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
 <body>
 
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
+  <?php require_once __DIR__ . '/includes/flash_toast.php'; ?>
 
   <div class="news-hero">
     <div class="container">
@@ -280,7 +282,21 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
         <?php foreach ($cat_labels as $k => $label): ?>
           <a href="news.php?cat=<?= $k ?>" class="cat-btn <?= $cat === $k ? 'active' : '' ?>"><?= $label ?></a>
         <?php endforeach; ?>
-        <a href="rss.php" class="cat-btn" style="margin-left:auto" title="Subscribe via RSS">&#128225; RSS</a>
+        <a href="rss.php" class="cat-btn" style="margin-left:auto;background:var(--gold, #D4882A);color:#fff;border-color:var(--gold, #D4882A)" title="Subscribe via RSS">&#128225; RSS</a>
+      </div>
+
+      <div id="subscribe" style="scroll-margin-top:100px;background:#fff;border-radius:14px;padding:20px 24px;margin:0 0 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div>
+          <p style="font-weight:700;margin:0 0 2px">Prefer email over RSS?</p>
+          <p style="font-size:13px;color:var(--text-soft);margin:0">Get notified whenever we post news, minutes, or announcements.</p>
+        </div>
+        <form action="subscribe.php" method="POST" style="display:flex;gap:8px;flex-wrap:wrap">
+          <?= csrf_field() ?>
+          <input type="hidden" name="redirect" value="news.php">
+          <input type="email" name="email" required placeholder="you@email.com"
+            style="padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;min-width:220px">
+          <button type="submit" style="padding:10px 20px;background:var(--pink-700);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;white-space:nowrap">Get Notified</button>
+        </form>
       </div>
 
       <?php if ($posts): ?>

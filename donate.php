@@ -2,20 +2,84 @@
 require_once __DIR__ . '/includes/session_init.php';
 require_once __DIR__ . '/config/Database.php';
 require_once __DIR__ . '/classes/SiteSettings.php';
+require_once __DIR__ . '/classes/Pledge.php';
+require_once __DIR__ . '/classes/PaymentAccount.php';
+require_once __DIR__ . '/includes/csrf.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db   = new Database();
 $conn = $db->connect();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pledge') {
+  csrf_verify();
+
+  if (!rate_limit_allow($conn, 'donation_pledge', 5, 900)) {
+    $_SESSION['flash_error'] = rate_limit_message();
+  } else {
+    $name      = trim($_POST['name'] ?? '');
+    $email     = trim($_POST['email'] ?? '');
+    $phone     = trim($_POST['phone'] ?? '');
+    $account_id = (int) ($_POST['payment_account_id'] ?? 0);
+    $note      = mb_substr(trim($_POST['note'] ?? ''), 0, 500);
+
+    $amount = null;
+    // Commas are stripped here as a backstop — the money-input formatter
+    // already strips them client-side, but this holds even with JS disabled.
+    $amount_raw = str_replace(',', '', trim($_POST['amount'] ?? ''));
+    if ($amount_raw !== '') {
+      if (!is_numeric($amount_raw) || (float) $amount_raw < 0 || (float) $amount_raw > 999999999) {
+        $_SESSION['flash_error'] = 'Please enter a valid donation amount, or leave it blank.';
+      } elseif ((float) $amount_raw > 0) {
+        $amount = (float) $amount_raw; // exactly 0 is treated the same as blank
+      }
+    }
+
+    $account = $account_id ? (new PaymentAccount($conn))->findById($account_id) : false;
+
+    if (!isset($_SESSION['flash_error'])) {
+      if (!$name || !$email) {
+        $_SESSION['flash_error'] = 'Name and email are required.';
+      } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['flash_error'] = 'Invalid email address.';
+      } elseif (!$account || !$account['is_active']) {
+        $_SESSION['flash_error'] = 'This payment method is no longer available — please refresh the page.';
+      } else {
+        try {
+          $donation = new Pledge($conn);
+          $pledge_id = $donation->create($name, $email, $phone, $account['id'], $account['type'], $account['label'], $amount, $note);
+
+          try {
+            require_once __DIR__ . '/classes/Mailer.php';
+            $sent = Mailer::fromSettings($conn)->donationPledgeThanks($email, $name, $account['label'], $amount);
+            $donation->setEmailSent($pledge_id, $sent);
+          } catch (Throwable $e) {
+          }
+
+          $_SESSION['flash_message'] = "Thank you, {$name}! We've noted your donation and an officer will follow up soon.";
+        } catch (mysqli_sql_exception $e) {
+          $_SESSION['flash_error'] = 'Could not save your donation. Please try again later.';
+        }
+      }
+    }
+  }
+
+  header('Location: donate.php');
+  exit;
+}
+
 $settings = new SiteSettings($conn);
 $donate_intro        = $settings->get('donate_intro', 'Every contribution helps us fund community service projects, from clean water initiatives to educational scholarships. Your generosity directly changes lives in Kwanza.');
-$donate_bank_details  = $settings->get('donate_bank_details', '');
-$donate_mobile_money  = $settings->get('donate_mobile_money', '');
+$donate_gratitude_message = $settings->get('donate_gratitude_message', 'Thank you for even considering a gift — every contribution, big or small, helps us keep serving Kwanza.');
 $contact_email        = $settings->get('contact_email', 'info@rotaractkwanza.org');
 $stat_projects        = $settings->get('hero_stats_projects', '45+');
 $stat_lives           = $settings->get('hero_stats_lives', '8K+');
 
-$has_payment_details = $donate_bank_details !== '' || $donate_mobile_money !== '';
+$account_obj    = new PaymentAccount($conn);
+$bank_accounts   = $account_obj->getActiveByType('bank_transfer');
+$mobile_accounts = $account_obj->getActiveByType('mobile_money');
+
+$has_payment_details = $bank_accounts || $mobile_accounts;
 
 $page_title = site_title($conn, 'Donate');
 $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…');
@@ -93,12 +157,118 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
       font-size: 14px;
       white-space: pre-line;
     }
+
+    .donate-gratitude {
+      background: var(--pink-100);
+      border-radius: 14px;
+      padding: 18px 24px;
+      margin-bottom: 8px;
+      text-align: center;
+      color: var(--pink-800);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      font-style: italic;
+    }
+
+    .donate-card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .donate-btn-copy,
+    .donate-btn-pledge {
+      border: none;
+      cursor: pointer;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 8px 16px;
+    }
+
+    .donate-btn-copy {
+      background: transparent;
+      border: 1.5px solid var(--pink-700);
+      color: var(--pink-700);
+    }
+
+    .donate-btn-pledge {
+      background: var(--pink-700);
+      color: #fff;
+    }
+
+    .pledge-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .pledge-overlay.open {
+      display: flex;
+    }
+
+    .pledge-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 420px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .pledge-box h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+    }
+
+    .pledge-box p.pledge-sub {
+      color: var(--text-soft);
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .pledge-box .form-group {
+      margin-bottom: 14px;
+    }
+
+    .pledge-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .pledge-box input,
+    .pledge-box textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #e5e5ea;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .pledge-box-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 
 <body>
 
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
+  <?php require_once __DIR__ . '/includes/flash_toast.php'; ?>
 
   <div class="donate-hero">
     <div class="container">
@@ -122,31 +292,40 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
     </div>
 
     <?php if ($has_payment_details): ?>
+      <div class="donate-gratitude reveal"><?= e($donate_gratitude_message) ?></div>
       <div class="donate-methods">
-        <?php if ($donate_bank_details): ?>
+        <?php foreach ($bank_accounts as $acc): ?>
           <div class="donate-card reveal">
             <h3>
               <span class="donate-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="7" width="20" height="14" rx="2" />
                   <path d="M16 21V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16" />
                 </svg></span>
-              Bank Transfer
+              <?= e($acc['label']) ?>
             </h3>
-            <p class="donate-details"><?= e($donate_bank_details) ?></p>
+            <p class="donate-details" id="donate-account-<?= $acc['id'] ?>"><?= e($acc['details']) ?></p>
+            <div class="donate-card-actions">
+              <button type="button" class="donate-btn-copy" data-copy-target="donate-account-<?= $acc['id'] ?>">Copy Details</button>
+              <button type="button" class="donate-btn-pledge" onclick="openPledgeModal(<?= $acc['id'] ?>, '<?= e(addslashes($acc['label'])) ?>')">I've Donated &rarr;</button>
+            </div>
           </div>
-        <?php endif; ?>
-        <?php if ($donate_mobile_money): ?>
+        <?php endforeach; ?>
+        <?php foreach ($mobile_accounts as $acc): ?>
           <div class="donate-card reveal">
             <h3>
               <span class="donate-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--pink-700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="5" y="2" width="14" height="20" rx="2" />
                   <line x1="12" y1="18" x2="12.01" y2="18" />
                 </svg></span>
-              Mobile Money
+              <?= e($acc['label']) ?>
             </h3>
-            <p class="donate-details"><?= e($donate_mobile_money) ?></p>
+            <p class="donate-details" id="donate-account-<?= $acc['id'] ?>"><?= e($acc['details']) ?></p>
+            <div class="donate-card-actions">
+              <button type="button" class="donate-btn-copy" data-copy-target="donate-account-<?= $acc['id'] ?>">Copy Details</button>
+              <button type="button" class="donate-btn-pledge" onclick="openPledgeModal(<?= $acc['id'] ?>, '<?= e(addslashes($acc['label'])) ?>')">I've Donated &rarr;</button>
+            </div>
           </div>
-        <?php endif; ?>
+        <?php endforeach; ?>
       </div>
     <?php else: ?>
       <div style="text-align:center;padding:60px 20px;color:var(--text-soft)">
@@ -169,6 +348,42 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
   </div>
 
   <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+  <?php if ($has_payment_details): ?>
+  <div class="pledge-overlay" id="pledge-overlay">
+    <div class="pledge-box">
+      <h3>I've Donated &mdash; <span id="pledge-method-label"></span></h3>
+      <p class="pledge-sub">Let us know so an officer can follow up and confirm receipt.</p>
+      <form method="POST">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="pledge">
+        <input type="hidden" name="payment_account_id" id="pledge-method-input">
+        <div class="form-group"><label>Full Name *</label><input type="text" name="name" required></div>
+        <div class="form-group"><label>Email *</label><input type="email" name="email" required></div>
+        <div class="form-group"><label>Phone</label><input type="tel" name="phone"></div>
+        <div class="form-group"><label>Amount <span style="font-weight:400;color:var(--text-soft)">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" name="amount" placeholder="Leave blank if you'd rather not say"></div>
+        <div class="form-group"><label>Note <span style="font-weight:400;color:var(--text-soft)">(optional)</span></label><textarea name="note" rows="2" maxlength="500"></textarea></div>
+        <div class="pledge-box-actions">
+          <button type="button" class="btn-submit" style="background:transparent;border:2px solid var(--pink-700);color:var(--pink-700)" onclick="closePledgeModal()">Cancel</button>
+          <button type="submit" class="btn-submit">Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    function openPledgeModal(accountId, label) {
+      document.getElementById('pledge-method-input').value = accountId;
+      document.getElementById('pledge-method-label').textContent = label;
+      document.getElementById('pledge-overlay').classList.add('open');
+    }
+    function closePledgeModal() {
+      document.getElementById('pledge-overlay').classList.remove('open');
+    }
+    document.getElementById('pledge-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closePledgeModal();
+    });
+  </script>
+  <?php endif; ?>
 
   <script src="assets/js/scripts.js"></script>
 </body>

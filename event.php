@@ -290,7 +290,7 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
               <?php if ($photos): ?><p style="margin-top:8px">Check out the photo recap on the left.</p><?php endif; ?>
             <?php endif; ?>
 
-            <?php if ($event['instagram_url'] || $event['tiktok_url']): ?>
+            <?php if ($event['instagram_url'] || $event['tiktok_url'] || ($event['x_url'] ?? '')): ?>
               <div class="ev-socials" style="justify-content:center">
                 <?php if ($event['instagram_url']): ?>
                   <a href="<?= e($event['instagram_url']) ?>" target="_blank" rel="noopener" class="ev-social-btn">
@@ -308,6 +308,14 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
                       <path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0115.54 3h-3.09v12.4a2.592 2.592 0 01-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 004.3 1.38V7.3s-1.88.09-3.24-1.48z" />
                     </svg>
                     TikTok
+                  </a>
+                <?php endif; ?>
+                <?php if ($event['x_url'] ?? ''): ?>
+                  <a href="<?= e($event['x_url']) ?>" target="_blank" rel="noopener" class="ev-social-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+                    </svg>
+                    X
                   </a>
                 <?php endif; ?>
               </div>
