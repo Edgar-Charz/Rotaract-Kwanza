@@ -86,6 +86,44 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
 
   initPhotoSliders();
+
+  // Copy-link buttons in social share rows (news posts, event pages)
+  document.querySelectorAll(".share-copy-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.dataset.shareUrl;
+      if (!url || !navigator.clipboard) return;
+      navigator.clipboard.writeText(url).then(() => {
+        const original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      });
+    });
+  });
+
+  // Instagram/TikTok share buttons: neither platform accepts a pre-filled
+  // link on the web, so copy the URL and open the platform so the visitor
+  // can paste it into a Story/bio/DM themselves — the standard workaround
+  // for platforms with no web share intent.
+  document.querySelectorAll(".share-copy-open-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.dataset.shareUrl;
+      const openUrl = btn.dataset.openUrl;
+      // Open synchronously, inside the click handler itself — same as the
+      // plain <a target="_blank"> buttons next to it. Chaining this inside
+      // the clipboard promise below (as before) meant it silently did
+      // nothing on any origin without clipboard access (non-HTTPS/non-
+      // localhost) and could get flagged as an unrequested popup by
+      // browsers that only treat *synchronous* click handlers as trusted.
+      if (openUrl) window.open(openUrl, "_blank", "noopener");
+      if (url && navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          const original = btn.textContent;
+          btn.textContent = "Link copied!";
+          setTimeout(() => { btn.textContent = original; }, 2500);
+        });
+      }
+    });
+  });
 });
 
 // Photo slider (group photos) — supports any number of independent sliders
@@ -111,3 +149,64 @@ function initPhotoSliders() {
     dots.forEach((d, di) => d.addEventListener("click", () => goTo(di)));
   });
 }
+
+// Copy-to-clipboard for donate.php's bank/mobile money detail cards
+document.querySelectorAll(".donate-btn-copy").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = document.getElementById(btn.dataset.copyTarget);
+    if (!target || !navigator.clipboard) return;
+    navigator.clipboard.writeText(target.textContent.trim()).then(() => {
+      const original = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => (btn.textContent = original), 1500);
+    });
+  });
+});
+
+// Thousands-separator formatting for money amount fields (class="money-input").
+// Fields are type="text" so commas can display; the value is stripped back to
+// a plain number on submit, and again server-side as a defense-in-depth check.
+(function () {
+  function formatIntPart(digits) {
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function reformat(el) {
+    const before = el.value;
+    const caret = el.selectionStart ?? before.length;
+
+    let cleaned = before.replace(/[^\d.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+    }
+    const [intRaw, decRaw] = cleaned.split(".");
+    const intPart = formatIntPart(intRaw || "");
+    const next = decRaw !== undefined ? intPart + "." + decRaw.slice(0, 2) : intPart;
+
+    el.value = next;
+    const pos = Math.min(next.length, Math.max(0, caret + (next.length - before.length)));
+    el.setSelectionRange(pos, pos);
+  }
+
+  document.addEventListener("input", (e) => {
+    if (e.target.matches && e.target.matches(".money-input")) reformat(e.target);
+  });
+
+  document.addEventListener(
+    "blur",
+    (e) => {
+      if (!(e.target.matches && e.target.matches(".money-input"))) return;
+      const el = e.target;
+      const num = parseFloat(el.value.replace(/,/g, ""));
+      el.value = isNaN(num) ? "" : num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    true
+  );
+
+  document.addEventListener("submit", (e) => {
+    e.target.querySelectorAll && e.target.querySelectorAll(".money-input").forEach((el) => {
+      el.value = el.value.replace(/,/g, "");
+    });
+  });
+})();
