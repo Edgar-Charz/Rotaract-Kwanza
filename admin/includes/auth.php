@@ -34,6 +34,15 @@ if ($idleExpired || $absoluteExpired) {
 
 $_SESSION['admin_last_activity'] = $now;
 
+// A super_admin-initiated password reset flags the account so it can't reach
+// anything else until a new password is set — prevents the temporary
+// password (which someone other than the account owner may have seen) from
+// remaining valid for normal use.
+if (!empty($_SESSION['must_change_password']) && basename($_SERVER['SCRIPT_NAME']) !== 'force_password_change.php') {
+    header('Location: ' . ADMIN_URL . '/force_password_change.php');
+    exit;
+}
+
 /**
  * Single source of truth for the role hierarchy: super_admin > editor > viewer.
  * Both require_role() and has_role() resolve levels through this.
@@ -60,10 +69,10 @@ function require_role(string $min_role): void
         $page_title = 'Access Denied';
         if (function_exists('h')) {
             include __DIR__ . '/header.php';
-            echo '<div class="card" style="text-align:center;padding:40px">
-                    <h2 style="color:var(--danger);margin-bottom:8px">Access Denied</h2>
+            echo '<div class="card access-denied">
+                    <h2>Access Denied</h2>
                     <p class="text-muted">Your role (<strong>' . htmlspecialchars($current) . '</strong>) does not have permission for this action.</p>
-                    <a href="index.php" class="btn btn-secondary" style="margin-top:16px">Back to Dashboard</a>
+                    <a href="index.php" class="btn btn-secondary">Back to Dashboard</a>
                   </div>';
             include __DIR__ . '/footer.php';
         } else {
