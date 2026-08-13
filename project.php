@@ -350,13 +350,13 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
   <?php require_once __DIR__ . '/includes/flash_toast.php'; ?>
 
-  <section id="projects" style="padding-top:100px;min-height:60vh">
+  <section id="projects" class="pj-hero-section">
     <div class="container">
       <?php if (!$project): ?>
-        <div style="text-align:center;padding:80px 20px;color:rgba(255,255,255,0.6)">
-          <p style="font-size:1.2rem;font-weight:600">Project not found</p>
-          <p style="margin-top:8px">This project may have been removed or the link is incorrect.</p>
-          <a href="projects.php" class="pj-back" style="margin-top:20px;justify-content:center">&#8592; Back to All Projects</a>
+        <div class="pj-empty">
+          <p class="pj-empty-title">Project not found</p>
+          <p class="mt-8">This project may have been removed or the link is incorrect.</p>
+          <a href="projects.php" class="pj-back pj-back--centered">&#8592; Back to All Projects</a>
         </div>
       <?php else: ?>
 
@@ -373,10 +373,10 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
           <?php if ($project['is_featured']): ?><span class="pj-badge featured">Featured</span><?php endif; ?>
         </div>
 
-        <h1 class="section-title" style="margin-bottom:0"><?= e($project['title']) ?></h1>
+        <h1 class="section-title section-title--mb0"><?= e($project['title']) ?></h1>
 
         <?php if ($project['start_date'] || $project['end_date']): ?>
-          <p style="color:rgba(255,255,255,.7);font-size:13.5px;margin-top:8px">
+          <p class="pj-date-range">
             <?= $project['start_date'] ? date('M Y', strtotime($project['start_date'])) : '' ?>
             &ndash;
             <?= $project['end_date'] ? date('M Y', strtotime($project['end_date'])) : 'Ongoing' ?>
@@ -384,9 +384,9 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
         <?php endif; ?>
 
         <?php if ($project['impact_stat']): ?>
-          <div class="project-impact" style="margin-top:20px">
+          <div class="project-impact mt-20">
             <div class="impact-stat">
-              <div class="impact-num" style="font-size:2rem"><?= e($project['impact_stat']) ?></div>
+              <div class="impact-num impact-num--lg"><?= e($project['impact_stat']) ?></div>
               <div class="impact-label"><?= e($project['impact_label'] ?? '') ?></div>
             </div>
           </div>
@@ -397,7 +397,7 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
         <?php endif; ?>
 
         <?php if ($project['status'] === 'cancelled'): ?>
-          <p style="color:rgba(255,255,255,.75);font-size:13.5px;background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.35);border-radius:8px;padding:12px 16px;display:inline-block">This project has been cancelled.</p>
+          <p class="pj-cancelled-notice">This project has been cancelled.</p>
         <?php elseif ($project['status'] !== 'completed'): ?>
           <a href="project_signup.php?id=<?= (int) $project['id'] ?>" class="pj-cta">Get Involved &rarr;</a>
         <?php endif; ?>
@@ -414,7 +414,7 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
             <?php if ($can_sponsor): ?>
               <button type="button" class="pj-sponsor-btn" onclick="openPledgeModal()">Sponsor This Project &rarr;</button>
             <?php elseif (!in_array($project['status'], ['completed', 'cancelled'], true)): ?>
-              <p style="color:rgba(255,255,255,.6);font-size:12.5px;margin-top:14px">Sponsorship isn't open right now — <a href="contact.php" style="color:var(--gold-light)">contact us</a> if you'd like to help fund this project.</p>
+              <p class="pj-sponsor-hint">Sponsorship isn't open right now — <a href="contact.php">contact us</a> if you'd like to help fund this project.</p>
             <?php endif; ?>
           </div>
         <?php endif; ?>
@@ -455,17 +455,17 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
   </section>
 
   <?php if ($photos): ?>
-    <section style="background:#fff;padding:60px 0">
+    <section class="pj-gallery-section">
       <div class="container">
-        <h3 class="section-title" style="font-size:1.6rem;margin-bottom:24px">Project <em>Gallery</em></h3>
+        <h3 class="section-title section-title--gallery">Project <em>Gallery</em></h3>
         <div class="gallery-grid">
           <?php foreach ($photos as $p): $pcaption = $p['caption'] ?: $project['title']; ?>
             <div class="gallery-item reveal" data-src="<?= e(img_url($p['image_path'])) ?>" data-title="<?= e($pcaption) ?>" tabindex="0" role="button" aria-label="View photo">
               <div class="gallery-inner">
-                <img src="<?= e(img_url($p['image_path'])) ?>" alt="<?= e($pcaption) ?>" style="width:100%;height:100%;object-fit:cover;display:block">
+                <img src="<?= e(img_url($p['image_path'])) ?>" alt="<?= e($pcaption) ?>">
               </div>
               <div class="gallery-overlay">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-20">
                   <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                 </svg>
                 View
@@ -518,15 +518,15 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
               </optgroup>
             <?php endif; ?>
           </select>
-          <p id="pledge-account-details" style="font-size:12.5px;color:var(--text-soft,#636e72);white-space:pre-line;margin-top:6px"></p>
+          <p id="pledge-account-details" class="pledge-account-details"></p>
         </div>
         <div class="form-group"><label>Full Name *</label><input type="text" name="name" required></div>
         <div class="form-group"><label>Email *</label><input type="email" name="email" required></div>
         <div class="form-group"><label>Phone</label><input type="tel" name="phone"></div>
-        <div class="form-group"><label>Amount <span style="font-weight:400;color:var(--text-soft,#636e72)">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" name="amount" placeholder="Leave blank if you'd rather not say"></div>
-        <div class="form-group"><label>Note <span style="font-weight:400;color:var(--text-soft,#636e72)">(optional)</span></label><textarea name="note" rows="2" maxlength="500"></textarea></div>
+        <div class="form-group"><label>Amount <span class="optional-hint">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" name="amount" placeholder="Leave blank if you'd rather not say"></div>
+        <div class="form-group"><label>Note <span class="optional-hint">(optional)</span></label><textarea name="note" rows="2" maxlength="500"></textarea></div>
         <div class="pledge-box-actions">
-          <button type="button" class="btn-submit" style="background:transparent;border:2px solid var(--pink-700,#9b2335);color:var(--pink-700,#9b2335)" onclick="closePledgeModal()">Cancel</button>
+          <button type="button" class="btn-submit btn-submit--outline" onclick="closePledgeModal()">Cancel</button>
           <button type="submit" class="btn-submit">Send</button>
         </div>
       </form>

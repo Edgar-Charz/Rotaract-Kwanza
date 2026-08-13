@@ -106,7 +106,7 @@ $page_description = 'Join a global network of young leaders committed to service
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
   <?php require_once __DIR__ . '/includes/flash_toast.php'; ?>
 
-  <section id="join" style="padding-top:100px">
+  <section id="join" class="pt-100">
     <div class="container">
       <div class="join-grid">
 
@@ -119,7 +119,7 @@ $page_description = 'Join a global network of young leaders committed to service
             <div class="perks reveal reveal-delay-3">
               <?php foreach ($perks as $perk): ?>
                 <div class="perk-item">
-                  <div class="perk-icon" style="color:var(--pink-700)"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
+                  <div class="perk-icon perk-icon--pink"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
                   <div>
                     <h4><?= e($perk['title']) ?></h4>
                     <?php if ($perk['description']): ?><p><?= e($perk['description']) ?></p><?php endif; ?>
@@ -172,7 +172,7 @@ $page_description = 'Join a global network of young leaders committed to service
               </div>
               <h3>Application Submitted!</h3>
               <p><?= e($message) ?></p>
-              <a href="index.php" class="btn-submit" style="display:inline-block;margin-top:1rem; text-decoration: none;">Back to Home &rarr;</a>
+              <a href="index.php" class="btn-submit btn-submit--link">Back to Home &rarr;</a>
             </div>
           <?php else: ?>
             <h3>Membership Application</h3>
@@ -182,32 +182,32 @@ $page_description = 'Join a global network of young leaders committed to service
               <?= csrf_field() ?>
               <div class="form-row">
                 <div class="form-group">
-                  <label>First Name</label>
-                  <input type="text" name="first_name" value="<?= e($old['first_name'] ?? '') ?>" placeholder="Your first name" required>
+                  <label for="join_first_name">First Name</label>
+                  <input type="text" id="join_first_name" name="first_name" value="<?= e($old['first_name'] ?? '') ?>" placeholder="Your first name" required>
                 </div>
                 <div class="form-group">
-                  <label>Last Name</label>
-                  <input type="text" name="last_name" value="<?= e($old['last_name'] ?? '') ?>" placeholder="Your last name" required>
+                  <label for="join_last_name">Last Name</label>
+                  <input type="text" id="join_last_name" name="last_name" value="<?= e($old['last_name'] ?? '') ?>" placeholder="Your last name" required>
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label>Email</label>
-                  <input type="email" name="email" value="<?= e($old['email'] ?? '') ?>" placeholder="your@email.com" required>
+                  <label for="join_email">Email</label>
+                  <input type="email" id="join_email" name="email" value="<?= e($old['email'] ?? '') ?>" placeholder="your@email.com" required>
                 </div>
                 <div class="form-group">
-                  <label>Phone</label>
-                  <input type="tel" name="phone" value="<?= e($old['phone'] ?? '') ?>" placeholder="+244 900 000 000">
+                  <label for="join_phone">Phone</label>
+                  <input type="tel" id="join_phone" name="phone" value="<?= e($old['phone'] ?? '') ?>" placeholder="+244 900 000 000">
                 </div>
               </div>
               <div class="form-group">
-                <label>Field of Study / Programme</label>
-                <input type="text" name="occupation" value="<?= e($old['occupation'] ?? '') ?>" placeholder="e.g. Computer Science, Medicine">
+                <label for="join_occupation">Field of Study / Programme</label>
+                <input type="text" id="join_occupation" name="occupation" value="<?= e($old['occupation'] ?? '') ?>" placeholder="e.g. Computer Science, Medicine">
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label>Year of Study</label>
-                  <select name="year_of_study">
+                  <label for="join_year_of_study">Year of Study</label>
+                  <select id="join_year_of_study" name="year_of_study">
                     <option value="">Select year</option>
                     <?php foreach (['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year', 'Postgraduate'] as $yr): ?>
                       <option value="<?= e($yr) ?>" <?= ($old['year_of_study'] ?? '') === $yr ? 'selected' : '' ?>><?= e($yr) ?></option>
@@ -215,13 +215,13 @@ $page_description = 'Join a global network of young leaders committed to service
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>Birthday</label>
-                  <input type="date" name="birthday" value="<?= e($old['birthday'] ?? '') ?>" max="<?= date('Y-m-d') ?>" required>
+                  <label for="join_birthday">Birthday</label>
+                  <input type="date" id="join_birthday" name="birthday" value="<?= e($old['birthday'] ?? '') ?>" max="<?= date('Y-m-d') ?>" required>
                 </div>
               </div>
               <div class="form-group">
-                <label>Why do you want to join? <span style="color:var(--pink-700)">*</span></label>
-                <textarea name="why_join" placeholder="Tell us about yourself and what motivates you to become a Rotaractor..." style="min-height:130px" required><?= e($old['why_join'] ?? '') ?></textarea>
+                <label for="join_why_join">Why do you want to join? <span class="required-mark">*</span></label>
+                <textarea id="join_why_join" name="why_join" placeholder="Tell us about yourself and what motivates you to become a Rotaractor..." class="mh-130" required><?= e($old['why_join'] ?? '') ?></textarea>
               </div>
               <button type="submit" name="submitJoinBTN" class="btn-submit">Submit Application &rarr;</button>
             </form>

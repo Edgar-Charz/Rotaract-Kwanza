@@ -199,19 +199,19 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
 
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
-  <section id="event-detail" style="padding-top:100px">
+  <section id="event-detail" class="pt-100">
     <div class="container">
       <?php if (!$event): ?>
-        <div style="text-align:center;padding:80px 20px;color:var(--text-soft)">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:.3;margin-bottom:16px">
+        <div class="gallery-empty">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
             <rect x="3" y="4" width="18" height="18" rx="2" />
             <line x1="16" y1="2" x2="16" y2="6" />
             <line x1="8" y1="2" x2="8" y2="6" />
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
-          <p style="font-size:1.2rem;font-weight:600">Event not found</p>
-          <p style="margin-top:8px">This event may have been removed or the link is incorrect.</p>
-          <a href="events.php" class="ev-back" style="margin-top:20px">&#8592; Back to All Events</a>
+          <p class="gallery-empty-title">Event not found</p>
+          <p class="mt-8">This event may have been removed or the link is incorrect.</p>
+          <a href="events.php" class="ev-back mt-20">&#8592; Back to All Events</a>
         </div>
       <?php else: ?>
 
@@ -222,7 +222,7 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
             <img class="ev-hero-img" src="<?= e(img_url($event['image_path'])) ?>" alt="<?= e($event['title']) ?>">
           <?php else: ?>
             <div class="ev-hero-fallback <?= $event_colors[$event['id'] % 3] ?>">
-              <div class="event-icon-badge" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%)">
+              <div class="event-icon-badge event-icon-badge--centered">
                 <?= icon_svg(event_category_icon($event['category'] ?? ''), '#fff') ?>
               </div>
             </div>
@@ -242,19 +242,19 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
           <div>
             <span class="event-tag"><?= e($event['category'] ?? 'General') ?></span>
             <?php if ($event['description']): ?>
-              <p class="ev-desc" style="margin-top:14px"><?= e($event['description']) ?></p>
+              <p class="ev-desc mt-14"><?= e($event['description']) ?></p>
             <?php endif; ?>
 
             <?php if ($photos): ?>
-              <h3 class="section-title" style="font-size:1.5rem;margin:40px 0 20px">Photo <em>Gallery</em></h3>
+              <h3 class="section-title section-title--ev-gallery">Photo <em>Gallery</em></h3>
               <div class="gallery-grid">
                 <?php foreach ($photos as $pi => $p): ?>
                   <div class="gallery-item reveal" data-src="<?= e(img_url($p['image_path'])) ?>" data-title="<?= e($event['title']) ?>" tabindex="0" role="button" aria-label="View photo">
                     <div class="gallery-inner">
-                      <img src="<?= e(img_url($p['image_path'])) ?>" alt="<?= e($event['title']) ?>" style="width:100%;height:100%;object-fit:cover;display:block">
+                      <img src="<?= e(img_url($p['image_path'])) ?>" alt="<?= e($event['title']) ?>">
                     </div>
                     <div class="gallery-overlay">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-20">
                         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                       </svg>
                       View
@@ -268,18 +268,18 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
           <div class="ev-cta-card">
             <?php if ($event['status'] === 'upcoming'): ?>
               <?php if ($spots_left !== null): ?>
-                <p style="font-weight:700;<?= $is_full ? 'color:#c0392b' : '' ?>"><?= $is_full ? 'This event is full' : $spots_left . ' spot' . ($spots_left === 1 ? '' : 's') . ' left' ?></p>
-                <p style="font-size:12.5px;color:var(--text-soft);margin-top:2px"><?= $guests_used ?> of <?= (int) $event['capacity'] ?> spots reserved</p>
+                <p class="ev-spots-text<?= $is_full ? ' ev-spots-text--full' : '' ?>"><?= $is_full ? 'This event is full' : $spots_left . ' spot' . ($spots_left === 1 ? '' : 's') . ' left' ?></p>
+                <p class="ev-spots-sub"><?= $guests_used ?> of <?= (int) $event['capacity'] ?> spots reserved</p>
               <?php elseif ($going > 0): ?>
                 <p><strong><?= $going ?></strong> <?= $going === 1 ? 'person is' : 'people are' ?> already going!</p>
               <?php else: ?>
                 <p>Be the first to RSVP for this event.</p>
               <?php endif; ?>
               <?php if ($is_full): ?>
-                <span style="display:inline-block;padding:12px 28px;background:#e0e0e0;color:#888;border-radius:10px;font-size:14px;font-weight:700">Registration Full</span>
+                <span class="ev-full-badge">Registration Full</span>
               <?php else: ?>
                 <a href="rsvp.php?id=<?= $event['id'] ?>"
-                  style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,var(--pink-600),var(--pink-800));color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">
+                  class="ev-rsvp-btn">
                   RSVP Now &rarr;
                 </a>
               <?php endif; ?>
@@ -287,11 +287,11 @@ if ($event && $event['image_path']) $page_image = img_url($event['image_path']);
               <p>This event has been cancelled.</p>
             <?php else: ?>
               <p>This event has ended. Thank you to everyone who joined us!</p>
-              <?php if ($photos): ?><p style="margin-top:8px">Check out the photo recap on the left.</p><?php endif; ?>
+              <?php if ($photos): ?><p class="mt-8">Check out the photo recap on the left.</p><?php endif; ?>
             <?php endif; ?>
 
             <?php if ($event['instagram_url'] || $event['tiktok_url'] || ($event['x_url'] ?? '')): ?>
-              <div class="ev-socials" style="justify-content:center">
+              <div class="ev-socials ev-socials--center">
                 <?php if ($event['instagram_url']): ?>
                   <a href="<?= e($event['instagram_url']) ?>" target="_blank" rel="noopener" class="ev-social-btn">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">

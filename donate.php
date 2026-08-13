@@ -272,15 +272,15 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
 
   <div class="donate-hero">
     <div class="container">
-      <div class="section-eyebrow" style="color:rgba(255,255,255,.7);justify-content:flex-start">Support Our Mission</div>
+      <div class="section-eyebrow section-eyebrow--hero-dark">Support Our Mission</div>
       <h1>Donate to <em>Rotaract Kwanza</em></h1>
       <p><?= e($donate_intro) ?></p>
     </div>
   </div>
 
-  <div class="container" style="padding:48px 0 80px">
+  <div class="container donate-container">
 
-    <div class="stats-grid reveal" style="margin-bottom:16px">
+    <div class="stats-grid reveal mb-16">
       <div class="stat-card">
         <div class="stat-number"><?= e($stat_projects) ?></div>
         <div class="stat-label">Projects Funded</div>
@@ -328,20 +328,20 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
         <?php endforeach; ?>
       </div>
     <?php else: ?>
-      <div style="text-align:center;padding:60px 20px;color:var(--text-soft)">
-        <p style="font-size:1.1rem;font-weight:600">Want to support us financially?</p>
-        <p style="margin-top:8px;max-width:480px;margin-left:auto;margin-right:auto">Reach out and our team will share the best way to contribute.</p>
+      <div class="donate-cta-empty">
+        <p class="donate-cta-empty-title">Want to support us financially?</p>
+        <p class="donate-cta-empty-text">Reach out and our team will share the best way to contribute.</p>
       </div>
     <?php endif; ?>
 
-    <div style="text-align:center;margin-top:56px">
-      <div class="section-eyebrow reveal" style="justify-content:center">Other Ways to Help</div>
+    <div class="text-center mt-56">
+      <div class="section-eyebrow reveal section-eyebrow--center">Other Ways to Help</div>
       <h2 class="section-title reveal reveal-delay-1">Give Your <em>Time</em>, Too</h2>
-      <p class="section-lead reveal reveal-delay-2" style="max-width:520px;margin:0 auto 2rem">Money isn't the only way to make a difference — join us as a member or volunteer for a project.</p>
-      <div class="reveal reveal-delay-3" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-        <a href="join.php" class="btn-submit" style="display:inline-block;text-decoration:none">Become a Member &rarr;</a>
-        <a href="projects.php" class="btn-submit" style="display:inline-block;background:transparent;border:2px solid var(--pink-700);color:var(--pink-700);text-decoration:none">Volunteer for a Project</a>
-        <a href="mailto:<?= e($contact_email) ?>" class="btn-submit" style="display:inline-block;background:transparent;border:2px solid var(--pink-700);color:var(--pink-700);text-decoration:none">Email Us</a>
+      <p class="section-lead reveal reveal-delay-2 donate-help-lead">Money isn't the only way to make a difference — join us as a member or volunteer for a project.</p>
+      <div class="reveal reveal-delay-3 donate-cta-buttons">
+        <a href="join.php" class="btn-submit btn-submit--inline">Become a Member &rarr;</a>
+        <a href="projects.php" class="btn-submit btn-submit--inline btn-submit--outline">Volunteer for a Project</a>
+        <a href="mailto:<?= e($contact_email) ?>" class="btn-submit btn-submit--inline btn-submit--outline">Email Us</a>
       </div>
     </div>
 
@@ -358,13 +358,13 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="pledge">
         <input type="hidden" name="payment_account_id" id="pledge-method-input">
-        <div class="form-group"><label>Full Name *</label><input type="text" name="name" required></div>
-        <div class="form-group"><label>Email *</label><input type="email" name="email" required></div>
-        <div class="form-group"><label>Phone</label><input type="tel" name="phone"></div>
-        <div class="form-group"><label>Amount <span style="font-weight:400;color:var(--text-soft)">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" name="amount" placeholder="Leave blank if you'd rather not say"></div>
-        <div class="form-group"><label>Note <span style="font-weight:400;color:var(--text-soft)">(optional)</span></label><textarea name="note" rows="2" maxlength="500"></textarea></div>
+        <div class="form-group"><label for="pledge_name">Full Name *</label><input type="text" id="pledge_name" name="name" required></div>
+        <div class="form-group"><label for="pledge_email">Email *</label><input type="email" id="pledge_email" name="email" required></div>
+        <div class="form-group"><label for="pledge_phone">Phone</label><input type="tel" id="pledge_phone" name="phone"></div>
+        <div class="form-group"><label for="pledge_amount">Amount <span class="optional-hint">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" id="pledge_amount" name="amount" placeholder="Leave blank if you'd rather not say"></div>
+        <div class="form-group"><label for="pledge_note">Note <span class="optional-hint">(optional)</span></label><textarea id="pledge_note" name="note" rows="2" maxlength="500"></textarea></div>
         <div class="pledge-box-actions">
-          <button type="button" class="btn-submit" style="background:transparent;border:2px solid var(--pink-700);color:var(--pink-700)" onclick="closePledgeModal()">Cancel</button>
+          <button type="button" class="btn-submit btn-submit--outline" onclick="closePledgeModal()">Cancel</button>
           <button type="submit" class="btn-submit">Send</button>
         </div>
       </form>

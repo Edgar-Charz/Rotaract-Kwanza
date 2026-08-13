@@ -120,10 +120,10 @@ $page_description = $project ? 'Sign up to help with ' . $project['title'] . ' w
 
   <div class="rsvp-wrap">
     <?php if (!$project): ?>
-      <div class="rsvp-card" style="text-align:center">
-        <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;margin-bottom:12px">Project Not Found</h2>
-        <p style="color:#636e72;margin-bottom:24px">This project may have been removed or the link is incorrect.</p>
-        <a href="projects.php" style="color:var(--pink-700);font-weight:600">&#8592; View All Projects</a>
+      <div class="rsvp-card text-center">
+        <h2 class="confirm-title">Project Not Found</h2>
+        <p class="confirm-text mb-24">This project may have been removed or the link is incorrect.</p>
+        <a href="projects.php" class="confirm-link">&#8592; View All Projects</a>
       </div>
     <?php elseif ($success): ?>
       <div class="rsvp-card">
@@ -134,25 +134,25 @@ $page_description = $project ? 'Sign up to help with ' . $project['title'] . ' w
               stroke-linejoin="round" />
           </svg>
           <h3>You're signed up!</h3>
-          <p style="color:#636e72;margin-bottom:8px">Thanks for offering to help with <strong><?= e($project['title']) ?></strong></p>
-          <p style="color:#636e72;font-size:13px">An officer will reach out soon with details on how you can get involved.</p>
+          <p class="confirm-text mb-8">Thanks for offering to help with <strong><?= e($project['title']) ?></strong></p>
+          <p class="confirm-text fs-13">An officer will reach out soon with details on how you can get involved.</p>
           <?php if ($cancel_token): ?>
-            <div style="margin-top:16px">
+            <div class="mt-16">
               <a href="cancel_signup.php?token=<?= e($cancel_token) ?>"
-                style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;background:#fdf0f5;border:1.5px solid #f5d5e3;color:#9b2335;font-size:13px;font-weight:600;text-decoration:none">
+                class="withdraw-pill">
                 Withdraw Signup
               </a>
             </div>
           <?php endif; ?>
           <?php if (!$was_member): ?>
-            <div style="background:#fdf0f5;border-radius:10px;padding:16px 20px;margin-top:20px;text-align:left">
-              <p style="font-weight:700;color:#2d3436;margin-bottom:4px">Enjoyed the idea of helping out?</p>
-              <p style="color:#636e72;font-size:13.5px;margin-bottom:10px">We'd love to have you join the club as a full member.</p>
-              <a href="join.php" class="btn-rsvp" style="display:inline-block;width:auto;padding:9px 20px;font-size:13.5px;text-decoration:none">Join the Club &rarr;</a>
+            <div class="join-nudge-box">
+              <p class="join-nudge-title">Enjoyed the idea of helping out?</p>
+              <p class="join-nudge-text">We'd love to have you join the club as a full member.</p>
+              <a href="join.php" class="btn-rsvp btn-rsvp--pill-link">Join the Club &rarr;</a>
             </div>
           <?php endif; ?>
           <a href="projects.php"
-            style="display:inline-block;margin-top:24px;color:var(--pink-700);font-weight:600; text-decoration: none;">&#8592;
+            class="confirm-link-block mt-24">&#8592;
             View More Projects</a>
         </div>
       </div>
@@ -160,7 +160,7 @@ $page_description = $project ? 'Sign up to help with ' . $project['title'] . ' w
       <div class="rsvp-card">
         <div class="rsvp-event-header">
           <div
-            style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:6px">
+            class="confirm-event-label">
             Get Involved</div>
           <h2><?= e($project['title']) ?></h2>
         </div>
@@ -172,15 +172,15 @@ $page_description = $project ? 'Sign up to help with ' . $project['title'] . ' w
         <form method="POST" class="rsvp-form">
           <?= csrf_field() ?>
           <div class="form-row">
-            <div class="form-group"><label>Full Name *</label><input type="text" name="name"
+            <div class="form-group"><label for="signup_name">Full Name *</label><input type="text" id="signup_name" name="name"
                 value="<?= e($old['name'] ?? '') ?>" placeholder="Your name" required></div>
-            <div class="form-group"><label>Email *</label><input type="email" name="email"
+            <div class="form-group"><label for="signup_email">Email *</label><input type="email" id="signup_email" name="email"
                 value="<?= e($old['email'] ?? '') ?>" placeholder="your@email.com" required></div>
           </div>
-          <div class="form-group"><label>Phone</label><input type="tel" name="phone"
+          <div class="form-group"><label for="signup_phone">Phone</label><input type="tel" id="signup_phone" name="phone"
               value="<?= e($old['phone'] ?? '') ?>" placeholder="+244 900 000 000"></div>
-          <div class="form-group"><label>How would you like to help? <span style="font-weight:400;color:#636e72">(optional)</span></label>
-            <textarea name="notes" placeholder="e.g. I can help on the day, donate supplies, spread the word..."
+          <div class="form-group"><label for="signup_notes">How would you like to help? <span class="optional-hint-gray">(optional)</span></label>
+            <textarea id="signup_notes" name="notes" placeholder="e.g. I can help on the day, donate supplies, spread the word..."
               rows="3"><?= e($old['notes'] ?? '') ?></textarea></div>
           <button type="submit" class="btn-rsvp">Sign Up to Help &#10003;</button>
         </form>

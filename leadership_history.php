@@ -329,12 +329,12 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
 <body>
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
-  <section id="leadership-history" style="padding-top:100px">
+  <section id="leadership-history" class="pt-100">
     <div class="container">
-      <div style="text-align:center;max-width:700px;margin:0 auto 24px">
-        <div class="section-eyebrow reveal" style="justify-content:center">Leadership Through Time</div>
+      <div class="section-intro-centered">
+        <div class="section-eyebrow reveal section-eyebrow--center">Leadership Through Time</div>
         <h2 class="section-title reveal reveal-delay-1">Club Leadership History</h2>
-        <p class="section-lead reveal reveal-delay-2" style="margin:0 auto">Explore the officers, terms, and past
+        <p class="section-lead reveal reveal-delay-2 mx-auto">Explore the officers, terms, and past
           leaders who have helped shape the Rotaract Club of Kwanza.</p>
       </div>
 
@@ -381,7 +381,7 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
             $count = count($records);
             $hidden = $selectedTerm !== '' && $selectedTerm !== $label;
             ?>
-            <article class="history-term-block reveal" data-term="<?= e($label) ?>" <?= $hidden ? ' style="display:none"' : '' ?>>
+            <article class="history-term-block reveal<?= $hidden ? ' hidden' : '' ?>" data-term="<?= e($label) ?>">
               <div class="history-term-marker" aria-hidden="true"></div>
               <h3 class="history-term-label"><?= e($label) ?></h3>
               <p class="history-term-meta"><?= $count ?> officer<?= $count !== 1 ? 's' : '' ?> served this term</p>
@@ -417,12 +417,19 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
                       <?php if ($record['description']): ?>
                         <p class="history-description"><?= e($record['description']) ?></p>
                       <?php endif; ?>
+                      <?php if ($record['email'] ?? ''): ?>
+                        <div class="history-email-row">
+                          <a href="mailto:<?= e($record['email']) ?>"
+                            class="history-email-link">
+                            <?= e($record['email']) ?>
+                          </a>
+                        </div>
+                      <?php endif; ?>
                       <?php if (($record['linkedin_url'] ?? '') || ($record['instagram_url'] ?? '')): ?>
-                        <div class="history-social-row"
-                          style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:10px;flex-wrap:wrap">
+                        <div class="history-social-row">
                           <?php if ($record['linkedin_url'] ?? ''): ?>
                             <a href="<?= e($record['linkedin_url']) ?>" target="_blank" rel="noopener"
-                              style="font-size:12px;color:var(--pink-600);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                              class="history-social-link">
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
                                 <rect x="2" y="9" width="4" height="12" />
@@ -433,7 +440,7 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
                           <?php endif; ?>
                           <?php if ($record['instagram_url'] ?? ''): ?>
                             <a href="<?= e($record['instagram_url']) ?>" target="_blank" rel="noopener"
-                              style="font-size:12px;color:var(--pink-600);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                              class="history-social-link">
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round">
                                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -453,9 +460,9 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
           <?php endforeach; ?>
         </div>
       <?php else: ?>
-        <div style="text-align:center;padding:80px 20px;color:var(--text-soft)">
-          <p style="font-size:1.2rem;font-weight:600">No history records available yet.</p>
-          <p style="margin-top:8px">Leadership archives will appear here once added through the admin panel.</p>
+        <div class="gallery-empty">
+          <p class="gallery-empty-title">No history records available yet.</p>
+          <p class="mt-8">Leadership archives will appear here once added through the admin panel.</p>
         </div>
       <?php endif; ?>
     </div>

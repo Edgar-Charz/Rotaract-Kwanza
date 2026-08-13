@@ -139,7 +139,7 @@ if ($about_image)
 
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
-  <section id="about" style="padding-top:100px">
+  <section id="about" class="pt-100">
     <div class="container">
       <div class="about-grid">
         <div class="about-visual reveal">
@@ -175,7 +175,7 @@ if ($about_image)
         </div>
       </div>
 
-      <div style="margin-top:80px">
+      <div class="mt-80">
         <div class="section-eyebrow reveal">Mission &amp; Motto</div>
         <h2 class="section-title reveal reveal-delay-1">What Drives <em>Us</em></h2>
         <div class="ab-mission-grid reveal reveal-delay-2">
@@ -191,11 +191,11 @@ if ($about_image)
       </div>
 
       <?php if ($values): ?>
-        <div style="margin-top:60px">
+        <div class="mt-60">
           <div class="about-values reveal reveal-delay-3">
             <?php foreach ($values as $val): ?>
               <div class="value-item">
-                <div class="value-icon" style="color:var(--pink-700)"><?= icon_svg($val['icon_key'], 'var(--pink-700)') ?>
+                <div class="value-icon value-icon--pink"><?= icon_svg($val['icon_key'], 'var(--pink-700)') ?>
                 </div>
                 <div>
                   <h4><?= e($val['title']) ?></h4>
@@ -208,7 +208,7 @@ if ($about_image)
         </div>
       <?php endif; ?>
 
-      <div style="margin-top:80px">
+      <div class="mt-80">
         <div class="section-eyebrow reveal">Get Involved</div>
         <h2 class="section-title reveal reveal-delay-1">Meetings &amp; <em>Affiliation</em></h2>
         <div class="ab-card reveal reveal-delay-2">
@@ -264,7 +264,7 @@ if ($about_image)
         </div>
       </div>
 
-      <div style="margin-top:80px">
+      <div class="mt-80">
         <div class="section-eyebrow reveal">By the Numbers</div>
         <h2 class="section-title reveal reveal-delay-1">Our <em>Impact</em></h2>
         <div class="stats-grid reveal reveal-delay-2">
@@ -287,19 +287,16 @@ if ($about_image)
         </div>
       </div>
 
-      <div style="margin-top:80px;text-align:center">
+      <div class="cta-section">
         <div class="section-eyebrow reveal">Get Involved</div>
         <h2 class="section-title reveal reveal-delay-1">Ready to Make a <em>Difference</em>?</h2>
-        <p class="section-lead reveal reveal-delay-2" style="max-width:560px;margin:0 auto 2rem">Join a global movement
+        <p class="section-lead reveal reveal-delay-2 cta-lead">Join a global movement
           of young leaders dedicated to service, fellowship, and building a better world.</p>
         <div class="reveal reveal-delay-3">
-          <a href="join.php" class="btn-submit"
-            style="display:inline-block; margin-right:1rem; text-decoration: none;">Join Us
+          <a href="join.php" class="btn-submit btn-submit--inline btn-submit--mr">Join Us
             &rarr;</a>
-          <a href="donate.php" class="btn-submit"
-            style="display:inline-block;background:transparent;border:2px solid var(--pink-700);color:var(--pink-700); text-decoration: none; margin-right:1rem;">Donate</a>
-          <a href="contact.php" class="btn-submit"
-            style="display:inline-block;background:transparent;border:2px solid var(--pink-700);color:var(--pink-700); text-decoration: none;">Contact
+          <a href="donate.php" class="btn-submit btn-submit--inline btn-submit--outline btn-submit--mr">Donate</a>
+          <a href="contact.php" class="btn-submit btn-submit--inline btn-submit--outline">Contact
             Us</a>
         </div>
       </div>

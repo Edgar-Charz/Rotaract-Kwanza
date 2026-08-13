@@ -35,11 +35,11 @@ $page_description = 'Cancel your RSVP to a Rotaract Club of Kwanza event.';
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
   <div class="rsvp-wrap">
-    <div class="rsvp-card" style="text-align:center">
+    <div class="rsvp-card text-center">
       <?php if (!$rsvp): ?>
-        <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;margin-bottom:12px">Link Not Found</h2>
-        <p style="color:#636e72;margin-bottom:24px">This cancellation link is invalid or has already been used.</p>
-        <a href="events.php" style="color:var(--pink-700);font-weight:600">&#8592; View All Events</a>
+        <h2 class="confirm-title">Link Not Found</h2>
+        <p class="confirm-text mb-24">This cancellation link is invalid or has already been used.</p>
+        <a href="events.php" class="confirm-link">&#8592; View All Events</a>
       <?php elseif ($cancelled): ?>
         <div class="success-box">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
@@ -47,26 +47,26 @@ $page_description = 'Cancel your RSVP to a Rotaract Club of Kwanza event.';
             <path d="M8 8l8 8M16 8l-8 8" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round" />
           </svg>
           <h3>RSVP Cancelled</h3>
-          <p style="color:#636e72">You're no longer registered for <strong><?= e($rsvp['event_title']) ?></strong>.</p>
-          <a href="events.php" style="display:inline-block;margin-top:20px;color:var(--pink-700);font-weight:600;text-decoration:none">&#8592; View All Events</a>
+          <p class="confirm-text">You're no longer registered for <strong><?= e($rsvp['event_title']) ?></strong>.</p>
+          <a href="events.php" class="confirm-link-block mt-20">&#8592; View All Events</a>
         </div>
       <?php else: ?>
-        <div class="rsvp-event-header" style="text-align:left">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:6px">Cancel RSVP</div>
+        <div class="rsvp-event-header text-left">
+          <div class="confirm-event-label">Cancel RSVP</div>
           <h2><?= e($rsvp['event_title']) ?></h2>
           <div class="rsvp-meta">
             <span>&#128197; <?= date('l, d F Y', strtotime($rsvp['event_date'])) ?></span>
             <?php if ($rsvp['event_time']): ?><span>&#128336; <?= e($rsvp['event_time']) ?></span><?php endif; ?>
           </div>
         </div>
-        <p style="color:#636e72;margin-bottom:20px">Are you sure you want to cancel your RSVP for <strong><?= e($rsvp['name']) ?></strong>
+        <p class="confirm-text mb-20">Are you sure you want to cancel your RSVP for <strong><?= e($rsvp['name']) ?></strong>
           <?= $rsvp['guests'] > 1 ? '(+' . ((int) $rsvp['guests'] - 1) . ' guest' . ($rsvp['guests'] > 2 ? 's' : '') . ')' : '' ?>?</p>
         <form method="POST">
           <?= csrf_field() ?>
           <input type="hidden" name="token" value="<?= e($token) ?>">
           <button type="submit" class="btn-rsvp btn-danger">Yes, Cancel My RSVP</button>
         </form>
-        <a href="event.php?id=<?= (int) $rsvp['event_id'] ?>" style="display:inline-block;margin-top:14px;color:var(--pink-700);font-weight:600;text-decoration:none">No, keep my RSVP</a>
+        <a href="event.php?id=<?= (int) $rsvp['event_id'] ?>" class="confirm-link-block mt-14">No, keep my RSVP</a>
       <?php endif; ?>
     </div>
   </div>

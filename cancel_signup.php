@@ -35,11 +35,11 @@ $page_description = 'Withdraw your volunteer signup for a Rotaract Club of Kwanz
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
   <div class="rsvp-wrap">
-    <div class="rsvp-card" style="text-align:center">
+    <div class="rsvp-card text-center">
       <?php if (!$signup): ?>
-        <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;margin-bottom:12px">Link Not Found</h2>
-        <p style="color:#636e72;margin-bottom:24px">This link is invalid or has already been used.</p>
-        <a href="projects.php" style="color:var(--pink-700);font-weight:600">&#8592; View All Projects</a>
+        <h2 class="confirm-title">Link Not Found</h2>
+        <p class="confirm-text mb-24">This link is invalid or has already been used.</p>
+        <a href="projects.php" class="confirm-link">&#8592; View All Projects</a>
       <?php elseif ($cancelled): ?>
         <div class="success-box">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
@@ -47,21 +47,21 @@ $page_description = 'Withdraw your volunteer signup for a Rotaract Club of Kwanz
             <path d="M8 8l8 8M16 8l-8 8" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round" />
           </svg>
           <h3>Signup Withdrawn</h3>
-          <p style="color:#636e72">You've been removed from the volunteer list for <strong><?= e($signup['project_title']) ?></strong>.</p>
-          <a href="projects.php" style="display:inline-block;margin-top:20px;color:var(--pink-700);font-weight:600;text-decoration:none">&#8592; View All Projects</a>
+          <p class="confirm-text">You've been removed from the volunteer list for <strong><?= e($signup['project_title']) ?></strong>.</p>
+          <a href="projects.php" class="confirm-link-block mt-20">&#8592; View All Projects</a>
         </div>
       <?php else: ?>
-        <div class="rsvp-event-header" style="text-align:left">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:6px">Withdraw Signup</div>
+        <div class="rsvp-event-header text-left">
+          <div class="confirm-event-label">Withdraw Signup</div>
           <h2><?= e($signup['project_title']) ?></h2>
         </div>
-        <p style="color:#636e72;margin-bottom:20px">Are you sure you want to withdraw <strong><?= e($signup['name']) ?></strong> from helping with this project?</p>
+        <p class="confirm-text mb-20">Are you sure you want to withdraw <strong><?= e($signup['name']) ?></strong> from helping with this project?</p>
         <form method="POST">
           <?= csrf_field() ?>
           <input type="hidden" name="token" value="<?= e($token) ?>">
           <button type="submit" class="btn-rsvp btn-danger">Yes, Withdraw My Signup</button>
         </form>
-        <a href="project.php?id=<?= (int) $signup['project_id'] ?>" style="display:inline-block;margin-top:14px;color:var(--pink-700);font-weight:600;text-decoration:none">No, keep me signed up</a>
+        <a href="project.php?id=<?= (int) $signup['project_id'] ?>" class="confirm-link-block mt-14">No, keep me signed up</a>
       <?php endif; ?>
     </div>
   </div>

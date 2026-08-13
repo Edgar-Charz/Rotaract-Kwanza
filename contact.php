@@ -90,7 +90,7 @@ $page_description = $contact_intro;
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
   <?php require_once __DIR__ . '/includes/flash_toast.php'; ?>
 
-  <section id="contact" style="padding-top:100px">
+  <section id="contact" class="pt-100">
     <div class="container">
       <div class="contact-grid">
         <div>
@@ -189,7 +189,7 @@ $page_description = $contact_intro;
             </div>
             <div class="form-group">
               <label>Message</label>
-              <textarea name="message" placeholder="Tell us more..." style="min-height:140px" required><?= e($old['message'] ?? '') ?></textarea>
+              <textarea name="message" placeholder="Tell us more..." class="mh-140" required><?= e($old['message'] ?? '') ?></textarea>
             </div>
             <button type="submit" name="submitContactBTN" class="btn-submit">Send Message &rarr;</button>
           </form>

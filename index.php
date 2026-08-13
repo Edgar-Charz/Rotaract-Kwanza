@@ -68,7 +68,7 @@ $home_gallery_description = $settings->get('home_gallery_description', 'A glimps
 
 $event_colors = ['', 'gold', 'rose'];
 $gallery_classes = [
-  'tall reveal" style="grid-row:span 2',
+  'tall reveal',
   'reveal reveal-delay-1',
   'reveal reveal-delay-2',
   'wide reveal',
@@ -168,7 +168,7 @@ if ($hero_image) $page_image = img_url($hero_image);
     </div>
   </section>
 
-  <div class="wave-divider" style="background:#fff;margin-top:-1px;">
+  <div class="wave-divider wave-divider--white">
     <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,0 L0,0 Z" fill="#FFF5F9" />
     </svg>
@@ -211,7 +211,7 @@ if ($hero_image) $page_image = img_url($hero_image);
             <div class="about-values reveal reveal-delay-3">
               <?php foreach ($club_values as $val): ?>
                 <div class="value-item">
-                  <div class="value-icon" style="color:var(--pink-700)"><?= icon_svg($val['icon_key'], 'var(--pink-700)') ?></div>
+                  <div class="value-icon value-icon--pink"><?= icon_svg($val['icon_key'], 'var(--pink-700)') ?></div>
                   <div>
                     <h4><?= e($val['title']) ?></h4>
                     <?php if ($val['description']): ?><p><?= e($val['description']) ?></p><?php endif; ?>
@@ -220,7 +220,7 @@ if ($hero_image) $page_image = img_url($hero_image);
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
-          <a href="about.php" class="btn-secondary" style="display:inline-block;margin-top:24px">Learn
+          <a href="about.php" class="btn-secondary btn-secondary--inline-mt24">Learn
             More &rarr;</a>
         </div>
       </div>
@@ -236,16 +236,15 @@ if ($hero_image) $page_image = img_url($hero_image);
           <h2 class="section-title reveal reveal-delay-1">Featured <em>Projects</em></h2>
           <p class="section-lead reveal reveal-delay-2"><?= e($home_projects_description) ?></p>
         </div>
-        <a href="projects.php" class="btn-secondary reveal"
-          style="color:#fff;border-color:rgba(255,255,255,0.3)">All Projects</a>
+        <a href="projects.php" class="btn-secondary reveal btn-secondary--hero">All Projects</a>
       </div>
       <div class="projects-grid">
         <?php if ($projects):
           foreach ($projects as $i => $pj): ?>
-            <a href="project.php?id=<?= $pj['id'] ?>" class="project-card reveal<?= $i > 0 ? ' reveal-delay-' . $i : '' ?>" style="display:block;color:inherit;text-decoration:none">
+            <a href="project.php?id=<?= $pj['id'] ?>" class="project-card reveal<?= $i > 0 ? ' reveal-delay-' . $i : '' ?>">
               <?php if ($pj['image_path'] ?? ''): ?>
-                <div class="project-icon" style="width:100%;height:140px;border-radius:12px;overflow:hidden;margin-bottom:20px">
-                  <img src="<?= e(img_url($pj['image_path'])) ?>" alt="<?= e($pj['title']) ?>" style="width:100%;height:100%;object-fit:cover">
+                <div class="project-icon project-icon--photo">
+                  <img src="<?= e(img_url($pj['image_path'])) ?>" alt="<?= e($pj['title']) ?>">
                 </div>
               <?php else: ?>
                 <div class="project-icon">
@@ -269,8 +268,8 @@ if ($hero_image) $page_image = img_url($hero_image);
             </a>
           <?php endforeach;
         else: ?>
-          <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-soft)">
-            <p style="font-size:1.1rem">Projects coming soon.</p>
+          <div class="home-empty-state home-empty-state--grid-full">
+            <p class="fs-110">Projects coming soon.</p>
           </div>
         <?php endif; ?>
       </div>
@@ -291,11 +290,10 @@ if ($hero_image) $page_image = img_url($hero_image);
       <div class="events-grid">
         <?php if ($events):
           foreach ($events as $i => $ev): ?>
-            <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . $i : '' ?>">
+            <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . $i : '' ?> event-card--clickable" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
               <?php if ($ev['image_path'] ?? ''): ?>
-                <div class="event-card-img" style="padding:0;overflow:hidden">
-                  <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>"
-                    style="width:100%;height:100%;object-fit:cover">
+                <div class="event-card-img event-card-img--flush">
+                  <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>">
                   <div class="event-date-badge">
                     <div class="day"><?= date('d', strtotime($ev['event_date'])) ?></div>
                     <div class="month"><?= date('M', strtotime($ev['event_date'])) ?></div>
@@ -312,7 +310,7 @@ if ($hero_image) $page_image = img_url($hero_image);
               <?php endif; ?>
               <div class="event-card-body">
                 <span class="event-tag"><?= e($ev['category'] ?? 'General') ?></span>
-                <h3><a href="event.php?id=<?= $ev['id'] ?>" style="color:inherit;text-decoration:none"><?= e($ev['title']) ?></a></h3>
+                <h3><a href="event.php?id=<?= $ev['id'] ?>" class="title-link"><?= e($ev['title']) ?></a></h3>
                 <?php if ($ev['description']): ?>
                   <p><?= e($ev['description']) ?></p><?php endif; ?>
                 <div class="event-meta">
@@ -323,18 +321,20 @@ if ($hero_image) $page_image = img_url($hero_image);
                   <?= e($ev['location'] ?? '') ?> <?= ($ev['location'] && $ev['event_time']) ? ', ' : '' ?>
                   <?= e($ev['event_time'] ?? '') ?>
                 </div>
-                <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+                <div class="event-card-actions">
                   <a href="rsvp.php?id=<?= $ev['id'] ?>"
-                    style="display:inline-block;padding:9px 20px;background:linear-gradient(135deg,var(--pink-600),var(--pink-800));color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;transition:opacity .2s"
+                    class="event-rsvp-btn"
                     onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">RSVP &rarr;</a>
-                  <a href="event.php?id=<?= $ev['id'] ?>" style="font-size:13px;font-weight:700;color:var(--pink-800);text-decoration:none">Details</a>
+                  <a href="event.php?id=<?= $ev['id'] ?>"
+                    class="event-details-btn"
+                    onmouseover="this.style.background='var(--pink-100)'" onmouseout="this.style.background='transparent'">Details</a>
                 </div>
               </div>
             </div>
           <?php endforeach;
         else: ?>
-          <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-soft)">
-            <p style="font-size:1.1rem">No upcoming events at the moment. Check back soon!</p>
+          <div class="home-empty-state home-empty-state--grid-full">
+            <p class="fs-110">No upcoming events at the moment. Check back soon!</p>
           </div>
         <?php endif; ?>
       </div>
@@ -344,10 +344,10 @@ if ($hero_image) $page_image = img_url($hero_image);
   <!-- TEAM -->
   <section id="team">
     <div class="container">
-      <div style="text-align:center;max-width:600px;margin:0 auto 12px">
-        <div class="section-eyebrow reveal" style="justify-content:center">Our Leadership</div>
+      <div class="section-intro-centered section-intro-centered--sm">
+        <div class="section-eyebrow reveal section-eyebrow--center">Our Leadership</div>
         <h2 class="section-title reveal reveal-delay-1">Meet the <em>Team</em></h2>
-        <p class="section-lead reveal reveal-delay-2" style="margin:0 auto"><?= e($home_team_description) ?></p>
+        <p class="section-lead reveal reveal-delay-2 mx-auto"><?= e($home_team_description) ?></p>
       </div>
       <div class="team-grid">
         <?php if ($team):
@@ -359,9 +359,8 @@ if ($hero_image) $page_image = img_url($hero_image);
             <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . $i % 4 : '' ?>">
               <div class="team-avatar" style="background:<?= $pal['bg'] ?>">
                 <?php if ($tm['image_path']): ?>
-                  <div class="team-avatar-circle" style="overflow:hidden;padding:0">
-                    <img src="<?= e(img_url($tm['image_path'])) ?>" alt="<?= e($tm['full_name']) ?>"
-                      style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">
+                  <div class="team-avatar-circle team-avatar-circle--photo">
+                    <img src="<?= e(img_url($tm['image_path'])) ?>" alt="<?= e($tm['full_name']) ?>">
                   </div>
                 <?php else: ?>
                   <div class="team-avatar-circle" style="background:<?= $pal['circle'] ?>"><?= $initials ?></div>
@@ -376,13 +375,13 @@ if ($hero_image) $page_image = img_url($hero_image);
             </div>
           <?php endforeach;
         else: ?>
-          <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-soft)">
+          <div class="home-empty-state home-empty-state--grid-full home-empty-state--tight">
             <p>Team information coming soon.</p>
           </div>
         <?php endif; ?>
       </div>
       <?php if ($team): ?>
-        <div style="text-align:center;margin-top:40px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+        <div class="text-center mt-40 flex flex-wrap gap-12 justify-center">
           <a href="team.php" class="btn-secondary reveal">Meet the Full Team</a>
           <a href="leadership_history.php" class="btn-secondary reveal">Leadership History</a>
         </div>
@@ -393,8 +392,7 @@ if ($hero_image) $page_image = img_url($hero_image);
   <!-- GALLERY -->
   <section id="gallery">
     <div class="container">
-      <div
-        style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:0;flex-wrap:wrap;gap:20px">
+      <div class="gallery-header-row">
         <div>
           <div class="section-eyebrow reveal">Our Moments</div>
           <h2 class="section-title reveal reveal-delay-1">Photo <em>Gallery</em></h2>
@@ -409,14 +407,13 @@ if ($hero_image) $page_image = img_url($hero_image);
         ?>
             <div class="gallery-item <?= $gc ?>">
               <?php if ($photo['image_path']): ?>
-                <div class="gallery-inner"
-                  style="height:<?= $gi === 0 ? '100%' : '200px' ?>;border-radius:var(--radius-md);overflow:hidden;position:relative">
-                  <img src="<?= e(img_url($photo['image_path'])) ?>" alt="<?= e($photo['title']) ?>"
-                    style="width:100%;height:100%;object-fit:cover;display:block">
+                <div class="gallery-inner gallery-inner--home"
+                  style="height:<?= $gi === 0 ? '100%' : '200px' ?>">
+                  <img src="<?= e(img_url($photo['image_path'])) ?>" alt="<?= e($photo['title']) ?>">
                 </div>
               <?php else: ?>
-                <div class="gallery-inner"
-                  style="background:linear-gradient(145deg,var(--pink-300),var(--pink-700));height:<?= $gi === 0 ? '100%' : '200px' ?>;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center">
+                <div class="gallery-inner gallery-inner--home gallery-inner--placeholder"
+                  style="height:<?= $gi === 0 ? '100%' : '200px' ?>">
                   <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
                     <rect x="10" y="10" width="40" height="40" rx="4" fill="rgba(255,255,255,0.2)" />
                     <circle cx="22" cy="22" r="5" fill="rgba(255,255,255,0.4)" />
@@ -428,8 +425,8 @@ if ($hero_image) $page_image = img_url($hero_image);
             </div>
           <?php endforeach;
         else: ?>
-          <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-soft)">
-            <p style="font-size:1.1rem">Gallery photos coming soon.</p>
+          <div class="home-empty-state home-empty-state--grid-full">
+            <p class="fs-110">Gallery photos coming soon.</p>
           </div>
         <?php endif; ?>
       </div>
@@ -438,10 +435,10 @@ if ($hero_image) $page_image = img_url($hero_image);
 
   <!-- LATEST NEWS -->
   <?php if ($announcements): ?>
-    <section id="news" style="background:#f8f5ff;padding:80px 0">
+    <section id="news" class="home-news-section">
       <div class="container">
         <div
-          style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;flex-wrap:wrap;gap:16px">
+          class="home-news-header">
           <div>
             <div class="section-eyebrow reveal">Club Updates</div>
             <h2 class="section-title reveal reveal-delay-1">Latest <em>News</em></h2>
@@ -449,23 +446,22 @@ if ($hero_image) $page_image = img_url($hero_image);
           </div>
           <a href="news.php" class="btn-secondary reveal">All Posts</a>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:24px">
+        <div class="home-news-grid">
           <?php
           $cat_colors = ['news' => '#fce4ef', 'minutes' => '#d6eaff', 'notice' => '#fff3cd', 'announcement' => '#f0eafd'];
           $cat_text   = ['news' => '#c0396b', 'minutes' => '#1a5fb4', 'notice' => '#856404', 'announcement' => '#7b5ea7'];
           $cat_labels = ['news' => 'News', 'minutes' => 'Meeting Minutes', 'notice' => 'Notice', 'announcement' => 'Announcement'];
           foreach ($announcements as $ai => $ann): ?>
             <a href="news.php?slug=<?= e($ann['slug']) ?>"
-              class="reveal<?= $ai > 0 ? ' reveal-delay-' . $ai : '' ?>"
-              style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s"
+              class="reveal<?= $ai > 0 ? ' reveal-delay-' . $ai : '' ?> home-news-card"
               onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 30px rgba(192,57,107,0.13)'"
               onmouseout="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.07)'">
               <?php if ($ann['image_path']): ?>
-                <div style="height:160px;overflow:hidden"><img src="<?= e(img_url($ann['image_path'])) ?>"
-                    alt="<?= e($ann['title']) ?>" style="width:100%;height:100%;object-fit:cover"></div>
+                <div class="home-news-card-img"><img src="<?= e(img_url($ann['image_path'])) ?>"
+                    alt="<?= e($ann['title']) ?>"></div>
               <?php else: ?>
                 <div
-                  style="height:160px;background:linear-gradient(135deg,var(--pink-100),var(--pink-200));display:flex;align-items:center;justify-content:center">
+                  class="home-news-card-placeholder">
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--pink-500)" stroke-width="1.5">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
@@ -474,17 +470,17 @@ if ($hero_image) $page_image = img_url($hero_image);
                   </svg>
                 </div>
               <?php endif; ?>
-              <div style="padding:20px;flex:1;display:flex;flex-direction:column">
+              <div class="home-news-card-body">
                 <span
-                  style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:<?= $cat_colors[$ann['category']] ?? '#fce4ef' ?>;color:<?= $cat_text[$ann['category']] ?? '#c0396b' ?>;margin-bottom:10px"><?= $cat_labels[$ann['category']] ?? $ann['category'] ?></span>
+                  class="home-news-cat-tag" style="background:<?= $cat_colors[$ann['category']] ?? '#fce4ef' ?>;color:<?= $cat_text[$ann['category']] ?? '#c0396b' ?>"><?= $cat_labels[$ann['category']] ?? $ann['category'] ?></span>
                 <h3
-                  style="font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;margin-bottom:8px;line-height:1.35">
+                  class="home-news-title">
                   <?= e($ann['title']) ?>
                 </h3>
-                <p style="font-size:13px;color:#636e72;line-height:1.6;flex:1">
+                <p class="home-news-excerpt">
                   <?= e(mb_strimwidth(strip_tags($ann['content']), 0, 120, '…')) ?>
                 </p>
-                <div style="font-size:12px;color:#b2bec3;margin-top:12px">
+                <div class="home-news-date">
                   <?= date('d M Y', strtotime($ann['created_at'])) ?>
                 </div>
               </div>
@@ -498,7 +494,7 @@ if ($hero_image) $page_image = img_url($hero_image);
   <!-- MEMBER DIRECTORY PREVIEW -->
   <section id="directory">
     <div class="container">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:36px;flex-wrap:wrap;gap:20px">
+      <div class="dir-preview-header">
         <div>
           <div class="section-eyebrow reveal">Our Members</div>
           <h2 class="section-title reveal reveal-delay-1">Member <em>Directory</em></h2>
@@ -515,8 +511,7 @@ if ($hero_image) $page_image = img_url($hero_image);
             <div class="dir-card reveal<?= $di > 0 ? ' reveal-delay-' . ($di % 4) : '' ?>">
               <?php if ($dm['photo_path']): ?>
                 <div class="dir-avatar dir-avatar-photo">
-                  <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($dm['first_name'] . ' ' . $dm['last_name']) ?>"
-                    style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+                  <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($dm['first_name'] . ' ' . $dm['last_name']) ?>">
                 </div>
               <?php else: ?>
                 <div class="dir-avatar <?= $av_class ?>"><?= e($initials) ?></div>
@@ -529,9 +524,9 @@ if ($hero_image) $page_image = img_url($hero_image);
           <?php endforeach; ?>
         </div>
       <?php else: ?>
-        <div style="text-align:center;padding:60px 20px;color:var(--text-soft)">
-          <p style="font-size:1.1rem">No members listed yet.</p>
-          <a href="directory.php" style="color:var(--pink-700); font-weight: 600; margin-top: 8px; display: inline-block; text-decoration: none;">Browse Directory</a>
+        <div class="home-empty-state">
+          <p class="fs-110">No members listed yet.</p>
+          <a href="directory.php" class="dir-browse-link">Browse Directory</a>
         </div>
       <?php endif; ?>
     </div>
@@ -549,7 +544,7 @@ if ($hero_image) $page_image = img_url($hero_image);
             <div class="join-perks reveal reveal-delay-3">
               <?php foreach ($perks as $perk): ?>
                 <div class="perk">
-                  <div class="perk-icon" style="color:var(--pink-700)"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
+                  <div class="perk-icon perk-icon--pink"><?= icon_svg($perk['icon_key'], 'var(--pink-700)') ?></div>
                   <span><?= e($perk['title']) ?><?= $perk['description'] ? ' — ' . e($perk['description']) : '' ?></span>
                 </div>
               <?php endforeach; ?>
@@ -559,8 +554,8 @@ if ($hero_image) $page_image = img_url($hero_image);
         <div class="join-form reveal reveal-delay-2">
           <h3>Ready to Join Us?</h3>
           <p>Fill out our membership application and our team will get back to you within 3 business days.</p>
-          <div style="margin-top:24px">
-            <a href="join.php" class="btn-submit" style="display:inline-block; text-decoration: none;">Apply for Membership
+          <div class="mt-24">
+            <a href="join.php" class="btn-submit btn-submit--inline">Apply for Membership
               &rarr;</a>
           </div>
         </div>
@@ -613,46 +608,46 @@ if ($hero_image) $page_image = img_url($hero_image);
           </div>
           <div class="socials reveal">
             <?php if ($fb): ?>
-            <a href="<?= e($fb) ?>" class="social-btn" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none"
-                stroke-width="2" stroke-linecap="round">
-                <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
-              </svg></a>
+              <a href="<?= e($fb) ?>" class="social-btn" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none"
+                  stroke-width="2" stroke-linecap="round">
+                  <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+                </svg></a>
             <?php endif; ?>
             <?php if ($ig): ?>
-            <a href="<?= e($ig) ?>" class="social-btn" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none"
-                stroke-width="2" stroke-linecap="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-              </svg></a>
+              <a href="<?= e($ig) ?>" class="social-btn" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none"
+                  stroke-width="2" stroke-linecap="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg></a>
             <?php endif; ?>
             <?php if ($tw): ?>
-            <a href="<?= e($tw) ?>" class="social-btn" aria-label="X" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
-              </svg></a>
+              <a href="<?= e($tw) ?>" class="social-btn" aria-label="X" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+                </svg></a>
             <?php endif; ?>
             <?php if ($tt): ?>
-            <a href="<?= e($tt) ?>" class="social-btn" aria-label="TikTok" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0115.54 3h-3.09v12.4a2.592 2.592 0 01-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 004.3 1.38V7.3s-1.88.09-3.24-1.48z" />
-              </svg></a>
+              <a href="<?= e($tt) ?>" class="social-btn" aria-label="TikTok" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0115.54 3h-3.09v12.4a2.592 2.592 0 01-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 004.3 1.38V7.3s-1.88.09-3.24-1.48z" />
+                </svg></a>
             <?php endif; ?>
             <?php if ($li): ?>
-            <a href="<?= e($li) ?>" class="social-btn" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none"
-                stroke-width="2" stroke-linecap="round">
-                <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
-                <rect x="2" y="9" width="4" height="12" />
-                <circle cx="4" cy="4" r="2" />
-              </svg></a>
+              <a href="<?= e($li) ?>" class="social-btn" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none"
+                  stroke-width="2" stroke-linecap="round">
+                  <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
+                  <rect x="2" y="9" width="4" height="12" />
+                  <circle cx="4" cy="4" r="2" />
+                </svg></a>
             <?php endif; ?>
           </div>
         </div>
         <div class="contact-form reveal reveal-delay-2">
           <h3>Send Us a Message</h3>
           <p>Have something to say? We'd love to hear from you. Use our contact page to get in touch.</p>
-          <div style="margin-top:24px">
-            <a href="contact.php" class="btn-submit" style="display:inline-block; text-decoration: none;">Go to Contact Page
+          <div class="mt-24">
+            <a href="contact.php" class="btn-submit btn-submit--inline">Go to Contact Page
               &rarr;</a>
           </div>
         </div>

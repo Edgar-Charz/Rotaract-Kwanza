@@ -31,15 +31,14 @@ $__base_href = rtrim(dirname($__script), '/') . '/';
 
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
-  <section style="padding-top:160px;padding-bottom:120px;min-height:60vh;display:flex;align-items:center">
-    <div class="container" style="text-align:center">
-      <div
-        style="font-family:'Cormorant Garamond',serif;font-size:6rem;font-weight:700;color:var(--pink-700);line-height:1">
+  <section class="error-404-section">
+    <div class="container text-center">
+      <div class="error-404-code">
         404</div>
-      <h1 class="section-title" style="margin-top:8px">Page Not <em>Found</em></h1>
-      <p class="section-lead" style="max-width:480px;margin:16px auto 32px">The page you're looking for may have been
+      <h1 class="section-title mt-8">Page Not <em>Found</em></h1>
+      <p class="section-lead error-404-lead">The page you're looking for may have been
         moved, renamed, or never existed.</p>
-      <a href="index.php" class="btn-submit" style="display:inline-block;text-decoration:none">Back to Home &rarr;</a>
+      <a href="index.php" class="btn-submit error-404-btn">Back to Home &rarr;</a>
     </div>
   </section>
 

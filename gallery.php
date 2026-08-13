@@ -69,15 +69,15 @@ $page_description = $gallery_intro;
 
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
-  <section id="gallery" style="padding-top:100px">
+  <section id="gallery" class="pt-100">
     <div class="container">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px;margin-bottom:0">
+      <div class="gallery-header-row">
         <div>
           <div class="section-eyebrow reveal">Our Moments</div>
           <h2 class="section-title reveal reveal-delay-1">Photo <em>Gallery</em></h2>
           <p class="section-lead reveal reveal-delay-2"><?= e($gallery_intro) ?></p>
         </div>
-        <span class="btn-secondary" style="opacity:.6"><?= $total ?> Photo<?= $total !== 1 ? 's' : '' ?></span>
+        <span class="btn-secondary opacity-60"><?= $total ?> Photo<?= $total !== 1 ? 's' : '' ?></span>
       </div>
 
       <?php if ($categories): ?>
@@ -106,11 +106,10 @@ $page_description = $gallery_intro;
               <?php endif; ?>>
               <?php if ($photo['image_path']): ?>
                 <div class="gallery-inner">
-                  <img src="<?= e(img_url($photo['image_path'])) ?>" alt="<?= e($photo['title']) ?>"
-                    style="width:100%;height:100%;object-fit:cover;display:block">
+                  <img src="<?= e(img_url($photo['image_path'])) ?>" alt="<?= e($photo['title']) ?>">
                 </div>
               <?php else: ?>
-                <div class="gallery-inner" style="background:linear-gradient(145deg,var(--pink-300),var(--pink-700));display:flex;align-items:center;justify-content:center">
+                <div class="gallery-inner gallery-inner--placeholder">
                   <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
                     <rect x="10" y="10" width="40" height="40" rx="4" fill="rgba(255,255,255,0.2)" />
                     <circle cx="22" cy="22" r="5" fill="rgba(255,255,255,0.4)" />
@@ -119,7 +118,7 @@ $page_description = $gallery_intro;
                 </div>
               <?php endif; ?>
               <div class="gallery-overlay">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-20">
                   <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                 </svg>
                 <?= e($photo['title']) ?>
@@ -138,14 +137,14 @@ $page_description = $gallery_intro;
           </div>
         <?php endif; ?>
       <?php else: ?>
-        <div style="text-align:center;padding:80px 20px;color:var(--text-soft)">
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:.3;margin-bottom:16px">
+        <div class="gallery-empty">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
             <polyline points="21 15 16 10 5 21" />
           </svg>
-          <p style="font-size:1.2rem;font-weight:600">Gallery is empty</p>
-          <p style="margin-top:8px">Photos will appear here once uploaded through the admin dashboard.</p>
+          <p class="gallery-empty-title">Gallery is empty</p>
+          <p class="mt-8">Photos will appear here once uploaded through the admin dashboard.</p>
         </div>
       <?php endif; ?>
     </div>

@@ -124,10 +124,10 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
 
   <div class="rsvp-wrap">
     <?php if (!$event): ?>
-      <div class="rsvp-card" style="text-align:center">
-        <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;margin-bottom:12px">Event Not Found</h2>
-        <p style="color:#636e72;margin-bottom:24px">This event may have ended or the link is incorrect.</p>
-        <a href="events.php" style="color:var(--pink-700);font-weight:600">&#8592; View All Events</a>
+      <div class="rsvp-card text-center">
+        <h2 class="confirm-title">Event Not Found</h2>
+        <p class="confirm-text mb-24">This event may have ended or the link is incorrect.</p>
+        <a href="events.php" class="confirm-link">&#8592; View All Events</a>
       </div>
     <?php elseif ($success): ?>
       <div class="rsvp-card">
@@ -138,40 +138,39 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
               stroke-linejoin="round" />
           </svg>
           <h3>You're registered!</h3>
-          <p style="color:#636e72;margin-bottom:8px">See you at <strong><?= e($event['title']) ?></strong></p>
-          <p style="color:#636e72;font-size:13px">
+          <p class="confirm-text mb-8">See you at <strong><?= e($event['title']) ?></strong></p>
+          <p class="confirm-text fs-13">
             <?= date('l, d F Y', strtotime($event['event_date'])) ?>
             <?= $event['event_time'] ? ' &mdash; ' . e($event['event_time']) : '' ?>
           </p>
           <?php if ($event['location']): ?>
-            <p style="color:#636e72;font-size:13px;margin-top:4px">&#128205; <?= e($event['location']) ?></p>
+            <p class="confirm-text fs-13 mt-4">&#128205; <?= e($event['location']) ?></p>
           <?php endif; ?>
-          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px">
+          <div class="rsvp-action-row">
             <?php if ($ics_href): ?>
               <a href="<?= e($ics_href) ?>" download="<?= e(preg_replace('/[^a-z0-9]+/i', '-', $event['title'])) ?>.ics"
-                style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;background:var(--pink-50);border:1.5px solid var(--pink-200);color:var(--pink-800);font-size:13px;font-weight:600;text-decoration:none">
+                class="calendar-pill">
                 &#128197; Add to Calendar
               </a>
             <?php endif; ?>
             <?php if ($cancel_token): ?>
               <a href="cancel_rsvp.php?token=<?= e($cancel_token) ?>"
-                style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;background:#fdf0f5;border:1.5px solid #f5d5e3;color:#9b2335;font-size:13px;font-weight:600;text-decoration:none">
+                class="withdraw-pill">
                 Cancel RSVP
               </a>
             <?php endif; ?>
           </div>
           <?php if (!$was_member): ?>
-            <div style="background:#fdf0f5;border-radius:10px;padding:16px 20px;margin-top:20px;text-align:left">
-              <p style="font-weight:700;color:#2d3436;margin-bottom:4px">Enjoyed being here?</p>
-              <p style="color:#636e72;font-size:13.5px;margin-bottom:10px">We'd love to have you join the club as a full
+            <div class="join-nudge-box">
+              <p class="join-nudge-title">Enjoyed being here?</p>
+              <p class="join-nudge-text">We'd love to have you join the club as a full
                 member.</p>
-              <a href="join.php" class="btn-rsvp"
-                style="display:inline-block;width:auto;padding:9px 20px;font-size:13.5px;text-decoration:none">Join the Club
+              <a href="join.php" class="btn-rsvp btn-rsvp--pill-link">Join the Club
                 &rarr;</a>
             </div>
           <?php endif; ?>
           <a href="events.php"
-            style="display:inline-block;margin-top:24px;color:var(--pink-700);font-weight:600; text-decoration: none;">&#8592;
+            class="confirm-link-block mt-24">&#8592;
             View More Events</a>
         </div>
       </div>
@@ -179,7 +178,7 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
       <div class="rsvp-card">
         <div class="rsvp-event-header">
           <div
-            style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:6px">
+            class="confirm-event-label">
             <?= e($event['category'] ?? 'Event') ?>
           </div>
           <h2><?= e($event['title']) ?></h2>
@@ -189,9 +188,9 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
             <?php if ($event['location']): ?><span>&#128205; <?= e($event['location']) ?></span><?php endif; ?>
           </div>
           <?php if ($spots_left !== null): ?>
-            <div class="rsvp-meta" style="margin-top:6px">
+            <div class="rsvp-meta mt-6">
               <span
-                style="font-weight:700"><?= $is_full ? 'Fully booked' : $spots_left . ' spot' . ($spots_left === 1 ? '' : 's') . ' left' ?></span>
+                class="fw-700"><?= $is_full ? 'Fully booked' : $spots_left . ' spot' . ($spots_left === 1 ? '' : 's') . ' left' ?></span>
             </div>
           <?php endif; ?>
         </div>
@@ -201,28 +200,28 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
         <?php endif; ?>
 
         <?php if ($is_full): ?>
-          <div style="text-align:center;padding:20px 0">
-            <p style="font-weight:700;color:#9b2335;margin-bottom:8px">This event is fully booked</p>
-            <p style="color:#636e72;font-size:13.5px">All spots have been claimed. Check back in case a spot opens up, or
+          <div class="rsvp-full-notice">
+            <p class="rsvp-full-title">This event is fully booked</p>
+            <p class="confirm-text fs-13-5">All spots have been claimed. Check back in case a spot opens up, or
               explore our other events.</p>
-            <a href="events.php" style="display:inline-block;margin-top:16px;color:var(--pink-700);font-weight:600">&#8592;
+            <a href="events.php" class="rsvp-full-back">&#8592;
               View All Events</a>
           </div>
         <?php else: ?>
           <form method="POST" class="rsvp-form">
             <?= csrf_field() ?>
             <div class="form-row">
-              <div class="form-group"><label>Full Name *</label><input type="text" name="name"
+              <div class="form-group"><label for="rsvp_name">Full Name *</label><input type="text" id="rsvp_name" name="name"
                   value="<?= e($old['name'] ?? '') ?>" placeholder="Your name" required></div>
-              <div class="form-group"><label>Email *</label><input type="email" name="email"
+              <div class="form-group"><label for="rsvp_email">Email *</label><input type="email" id="rsvp_email" name="email"
                   value="<?= e($old['email'] ?? '') ?>" placeholder="your@email.com" required></div>
             </div>
             <div class="form-row">
-              <div class="form-group"><label>Phone</label><input type="tel" name="phone"
+              <div class="form-group"><label for="rsvp_phone">Phone</label><input type="tel" id="rsvp_phone" name="phone"
                   value="<?= e($old['phone'] ?? '') ?>" placeholder="+244 900 000 000"></div>
               <div class="form-group">
-                <label>Number of Guests</label>
-                <select name="guests">
+                <label for="rsvp_guests">Number of Guests</label>
+                <select id="rsvp_guests" name="guests">
                   <?php $max_guests = $spots_left !== null ? max(1, min(10, $spots_left)) : 10; ?>
                   <?php for ($g = 1; $g <= $max_guests; $g++): ?>
                     <option value="<?= $g ?>" <?= ($g == (int) ($old['guests'] ?? 1)) ? 'selected' : '' ?>><?= $g ?></option>
@@ -230,12 +229,12 @@ $page_description = $event ? 'RSVP for ' . $event['title'] . ' with Rotaract Clu
                 </select>
               </div>
             </div>
-            <div class="form-group"><label>Names of people you're bringing <span
-                  style="font-weight:400;color:#636e72">(optional)</span></label>
-              <input type="text" name="guest_names" value="<?= e($old['guest_names'] ?? '') ?>"
+            <div class="form-group"><label for="rsvp_guest_names">Names of people you're bringing <span
+                  class="optional-hint-gray">(optional)</span></label>
+              <input type="text" id="rsvp_guest_names" name="guest_names" value="<?= e($old['guest_names'] ?? '') ?>"
                 placeholder="e.g. Jane Doe, Mike Smith">
             </div>
-            <div class="form-group"><label>Notes / Dietary requirements</label><textarea name="notes" placeholder="Optional"
+            <div class="form-group"><label for="rsvp_notes">Notes / Dietary requirements</label><textarea id="rsvp_notes" name="notes" placeholder="Optional"
                 rows="3"><?= e($old['notes'] ?? '') ?></textarea></div>
             <button type="submit" class="btn-rsvp">Confirm RSVP &#10003;</button>
           </form>

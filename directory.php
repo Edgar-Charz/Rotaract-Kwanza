@@ -218,7 +218,7 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
 
   <div class="dir-hero">
     <div class="container">
-      <div class="section-eyebrow" style="color:rgba(255,255,255,.7);justify-content:flex-start">Our Members</div>
+      <div class="section-eyebrow section-eyebrow--hero-dark">Our Members</div>
       <h1>Member <em>Directory</em></h1>
     </div>
   </div>
@@ -242,8 +242,7 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
           <div class="dir-card">
             <?php if ($member['photo_path']): ?>
               <div class="dir-avatar dir-avatar-photo">
-                <img src="<?= e(img_url($member['photo_path'])) ?>" alt="<?= e($member['first_name'] . ' ' . $member['last_name']) ?>"
-                  style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+                <img src="<?= e(img_url($member['photo_path'])) ?>" alt="<?= e($member['first_name'] . ' ' . $member['last_name']) ?>">
               </div>
             <?php else: ?>
               <div class="dir-avatar <?= $av_class ?>"><?= e($initials) ?></div>
@@ -299,11 +298,11 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
     <?php else: ?>
       <div class="dir-empty">
         <?php if ($search): ?>
-          <p style="font-size:1.1rem;font-weight:600">No results for "<?= e($search) ?>"</p>
-          <a href="directory.php" style="color:var(--pink-700);font-weight:600;margin-top:8px;display:inline-block">Clear search</a>
+          <p class="dir-empty-title">No results for "<?= e($search) ?>"</p>
+          <a href="directory.php" class="dir-empty-clear">Clear search</a>
         <?php else: ?>
-          <p style="font-size:1.1rem;font-weight:600">No members listed yet</p>
-          <p style="margin-top:6px">Members must be approved and opted in to the directory by an admin.</p>
+          <p class="dir-empty-title">No members listed yet</p>
+          <p class="mt-6">Members must be approved and opted in to the directory by an admin.</p>
         <?php endif; ?>
       </div>
     <?php endif; ?>
