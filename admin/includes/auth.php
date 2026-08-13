@@ -11,6 +11,21 @@ if (!isset($_SESSION['admin_id'])) {
 // available for the admin-configurable timeout thresholds below.
 require_once __DIR__ . '/functions.php';
 
+// A suspension must take effect for an already signed-in admin as well as for
+// future login attempts. Lockouts are deliberately not checked here: they
+// only restrict new login attempts after repeated failures.
+$sessionAdmin = db_row($conn, 'SELECT is_suspended FROM admins WHERE id = ?', [(int) $_SESSION['admin_id']]);
+if (!$sessionAdmin || (int) $sessionAdmin['is_suspended'] === 1) {
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+    }
+    session_destroy();
+    header('Location: login.php?suspended=1');
+    exit;
+}
+
 // Idle + absolute session timeout — an admin session left open on a shared
 // machine (or simply forgotten) shouldn't stay valid indefinitely. Both
 // thresholds are admin-configurable via Settings → Login & Session Security.

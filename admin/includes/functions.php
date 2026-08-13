@@ -5,6 +5,27 @@ require_once dirname(__DIR__, 2) . '/classes/SiteSettings.php';
 require_once dirname(__DIR__, 2) . '/includes/csrf.php';
 require_once dirname(__DIR__, 2) . '/includes/upload.php';
 
+// ── Database Migrations ───────────────────────────────────────────────────────
+// Run account-security migrations in dependency order. Suspension is placed
+// after must_change_password, so the password-reset column must exist first.
+require_once dirname(__DIR__, 2) . '/assets/database/migrate_admin_password_reset.php';
+if (function_exists('run_admin_password_reset_migration')) {
+    try {
+        run_admin_password_reset_migration($conn ?? (new Database())->connect());
+    } catch (Throwable $e) {
+        // Migration failed or already applied — safe to ignore
+    }
+}
+
+require_once dirname(__DIR__, 2) . '/assets/database/migrate_admin_suspension.php';
+if (function_exists('run_admin_suspension_migration')) {
+    try {
+        run_admin_suspension_migration($conn ?? (new Database())->connect());
+    } catch (Throwable $e) {
+        // Migration failed or already applied — safe to ignore
+    }
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // Compute site root URL from the current request — works on any server, no hardcoding
