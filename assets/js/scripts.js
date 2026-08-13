@@ -18,8 +18,7 @@ function scrollSpy() {
   const pinned = nav?.dataset.activeNav;
   if (pinned) {
     document.querySelectorAll("#nav-links a").forEach((a) => {
-      const href = a.getAttribute("href") || "";
-      a.classList.toggle("active", href.endsWith("#" + pinned));
+      a.classList.toggle("active", a.dataset.nav === pinned);
     });
     return;
   }
@@ -84,6 +83,19 @@ document.addEventListener("DOMContentLoaded", () => {
     { threshold: 0.12 }
   );
   document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+
+  // Whole event card is clickable through to the event detail page, but clicks
+  // on an actual link inside it (RSVP, Details, title) keep going to their own
+  // destination instead of being overridden by the card-wide handler.
+  document.querySelectorAll(".event-card[data-href]").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      window.location.href = card.dataset.href;
+    });
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.target.closest("a")) window.location.href = card.dataset.href;
+    });
+  });
 
   initPhotoSliders();
 
