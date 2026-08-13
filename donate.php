@@ -350,39 +350,40 @@ $page_description = mb_strimwidth(trim(strip_tags($donate_intro)), 0, 160, '…'
   <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
   <?php if ($has_payment_details): ?>
-  <div class="pledge-overlay" id="pledge-overlay">
-    <div class="pledge-box">
-      <h3>I've Donated &mdash; <span id="pledge-method-label"></span></h3>
-      <p class="pledge-sub">Let us know so an officer can follow up and confirm receipt.</p>
-      <form method="POST">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="pledge">
-        <input type="hidden" name="payment_account_id" id="pledge-method-input">
-        <div class="form-group"><label for="pledge_name">Full Name *</label><input type="text" id="pledge_name" name="name" required></div>
-        <div class="form-group"><label for="pledge_email">Email *</label><input type="email" id="pledge_email" name="email" required></div>
-        <div class="form-group"><label for="pledge_phone">Phone</label><input type="tel" id="pledge_phone" name="phone"></div>
-        <div class="form-group"><label for="pledge_amount">Amount <span class="optional-hint">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" id="pledge_amount" name="amount" placeholder="Leave blank if you'd rather not say"></div>
-        <div class="form-group"><label for="pledge_note">Note <span class="optional-hint">(optional)</span></label><textarea id="pledge_note" name="note" rows="2" maxlength="500"></textarea></div>
-        <div class="pledge-box-actions">
-          <button type="button" class="btn-submit btn-submit--outline" onclick="closePledgeModal()">Cancel</button>
-          <button type="submit" class="btn-submit">Send</button>
-        </div>
-      </form>
+    <div class="pledge-overlay" id="pledge-overlay">
+      <div class="pledge-box">
+        <h3>I've Donated &mdash; <span id="pledge-method-label"></span></h3>
+        <p class="pledge-sub">Let us know so an officer can follow up and confirm receipt.</p>
+        <form method="POST">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="pledge">
+          <input type="hidden" name="payment_account_id" id="pledge-method-input">
+          <div class="form-group"><label for="pledge_name">Full Name *</label><input type="text" id="pledge_name" name="name" required></div>
+          <div class="form-group"><label for="pledge_email">Email *</label><input type="email" id="pledge_email" name="email" required></div>
+          <div class="form-group"><label for="pledge_phone">Phone</label><input type="tel" id="pledge_phone" name="phone"></div>
+          <div class="form-group"><label for="pledge_amount">Amount <span class="optional-hint">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" id="pledge_amount" name="amount" placeholder="Leave blank if you'd rather not say"></div>
+          <div class="form-group"><label for="pledge_note">Note <span class="optional-hint">(optional)</span></label><textarea id="pledge_note" name="note" rows="2" maxlength="500"></textarea></div>
+          <div class="pledge-box-actions">
+            <button type="button" class="btn-submit btn-submit--outline" onclick="closePledgeModal()">Cancel</button>
+            <button type="submit" class="btn-submit">Send</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
-  <script>
-    function openPledgeModal(accountId, label) {
-      document.getElementById('pledge-method-input').value = accountId;
-      document.getElementById('pledge-method-label').textContent = label;
-      document.getElementById('pledge-overlay').classList.add('open');
-    }
-    function closePledgeModal() {
-      document.getElementById('pledge-overlay').classList.remove('open');
-    }
-    document.getElementById('pledge-overlay').addEventListener('click', function(e) {
-      if (e.target === this) closePledgeModal();
-    });
-  </script>
+    <script>
+      function openPledgeModal(accountId, label) {
+        document.getElementById('pledge-method-input').value = accountId;
+        document.getElementById('pledge-method-label').textContent = label;
+        document.getElementById('pledge-overlay').classList.add('open');
+      }
+
+      function closePledgeModal() {
+        document.getElementById('pledge-overlay').classList.remove('open');
+      }
+      document.getElementById('pledge-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closePledgeModal();
+      });
+    </script>
   <?php endif; ?>
 
   <script src="assets/js/scripts.js"></script>

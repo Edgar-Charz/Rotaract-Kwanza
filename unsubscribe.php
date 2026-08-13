@@ -15,9 +15,9 @@ $subscriber  = $token !== '' ? $subscribers->findByToken($token) : false;
 $done = false;
 
 if ($subscriber && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    csrf_verify();
-    $subscribers->delete((int) $subscriber['id']);
-    $done = true;
+  csrf_verify();
+  $subscribers->delete((int) $subscriber['id']);
+  $done = true;
 }
 
 $page_title = site_title($conn, 'Unsubscribe');

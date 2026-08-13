@@ -492,62 +492,64 @@ if ($project && $project['image_path']) $page_image = img_url($project['image_pa
   <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
   <?php if ($can_sponsor): ?>
-  <div class="pledge-overlay" id="pledge-overlay">
-    <div class="pledge-box">
-      <h3>Sponsor This Project</h3>
-      <p class="pledge-sub">Let us know so an officer can follow up and confirm receipt.</p>
-      <form method="POST">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="pledge">
-        <div class="form-group">
-          <label>Pay Into *</label>
-          <select name="payment_account_id" id="pledge-account-select" required onchange="updatePledgeAccountDetails()">
-            <option value="">Select a payment account&hellip;</option>
-            <?php if ($bank_accounts): ?>
-              <optgroup label="Bank Transfer">
-                <?php foreach ($bank_accounts as $acc): ?>
-                  <option value="<?= $acc['id'] ?>" data-details="<?= e($acc['details']) ?>"><?= e($acc['label']) ?></option>
-                <?php endforeach; ?>
-              </optgroup>
-            <?php endif; ?>
-            <?php if ($mobile_accounts): ?>
-              <optgroup label="Mobile Money">
-                <?php foreach ($mobile_accounts as $acc): ?>
-                  <option value="<?= $acc['id'] ?>" data-details="<?= e($acc['details']) ?>"><?= e($acc['label']) ?></option>
-                <?php endforeach; ?>
-              </optgroup>
-            <?php endif; ?>
-          </select>
-          <p id="pledge-account-details" class="pledge-account-details"></p>
-        </div>
-        <div class="form-group"><label>Full Name *</label><input type="text" name="name" required></div>
-        <div class="form-group"><label>Email *</label><input type="email" name="email" required></div>
-        <div class="form-group"><label>Phone</label><input type="tel" name="phone"></div>
-        <div class="form-group"><label>Amount <span class="optional-hint">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" name="amount" placeholder="Leave blank if you'd rather not say"></div>
-        <div class="form-group"><label>Note <span class="optional-hint">(optional)</span></label><textarea name="note" rows="2" maxlength="500"></textarea></div>
-        <div class="pledge-box-actions">
-          <button type="button" class="btn-submit btn-submit--outline" onclick="closePledgeModal()">Cancel</button>
-          <button type="submit" class="btn-submit">Send</button>
-        </div>
-      </form>
+    <div class="pledge-overlay" id="pledge-overlay">
+      <div class="pledge-box">
+        <h3>Sponsor This Project</h3>
+        <p class="pledge-sub">Let us know so an officer can follow up and confirm receipt.</p>
+        <form method="POST">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="pledge">
+          <div class="form-group">
+            <label>Pay Into *</label>
+            <select name="payment_account_id" id="pledge-account-select" required onchange="updatePledgeAccountDetails()">
+              <option value="">Select a payment account&hellip;</option>
+              <?php if ($bank_accounts): ?>
+                <optgroup label="Bank Transfer">
+                  <?php foreach ($bank_accounts as $acc): ?>
+                    <option value="<?= $acc['id'] ?>" data-details="<?= e($acc['details']) ?>"><?= e($acc['label']) ?></option>
+                  <?php endforeach; ?>
+                </optgroup>
+              <?php endif; ?>
+              <?php if ($mobile_accounts): ?>
+                <optgroup label="Mobile Money">
+                  <?php foreach ($mobile_accounts as $acc): ?>
+                    <option value="<?= $acc['id'] ?>" data-details="<?= e($acc['details']) ?>"><?= e($acc['label']) ?></option>
+                  <?php endforeach; ?>
+                </optgroup>
+              <?php endif; ?>
+            </select>
+            <p id="pledge-account-details" class="pledge-account-details"></p>
+          </div>
+          <div class="form-group"><label>Full Name *</label><input type="text" name="name" required></div>
+          <div class="form-group"><label>Email *</label><input type="email" name="email" required></div>
+          <div class="form-group"><label>Phone</label><input type="tel" name="phone"></div>
+          <div class="form-group"><label>Amount <span class="optional-hint">(optional)</span></label><input type="text" inputmode="decimal" class="money-input" name="amount" placeholder="Leave blank if you'd rather not say"></div>
+          <div class="form-group"><label>Note <span class="optional-hint">(optional)</span></label><textarea name="note" rows="2" maxlength="500"></textarea></div>
+          <div class="pledge-box-actions">
+            <button type="button" class="btn-submit btn-submit--outline" onclick="closePledgeModal()">Cancel</button>
+            <button type="submit" class="btn-submit">Send</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
-  <script>
-    function openPledgeModal() {
-      document.getElementById('pledge-overlay').classList.add('open');
-    }
-    function closePledgeModal() {
-      document.getElementById('pledge-overlay').classList.remove('open');
-    }
-    function updatePledgeAccountDetails() {
-      var sel = document.getElementById('pledge-account-select');
-      var opt = sel.options[sel.selectedIndex];
-      document.getElementById('pledge-account-details').textContent = opt ? (opt.dataset.details || '') : '';
-    }
-    document.getElementById('pledge-overlay').addEventListener('click', function(e) {
-      if (e.target === this) closePledgeModal();
-    });
-  </script>
+    <script>
+      function openPledgeModal() {
+        document.getElementById('pledge-overlay').classList.add('open');
+      }
+
+      function closePledgeModal() {
+        document.getElementById('pledge-overlay').classList.remove('open');
+      }
+
+      function updatePledgeAccountDetails() {
+        var sel = document.getElementById('pledge-account-select');
+        var opt = sel.options[sel.selectedIndex];
+        document.getElementById('pledge-account-details').textContent = opt ? (opt.dataset.details || '') : '';
+      }
+      document.getElementById('pledge-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closePledgeModal();
+      });
+    </script>
   <?php endif; ?>
 
   <script src="assets/js/scripts.js"></script>

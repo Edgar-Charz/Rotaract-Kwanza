@@ -181,7 +181,8 @@ $page_description = $project ? 'Sign up to help with ' . $project['title'] . ' w
               value="<?= e($old['phone'] ?? '') ?>" placeholder="+244 900 000 000"></div>
           <div class="form-group"><label for="signup_notes">How would you like to help? <span class="optional-hint-gray">(optional)</span></label>
             <textarea id="signup_notes" name="notes" placeholder="e.g. I can help on the day, donate supplies, spread the word..."
-              rows="3"><?= e($old['notes'] ?? '') ?></textarea></div>
+              rows="3"><?= e($old['notes'] ?? '') ?></textarea>
+          </div>
           <button type="submit" class="btn-rsvp">Sign Up to Help &#10003;</button>
         </form>
       </div>

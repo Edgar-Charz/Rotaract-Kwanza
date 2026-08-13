@@ -333,7 +333,6 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
         calObj.render();
       }
     }
-
   </script>
 </body>
 

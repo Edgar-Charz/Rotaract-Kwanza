@@ -79,7 +79,7 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
             $pal = avatar_palette($i);
             $words = array_filter(explode(' ', $tm['full_name']));
             $initials = substr(strtoupper(implode('', array_map(fn($w) => $w[0], $words))), 0, 2);
-            ?>
+          ?>
             <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . ($i % 4) : '' ?>">
               <div class="team-avatar" style="background:<?= $pal['bg'] ?>">
                 <?php if ($tm['image_path']): ?>
