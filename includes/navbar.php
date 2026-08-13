@@ -22,6 +22,7 @@ $_page_nav_map = [
   'contact.php'             => 'contact',
 ];
 $_pinned_nav = $_page_nav_map[$_current] ?? null;
+$_is_home    = ($_current === 'index.php' || $_current === '');
 $_site_name      = isset($conn) ? (new SiteSettings($conn))->get('site_name', 'Rotaract Club of Kwanza') : 'Rotaract Club of Kwanza';
 $_motto_text     = isset($conn) ? (new SiteSettings($conn))->get('motto_text', 'Service Above Self') : 'Service Above Self';
 $_brand_initials = isset($conn) ? (new SiteSettings($conn))->get('brand_initials', 'RK') : 'RK';
@@ -30,7 +31,7 @@ $_navbar_show_logo = $_site_logo && (isset($conn) ? (new SiteSettings($conn))->g
 ?>
 <div id="progress-bar"></div>
 
-<nav id="navbar"<?= $_pinned_nav ? ' data-active-nav="' . htmlspecialchars($_pinned_nav, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
+<nav id="navbar" <?= $_pinned_nav ? ' data-active-nav="' . htmlspecialchars($_pinned_nav, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
   <a href="index.php#home" class="nav-brand">
     <div class="nav-logo">
       <?php if ($_navbar_show_logo): ?>
@@ -42,16 +43,16 @@ $_navbar_show_logo = $_site_logo && (isset($conn) ? (new SiteSettings($conn))->g
     <div class="nav-name"><?= htmlspecialchars($_site_name, ENT_QUOTES, 'UTF-8') ?><span><?= htmlspecialchars($_motto_text, ENT_QUOTES, 'UTF-8') ?></span></div>
   </a>
   <ul class="nav-links" id="nav-links">
-    <li><a href="index.php#home">Home</a></li>
-    <li><a href="index.php#about">About</a></li>
-    <li><a href="index.php#projects">Projects</a></li>
-    <li><a href="index.php#events">Events</a></li>
-    <li><a href="index.php#team">Team</a></li>
-    <li><a href="index.php#gallery">Gallery</a></li>
-    <li><a href="index.php#news">News</a></li>
-    <li><a href="index.php#directory">Directory</a></li>
-    <li><a href="index.php#join" class="nav-cta">Join Us</a></li>
-    <li><a href="index.php#contact">Contact</a></li>
+    <li><a href="index.php#home" data-nav="home">Home</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#about' : 'about.php' ?>" data-nav="about">About</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#projects' : 'projects.php' ?>" data-nav="projects">Projects</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#events' : 'events.php' ?>" data-nav="events">Events</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#team' : 'team.php' ?>" data-nav="team">Team</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#gallery' : 'gallery.php' ?>" data-nav="gallery">Gallery</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#news' : 'news.php' ?>" data-nav="news">News</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#directory' : 'directory.php' ?>" data-nav="directory">Directory</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#join' : 'join.php' ?>" class="nav-cta" data-nav="join">Join Us</a></li>
+    <li><a href="<?= $_is_home ? 'index.php#contact' : 'contact.php' ?>" data-nav="contact">Contact</a></li>
     <li>
       <a href="admin/login.php" class="nav-admin" aria-label="Admin Login" title="Admin Login">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

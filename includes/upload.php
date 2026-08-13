@@ -1,4 +1,5 @@
 <?php
+
 /** Safe image upload helpers — extension derived from MIME, never client filename. */
 
 const IMAGE_MIME_EXT = [

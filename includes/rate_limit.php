@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DB-backed rate limiter for public forms (per IP + action), using a
  * fixed window stored in the `rate_limits` table. A single UPDATE-or-INSERT

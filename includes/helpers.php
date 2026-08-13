@@ -26,7 +26,8 @@ function site_title(mysqli $conn, string $page = ''): string
 
 // Returns the URL to an uploaded image, regardless of which server the site runs on.
 // Detects the project root from the current request so no path is ever hardcoded.
-function img_url(string $path): string {
+function img_url(string $path): string
+{
     static $root = null;
     if ($root === null) {
         $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
@@ -132,7 +133,7 @@ function render_photo_slider(array $image_paths, string $alt): string
     if (!$image_paths) return '';
 
     if (count($image_paths) === 1) {
-        return '<div class="photo-slider"><img src="' . e(img_url($image_paths[0])) . '" alt="' . e($alt) . '" style="width:100%;height:100%;object-fit:cover;display:block"></div>';
+        return '<div class="photo-slider"><img src="' . e(img_url($image_paths[0])) . '" alt="' . e($alt) . '"></div>';
     }
 
     $slides = '';

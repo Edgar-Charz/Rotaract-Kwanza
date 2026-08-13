@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Turns uncaught exceptions and fatal PHP errors into a friendly page
  * instead of a raw error dump (display_errors is on in this environment,
@@ -14,6 +15,16 @@
 
 if (!defined('ROTARACT_ERROR_HANDLER_ACTIVE')) {
     define('ROTARACT_ERROR_HANDLER_ACTIVE', true);
+
+    // Belt-and-suspenders alongside the fatal/exception handlers below: those
+    // only catch what's fatal, so a stray non-fatal warning/notice would
+    // otherwise still print inline (file paths, query fragments) whenever
+    // the host's php.ini has display_errors on, regardless of environment.
+    // Logging stays on independent of display, so nothing is lost either way.
+    error_reporting(E_ALL);
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    ini_set('log_errors', '1');
 
     // Buffered so a fatal error partway through rendering can be discarded
     // instead of leaving a half-rendered page followed by an error dump.
@@ -53,32 +64,76 @@ if (!defined('ROTARACT_ERROR_HANDLER_ACTIVE')) {
         $accent  = '#C0396B';
         $home    = $isAdmin ? 'index.php' : 'index.php';
         $homeLabel = $isAdmin ? 'Back to Dashboard' : 'Back to Home';
-        ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Something Went Wrong</title>
-<link rel="icon" type="image/png" href="<?= $isAdmin ? '../assets/img/logo1.jpg' : 'assets/img/logo1.jpg' ?>">
-<style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Nunito,sans-serif;color:#2d3436}
-  .box{max-width:440px;text-align:center;padding:40px}
-  .code{font-size:3.5rem;font-weight:700;color:<?= $accent ?>;line-height:1;font-family:Georgia,'Times New Roman',serif}
-  h1{font-size:1.4rem;margin:12px 0 8px}
-  p{color:#636e72;font-size:14px;line-height:1.6;margin:0 0 24px}
-  a{display:inline-block;padding:11px 26px;background:<?= $accent ?>;color:#fff;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none}
-</style>
-</head>
-<body>
-  <div class="box">
-    <div class="code">500</div>
-    <h1>Something Went Wrong</h1>
-    <p>An unexpected error occurred on our end. It's been logged and we'll take a look. Please try again shortly.</p>
-    <a href="<?= htmlspecialchars($home, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($homeLabel, ENT_QUOTES, 'UTF-8') ?></a>
-  </div>
-</body>
-</html>
+?>
+        <!DOCTYPE html>
+        <html lang="en">
+
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Something Went Wrong</title>
+            <link rel="icon" type="image/png" href="<?= $isAdmin ? '../assets/img/logo1.jpg' : 'assets/img/logo1.jpg' ?>">
+            <style>
+                body {
+                    margin: 0;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #fff5f9;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Nunito, sans-serif;
+                    color: #2d3436
+                }
+
+                .box {
+                    max-width: 440px;
+                    text-align: center;
+                    padding: 40px
+                }
+
+                .code {
+                    font-size: 3.5rem;
+                    font-weight: 700;
+                    color: <?= $accent ?>;
+                    line-height: 1;
+                    font-family: Georgia, 'Times New Roman', serif
+                }
+
+                h1 {
+                    font-size: 1.4rem;
+                    margin: 12px 0 8px
+                }
+
+                p {
+                    color: #636e72;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    margin: 0 0 24px
+                }
+
+                a {
+                    display: inline-block;
+                    padding: 11px 26px;
+                    background: <?= $accent ?>;
+                    color: #fff;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    text-decoration: none
+                }
+            </style>
+        </head>
+
+        <body>
+            <div class="box">
+                <div class="code">500</div>
+                <h1>Something Went Wrong</h1>
+                <p>An unexpected error occurred on our end. It's been logged and we'll take a look. Please try again shortly.</p>
+                <a href="<?= htmlspecialchars($home, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($homeLabel, ENT_QUOTES, 'UTF-8') ?></a>
+            </div>
+        </body>
+
+        </html>
 <?php
     }
 

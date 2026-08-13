@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Shared public <head> assets. Set $page_title before including.
  * Optional: $extra_css = ['assets/css/pages/news.css']
@@ -33,21 +34,21 @@ $__image_url = match (true) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($__page_title) ?></title>
 <?php if ($__description !== ''): ?>
-<meta name="description" content="<?= e($__description) ?>">
+    <meta name="description" content="<?= e($__description) ?>">
 <?php endif; ?>
 <link rel="canonical" href="<?= e($__self_url) ?>">
 <link rel="alternate" type="application/rss+xml" title="<?= e($__page_title) ?> — News" href="<?= e($__origin . '/rss.php') ?>">
 <meta property="og:type" content="website">
 <meta property="og:title" content="<?= e($__page_title) ?>">
 <?php if ($__description !== ''): ?>
-<meta property="og:description" content="<?= e($__description) ?>">
+    <meta property="og:description" content="<?= e($__description) ?>">
 <?php endif; ?>
 <meta property="og:url" content="<?= e($__self_url) ?>">
 <meta property="og:image" content="<?= e($__image_url) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<?= e($__page_title) ?>">
 <?php if ($__description !== ''): ?>
-<meta name="twitter:description" content="<?= e($__description) ?>">
+    <meta name="twitter:description" content="<?= e($__description) ?>">
 <?php endif; ?>
 <meta name="twitter:image" content="<?= e($__image_url) ?>">
 <link rel="icon" type="image/png" href="assets/img/logo1.jpg">
@@ -56,5 +57,5 @@ $__image_url = match (true) {
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/kwanza.css">
 <?php foreach ($__extra_css as $__css): ?>
-<link rel="stylesheet" href="<?= e($__css) ?>">
+    <link rel="stylesheet" href="<?= e($__css) ?>">
 <?php endforeach; ?>
