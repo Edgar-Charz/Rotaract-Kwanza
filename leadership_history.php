@@ -226,15 +226,15 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
     }
 
     .history-avatar {
-      height: 150px;
+      height: 190px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .history-avatar-circle {
-      width: 96px;
-      height: 96px;
+      width: 132px;
+      height: 132px;
       border-radius: 50%;
       overflow: hidden;
       display: flex;
@@ -400,7 +400,7 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
                   $initials = substr(strtoupper(implode('', array_map(fn($w) => $w[0], $words))), 0, 2);
                   $photo = $record['photo_path'] ?? '';
                   ?>
-                  <div class="history-card">
+                  <div class="history-card" role="link" tabindex="0" data-profile-url="member.php?source=leadership&id=<?= (int) $record['id'] ?>">
                     <div class="history-avatar" style="background:<?= $pal['bg'] ?>">
                       <div class="history-avatar-circle"
                         style="<?= $photo ? 'padding:0;background:none' : 'background:' . $pal['circle'] ?>">
@@ -413,9 +413,9 @@ $page_description = 'Explore the officers, terms, and past leaders who have shap
                     </div>
                     <div class="history-card-body">
                       <p class="history-role"><?= e($record['role']) ?></p>
-                      <h3><?= e($record['full_name']) ?></h3>
+                      <h3><a class="member-card-profile-link" href="member.php?source=leadership&id=<?= (int) $record['id'] ?>"><?= e($record['full_name']) ?></a></h3>
                       <?php if ($record['description']): ?>
-                        <p class="history-description"><?= e($record['description']) ?></p>
+                        <p class="history-description member-card-description"><?= e($record['description']) ?></p>
                       <?php endif; ?>
                       <?php if ($record['email'] ?? ''): ?>
                         <div class="history-email-row">

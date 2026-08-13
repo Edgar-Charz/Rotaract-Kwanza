@@ -24,10 +24,10 @@ $events = (new Event($conn))->getFeaturedOrNextUpcoming(3);
 // than 3 projects are actually marked "Featured", instead of looking
 // sparse, while never surfacing a scrapped/cancelled project on the homepage.
 $projects = (new Project($conn))->getAllExcludingCancelled(3);
-$team = (new TeamMember($conn))->getActive();
+$team = array_slice((new TeamMember($conn))->getActive(), 0, 3);
 $gallery = array_slice((new Gallery($conn))->getActive(), 0, 6);
 $announcements = (new Announcement($conn))->getPublished(3);
-$dir_members   = array_slice((new Member($conn))->getApprovedForDirectory(), 0, 8);
+$dir_members   = array_slice((new Member($conn))->getApprovedForDirectory(), 0, 6);
 $club_values   = (new ClubValue($conn))->getActive();
 $perks         = (new MembershipPerk($conn))->getActive();
 
@@ -356,7 +356,7 @@ if ($hero_image) $page_image = img_url($hero_image);
             $initials = strtoupper(implode('', array_map(fn($w) => $w[0], array_filter(explode(' ', $tm['full_name'])))));
             $initials = substr($initials, 0, 2);
         ?>
-            <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . $i % 4 : '' ?>">
+            <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . $i % 4 : '' ?>" role="link" tabindex="0" data-profile-url="member.php?source=team&id=<?= (int) $tm['id'] ?>">
               <div class="team-avatar" style="background:<?= $pal['bg'] ?>">
                 <?php if ($tm['image_path']): ?>
                   <div class="team-avatar-circle team-avatar-circle--photo">
@@ -368,9 +368,9 @@ if ($hero_image) $page_image = img_url($hero_image);
               </div>
               <div class="team-card-body">
                 <div class="role"><?= e($tm['role']) ?></div>
-                <h4><?= e($tm['full_name']) ?></h4>
+                <h4><a class="member-card-profile-link" href="member.php?source=team&id=<?= (int) $tm['id'] ?>"><?= e($tm['full_name']) ?></a></h4>
                 <?php if ($tm['description']): ?>
-                  <p><?= e($tm['description']) ?></p><?php endif; ?>
+                  <p class="member-card-description"><?= e($tm['description']) ?></p><?php endif; ?>
               </div>
             </div>
           <?php endforeach;
@@ -508,7 +508,7 @@ if ($hero_image) $page_image = img_url($hero_image);
             $initials = strtoupper(substr($dm['first_name'], 0, 1) . substr($dm['last_name'], 0, 1));
             $av_class = 'av-' . ($di % 7);
           ?>
-            <div class="dir-card reveal<?= $di > 0 ? ' reveal-delay-' . ($di % 4) : '' ?>">
+            <div class="dir-card reveal<?= $di > 0 ? ' reveal-delay-' . ($di % 4) : '' ?>" role="link" tabindex="0" data-profile-url="member.php?source=directory&id=<?= (int) $dm['id'] ?>">
               <?php if ($dm['photo_path']): ?>
                 <div class="dir-avatar dir-avatar-photo">
                   <img src="<?= e(img_url($dm['photo_path'])) ?>" alt="<?= e($dm['first_name'] . ' ' . $dm['last_name']) ?>">
@@ -516,7 +516,7 @@ if ($hero_image) $page_image = img_url($hero_image);
               <?php else: ?>
                 <div class="dir-avatar <?= $av_class ?>"><?= e($initials) ?></div>
               <?php endif; ?>
-              <div class="dir-name"><?= e($dm['first_name'] . ' ' . $dm['last_name']) ?></div>
+              <div class="dir-name"><a class="member-card-profile-link" href="member.php?source=directory&id=<?= (int) $dm['id'] ?>"><?= e($dm['first_name'] . ' ' . $dm['last_name']) ?></a></div>
               <?php if ($dm['occupation']): ?>
                 <div class="dir-role"><?= e($dm['occupation']) ?></div>
               <?php endif; ?>

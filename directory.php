@@ -137,8 +137,8 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
     }
 
     .dir-avatar {
-      width: 72px;
-      height: 72px;
+      width: 112px;
+      height: 112px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -239,7 +239,7 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
           $initials = strtoupper(substr($member['first_name'], 0, 1) . substr($member['last_name'], 0, 1));
           $av_class = 'av-' . ($i % 7);
           ?>
-          <div class="dir-card">
+          <div class="dir-card" role="link" tabindex="0" data-profile-url="member.php?source=directory&id=<?= (int) $member['id'] ?>">
             <?php if ($member['photo_path']): ?>
               <div class="dir-avatar dir-avatar-photo">
                 <img src="<?= e(img_url($member['photo_path'])) ?>" alt="<?= e($member['first_name'] . ' ' . $member['last_name']) ?>">
@@ -247,12 +247,12 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
             <?php else: ?>
               <div class="dir-avatar <?= $av_class ?>"><?= e($initials) ?></div>
             <?php endif; ?>
-            <div class="dir-name"><?= e($member['first_name'] . ' ' . $member['last_name']) ?></div>
+            <div class="dir-name"><a class="member-card-profile-link" href="member.php?source=directory&id=<?= (int) $member['id'] ?>"><?= e($member['first_name'] . ' ' . $member['last_name']) ?></a></div>
             <?php if ($member['occupation']): ?>
               <div class="dir-role"><?= e($member['occupation']) ?></div>
             <?php endif; ?>
             <?php if ($member['bio'] ?? ''): ?>
-              <p class="dir-bio"><?= e(mb_strimwidth($member['bio'], 0, 90, '…')) ?></p>
+              <p class="dir-bio member-card-description"><?= e($member['bio']) ?></p>
             <?php endif; ?>
             <?php if (($member['linkedin_url'] ?? '') || ($member['instagram_url'] ?? '')): ?>
               <div class="dir-social-row">

@@ -44,6 +44,7 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
       height: 360px;
       margin: 32px auto 0;
     }
+    .team-page-actions { margin-top: 24px; text-align: center; }
 
     @media (max-width: 640px) {
       .team-photo-slider {
@@ -65,6 +66,7 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
         <p class="section-lead reveal reveal-delay-2 mx-auto">Passionate, driven young leaders who
           dedicate their time to making a difference in Kwanza &mdash; organized by leadership structure.
         </p>
+        <div class="team-page-actions reveal reveal-delay-3"><a href="leadership_history.php" class="btn-secondary">View Leadership History</a></div>
       </div>
 
       <?php if ($team_photos): ?>
@@ -80,7 +82,7 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
             $words = array_filter(explode(' ', $tm['full_name']));
             $initials = substr(strtoupper(implode('', array_map(fn($w) => $w[0], $words))), 0, 2);
           ?>
-            <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . ($i % 4) : '' ?>">
+            <div class="team-card reveal<?= $i > 0 && $i < 4 ? ' reveal-delay-' . ($i % 4) : '' ?>" role="link" tabindex="0" data-profile-url="member.php?source=team&id=<?= (int) $tm['id'] ?>">
               <div class="team-avatar" style="background:<?= $pal['bg'] ?>">
                 <?php if ($tm['image_path']): ?>
                   <div class="team-avatar-circle team-avatar-circle--photo">
@@ -92,13 +94,13 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
               </div>
               <div class="team-card-body">
                 <div class="role"><?= e($tm['role']) ?></div>
-                <h4><?= e($tm['full_name']) ?></h4>
+                <h4><a class="member-card-profile-link" href="member.php?source=team&id=<?= (int) $tm['id'] ?>"><?= e($tm['full_name']) ?></a></h4>
                 <?php if ($tm['term'] ?? ''): ?>
                   <div class="team-term-label">
                     Term <?= e($tm['term']) ?></div>
                 <?php endif; ?>
                 <?php if ($tm['description']): ?>
-                  <p><?= e($tm['description']) ?></p><?php endif; ?>
+                  <p class="member-card-description"><?= e($tm['description']) ?></p><?php endif; ?>
                 <?php if ($tm['email']): ?>
                   <div class="team-email-row">
                     <a href="mailto:<?= e($tm['email']) ?>" class="team-social-link">
@@ -146,9 +148,6 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
         </div>
       <?php endif; ?>
 
-      <div class="text-center mt-48">
-        <a href="leadership_history.php" class="btn-secondary reveal">View Leadership History</a>
-      </div>
     </div>
   </section>
 
