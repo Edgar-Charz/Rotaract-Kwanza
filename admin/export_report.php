@@ -7,14 +7,17 @@ require_role('editor');
 // Mirror reports.php's date-range handling exactly so the export reflects
 // whatever range the admin was looking at on screen, instead of always
 // dumping all-time data regardless of the dashboard's from/to filter.
-function valid_ymd(?string $s): bool {
+function valid_ymd(?string $s): bool
+{
     return $s !== null && $s !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $s) && strtotime($s) !== false;
 }
 $default_from = date('Y-m-01', strtotime('-11 months'));
 $default_to   = date('Y-m-d');
 $from = valid_ymd($_GET['from'] ?? null) ? $_GET['from'] : $default_from;
 $to   = valid_ymd($_GET['to']   ?? null) ? $_GET['to']   : $default_to;
-if (strtotime($from) > strtotime($to)) { [$from, $to] = [$to, $from]; }
+if (strtotime($from) > strtotime($to)) {
+    [$from, $to] = [$to, $from];
+}
 if ((strtotime($to) - strtotime($from)) > 36 * 31 * 86400) {
     $from = date('Y-m-d', strtotime($to . ' -35 months'));
 }
@@ -38,13 +41,15 @@ foreach ($dues_rows as $r) {
     }
 }
 
-$rsvp_by_event = db_rows($conn,
+$rsvp_by_event = db_rows(
+    $conn,
     "SELECT e.title, COUNT(r.id) AS n
      FROM event_rsvps r JOIN events e ON e.id = r.event_id
      GROUP BY r.event_id ORDER BY n DESC"
 );
 
-$attend_rows = db_rows($conn,
+$attend_rows = db_rows(
+    $conn,
     "SELECT e.title,
             COUNT(r.id)                                AS total,
             SUM(COALESCE(r.attended,0))                AS attended

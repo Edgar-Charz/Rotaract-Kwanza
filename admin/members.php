@@ -239,8 +239,8 @@ include __DIR__ . '/includes/header.php';
 
 <div class="card">
   <div class="card-header">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1">
-      <form method="GET" style="display:flex;gap:8px;align-items:center">
+    <div class="filter-bar">
+      <form method="GET" class="flex-row-gap8">
         <select name="status" class="filter-select" onchange="this.form.submit()">
           <option value="">All Statuses</option>
           <option value="pending" <?= $filter === 'pending'  ? 'selected' : '' ?>>Pending</option>
@@ -254,7 +254,7 @@ include __DIR__ . '/includes/header.php';
     </div>
     <?php if (has_role('editor')): ?>
       <a href="import_members.php" class="btn btn-secondary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-15">
           <polyline points="16 17 12 21 8 17" />
           <line x1="12" y1="12" x2="12" y2="21" />
           <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29" />
@@ -263,7 +263,7 @@ include __DIR__ . '/includes/header.php';
       </a>
       <a href="export_members.php?status=<?= urlencode($filter) ?>"
         class="btn btn-success">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-15">
           <polyline points="8 17 12 21 16 17" />
           <line x1="12" y1="12" x2="12" y2="21" />
           <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29" />
@@ -271,7 +271,7 @@ include __DIR__ . '/includes/header.php';
         Export CSV
       </a>
       <button class="btn btn-primary" onclick="openModal('add-modal')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-15">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
@@ -281,9 +281,9 @@ include __DIR__ . '/includes/header.php';
   </div>
 
   <?php if (has_role('editor')): ?>
-    <div class="card-header" id="bulk-bar" style="display:none;background:#fef6f0">
-      <span id="bulk-count" class="text-muted" style="font-size:13px;font-weight:600"></span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="card-header bulk-bar" id="bulk-bar">
+      <span id="bulk-count" class="text-muted fs-13 fw-600"></span>
+      <div class="flex-gap8-wrap">
         <button type="button" class="btn btn-sm btn-success" onclick="bulkApprove()">Approve Selected</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="bulkReject()">Reject Selected</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="submitDirectoryBulk('1')">Show in Directory</button>
@@ -291,7 +291,7 @@ include __DIR__ . '/includes/header.php';
         <button type="button" class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete Selected</button>
       </div>
     </div>
-    <form id="bulk-form" method="POST" style="display:none">
+    <form id="bulk-form" method="POST" class="hidden">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" id="bulk-action-field" value="">
       <input type="hidden" name="bulk_status" id="bulk-status-field" value="">
@@ -333,35 +333,35 @@ include __DIR__ . '/includes/header.php';
                 <?php if ($m['status_email_sent'] !== null && (int)$m['status_email_sent'] === 0): ?>
                   <span class="badge badge-unread" title="Notification email failed to send">Email failed</span>
                   <?php if (has_role('editor')): ?>
-                    <form id="resend-<?= $m['id'] ?>" method="POST" style="display:inline">
+                    <form id="resend-<?= $m['id'] ?>" method="POST" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                       <input type="hidden" name="action" value="resend_status_email">
                       <input type="hidden" name="id" value="<?= $m['id'] ?>">
                     </form>
-                    <button type="submit" form="resend-<?= $m['id'] ?>" class="btn btn-sm btn-secondary" style="font-size:11px" title="Resend notification email">Resend</button>
+                    <button type="submit" form="resend-<?= $m['id'] ?>" class="btn btn-sm btn-secondary fs-11" title="Resend notification email">Resend</button>
                   <?php endif; ?>
                 <?php endif; ?>
               </td>
               <td>
                 <?php if ($m['dues_status']): ?>
-                  <a href="dues.php?year=<?= $dues_year ?>#member-<?= $m['id'] ?>" class="badge badge-<?= h($m['dues_status']) ?>" style="text-decoration:none"><?= h($m['dues_status']) ?></a>
+                  <a href="dues.php?year=<?= $dues_year ?>#member-<?= $m['id'] ?>" class="badge badge-<?= h($m['dues_status']) ?> no-underline"><?= h($m['dues_status']) ?></a>
                 <?php else: ?>
-                  <a href="dues.php?year=<?= $dues_year ?>#member-<?= $m['id'] ?>" class="text-muted" style="font-size:11px">No record</a>
+                  <a href="dues.php?year=<?= $dues_year ?>#member-<?= $m['id'] ?>" class="text-muted fs-11">No record</a>
                 <?php endif; ?>
               </td>
               <td>
                 <?php if (has_role('editor')): ?>
-                  <form method="POST" style="display:inline">
+                  <form method="POST" class="d-inline">
                     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                     <input type="hidden" name="action" value="toggle_directory">
                     <input type="hidden" name="id" value="<?= $m['id'] ?>">
-                    <button type="submit" class="btn btn-sm <?= ($m['show_in_directory'] ?? 0) ? 'btn-success' : 'btn-secondary' ?>"
-                      title="Toggle directory listing" style="font-size:11px">
+                    <button type="submit" class="btn btn-sm fs-11 <?= ($m['show_in_directory'] ?? 0) ? 'btn-success' : 'btn-secondary' ?>"
+                      title="Toggle directory listing">
                       <?= ($m['show_in_directory'] ?? 0) ? '✓ Listed' : 'Hidden' ?>
                     </button>
                   </form>
                 <?php else: ?>
-                  <span class="badge <?= ($m['show_in_directory'] ?? 0) ? 'badge-approved' : 'badge-rejected' ?>" style="font-size:11px"><?= ($m['show_in_directory'] ?? 0) ? 'Listed' : 'Hidden' ?></span>
+                  <span class="badge <?= ($m['show_in_directory'] ?? 0) ? 'badge-approved' : 'badge-rejected' ?> fs-11"><?= ($m['show_in_directory'] ?? 0) ? 'Listed' : 'Hidden' ?></span>
                 <?php endif; ?>
               </td>
               <td class="text-muted"><?= $m['created_at'] ? date('d M Y', strtotime($m['created_at'])) : '—' ?></td>
@@ -383,7 +383,7 @@ include __DIR__ . '/includes/header.php';
                         <polyline points="1 20 1 14 7 14" />
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                       </svg></button>
-                    <form id="del-m-<?= $m['id'] ?>" method="POST" style="display:inline">
+                    <form id="del-m-<?= $m['id'] ?>" method="POST" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="id" value="<?= $m['id'] ?>">
@@ -538,22 +538,26 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-group"><label>Why do they want to join?</label><textarea name="why_join"></textarea></div>
         <div class="form-group">
-          <label>Public Bio <span class="text-muted" style="font-weight:400">(shown on the member directory, optional)</span></label>
-          <textarea name="bio" style="min-height:60px" placeholder="Short intro shown publicly, e.g. interests, what they do in the club..."></textarea>
+          <label>Public Bio <span class="text-muted fw-normal">(shown on the member directory, optional)</span></label>
+          <textarea name="bio" class="mh-60" placeholder="Short intro shown publicly, e.g. interests, what they do in the club..."></textarea>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>LinkedIn URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="linkedin_url" placeholder="https://linkedin.com/in/..."></div>
-          <div class="form-group"><label>Instagram URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="instagram_url" placeholder="https://instagram.com/..."></div>
+          <div class="form-group"><label>LinkedIn URL <span class="text-muted fw-normal">(optional)</span></label><input type="text" name="linkedin_url" placeholder="https://linkedin.com/in/..."></div>
+          <div class="form-group"><label>Instagram URL <span class="text-muted fw-normal">(optional)</span></label><input type="text" name="instagram_url" placeholder="https://instagram.com/..."></div>
         </div>
-        <div class="form-group"><label>Admin Notes</label><textarea name="notes" style="min-height:60px"></textarea></div>
+        <div class="form-group"><label>Admin Notes</label><textarea name="notes" class="mh-60"></textarea></div>
         <div class="form-group">
-          <label>Profile Photo <span class="text-muted" style="font-weight:400">(optional)</span></label>
+          <label>Profile Photo <span class="text-muted fw-normal">(optional)</span></label>
           <div class="image-field">
             <label class="upload-area" for="am_photo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
               <p><strong>Upload photo</strong></p>
             </label>
-            <input type="file" id="am_photo" name="photo" accept="image/*" style="display:none" onchange="previewImage(this,'add-m-photo-prev')">
+            <input type="file" id="am_photo" name="photo" accept="image/*" class="hidden" onchange="previewImage(this,'add-m-photo-prev')">
             <div class="thumb-col">
               <span class="thumb-col-label">Preview</span>
               <img id="add-m-photo-prev" src="" alt="Preview" class="image-thumb image-thumb--avatar">
@@ -617,29 +621,33 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-group"><label>Why join?</label><textarea name="why_join" id="e_why_join"></textarea></div>
         <div class="form-group">
-          <label>Public Bio <span class="text-muted" style="font-weight:400">(shown on the member directory, optional)</span></label>
-          <textarea name="bio" id="e_bio" style="min-height:60px" placeholder="Short intro shown publicly, e.g. interests, what they do in the club..."></textarea>
+          <label>Public Bio <span class="text-muted fw-normal">(shown on the member directory, optional)</span></label>
+          <textarea name="bio" id="e_bio" class="mh-60" placeholder="Short intro shown publicly, e.g. interests, what they do in the club..."></textarea>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>LinkedIn URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="linkedin_url" id="e_linkedin" placeholder="https://linkedin.com/in/..."></div>
-          <div class="form-group"><label>Instagram URL <span class="text-muted" style="font-weight:400">(optional)</span></label><input type="text" name="instagram_url" id="e_instagram" placeholder="https://instagram.com/..."></div>
+          <div class="form-group"><label>LinkedIn URL <span class="text-muted fw-normal">(optional)</span></label><input type="text" name="linkedin_url" id="e_linkedin" placeholder="https://linkedin.com/in/..."></div>
+          <div class="form-group"><label>Instagram URL <span class="text-muted fw-normal">(optional)</span></label><input type="text" name="instagram_url" id="e_instagram" placeholder="https://instagram.com/..."></div>
         </div>
-        <div class="form-group"><label>Admin Notes</label><textarea name="notes" id="e_notes" style="min-height:60px"></textarea></div>
+        <div class="form-group"><label>Admin Notes</label><textarea name="notes" id="e_notes" class="mh-60"></textarea></div>
         <div class="form-group">
           <label>Profile Photo</label>
           <div class="image-field">
             <label class="upload-area" for="em_photo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
               <p><strong>Replace photo</strong></p>
             </label>
-            <input type="file" id="em_photo" name="photo" accept="image/*" style="display:none" onchange="previewImage(this,'edit-m-photo-prev')">
+            <input type="file" id="em_photo" name="photo" accept="image/*" class="hidden" onchange="previewImage(this,'edit-m-photo-prev')">
             <div id="e_photo_current"></div>
             <div class="thumb-col">
               <span class="thumb-col-label">New</span>
               <img id="edit-m-photo-prev" src="" alt="New preview" class="image-thumb image-thumb--avatar">
             </div>
           </div>
-          <p class="text-muted" style="font-size:11.5px;margin-top:6px">Leave blank to keep the current photo.</p>
+          <p class="text-muted fs-11-5 mt-6px">Leave blank to keep the current photo.</p>
         </div>
       </div>
       <div class="modal-footer">
@@ -652,7 +660,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Status Modal -->
 <div class="modal fade" id="status-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content" style="max-width:380px">
+  <div class="modal-dialog modal-content modal-xs">
     <div class="modal-header">
       <span class="modal-title">Update Status</span>
       <button class="modal-close" onclick="closeModal('status-modal')">&times;</button>
@@ -682,7 +690,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- View Modal -->
 <div class="modal fade" id="view-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content" style="max-width:540px">
+  <div class="modal-dialog modal-content modal-md">
     <div class="modal-header">
       <span class="modal-title">Member Details</span>
       <button class="modal-close" onclick="closeModal('view-modal')">&times;</button>
@@ -701,7 +709,7 @@ include __DIR__ . '/includes/header.php';
       // photo_path is like admin/uploads/members/xxx.jpg — resolve to a URL
       var base = window.location.pathname.replace(/\/admin\/.*$/, '');
       var src = base + '/' + m.photo_path;
-      return '<img src="' + src + '" alt="" style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">';
+      return '<img src="' + src + '" alt="" class="avatar-photo" style="width:' + size + 'px;height:' + size + 'px">';
     }
     var initials = (m.first_name ? m.first_name[0] : '?').toUpperCase();
     return '<div class="view-avatar-init" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.4) + 'px">' + esc(initials) + '</div>';
@@ -725,7 +733,7 @@ include __DIR__ . '/includes/header.php';
       <div><div class="view-dt">LinkedIn</div><div class="view-dd">${m.linkedin_url ? `<a href="${esc(m.linkedin_url)}" target="_blank" rel="noopener">${esc(m.linkedin_url)}</a>` : '—'}</div></div>
       <div><div class="view-dt">Instagram</div><div class="view-dd">${m.instagram_url ? `<a href="${esc(m.instagram_url)}" target="_blank" rel="noopener">${esc(m.instagram_url)}</a>` : '—'}</div></div>
       <div><div class="view-dt">Applied</div><div class="view-dd">${esc(m.created_at ? m.created_at.substring(0,10) : '')}</div></div>
-      <div><div class="view-dt">Dues (<?= $dues_year ?>)</div><div class="view-dd">${m.dues_status ? `<a href="dues.php?year=<?= $dues_year ?>#member-${m.id}" class="badge badge-${esc(m.dues_status)}" style="text-decoration:none">${esc(m.dues_status)}</a>` : `<a href="dues.php?year=<?= $dues_year ?>#member-${m.id}">No record</a>`}</div></div>
+      <div><div class="view-dt">Dues (<?= $dues_year ?>)</div><div class="view-dd">${m.dues_status ? `<a href="dues.php?year=<?= $dues_year ?>#member-${m.id}" class="badge badge-${esc(m.dues_status)} no-underline">${esc(m.dues_status)}</a>` : `<a href="dues.php?year=<?= $dues_year ?>#member-${m.id}">No record</a>`}</div></div>
     </div>
     <div class="view-full">
       <div class="view-dt">Public Bio</div>
@@ -750,7 +758,7 @@ include __DIR__ . '/includes/header.php';
     document.getElementById('e_phone').value = m.phone || '';
     document.getElementById('e_occupation').value = m.occupation || '';
     document.getElementById('e_year_of_study').value = m.year_of_study || '';
-    document.getElementById('e_birthday').value = m.birthday ? m.birthday.substring(0,10) : '';
+    document.getElementById('e_birthday').value = m.birthday ? m.birthday.substring(0, 10) : '';
     document.getElementById('e_status').value = m.status;
     document.getElementById('e_why_join').value = m.why_join || '';
     document.getElementById('e_bio').value = m.bio || '';
@@ -763,9 +771,9 @@ include __DIR__ . '/includes/header.php';
     var prev = document.getElementById('edit-m-photo-prev');
     prev.style.display = 'none';
     prev.src = '';
-    cur.innerHTML = '<div class="thumb-col"><span class="thumb-col-label">Current</span>' + memberAvatar(m, 72)
-      + (m.photo_path ? '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:400;margin-top:6px"><input type="checkbox" name="remove_photo" value="1" style="width:auto"> Remove</label>' : '')
-      + '</div>';
+    cur.innerHTML = '<div class="thumb-col"><span class="thumb-col-label">Current</span>' + memberAvatar(m, 72) +
+      (m.photo_path ? '<label class="remove-photo-label"><input type="checkbox" name="remove_photo" value="1" class="w-auto"> Remove</label>' : '') +
+      '</div>';
 
     openModal('edit-modal');
   }

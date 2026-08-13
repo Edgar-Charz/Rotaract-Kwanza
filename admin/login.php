@@ -16,10 +16,12 @@ require_once dirname(__DIR__) . '/classes/ActivityLog.php';
 
 $db   = new Database();
 $conn = $db->connect();
+// Ensures the account-state columns are present before any login queries run.
+require_once __DIR__ . '/includes/functions.php';
 
 if (isset($_SESSION['admin_id'])) {
-    header('Location: index.php');
-    exit;
+  header('Location: index.php');
+  exit;
 }
 
 // ── Rate limiting (DB-backed per username) ───────────────────────────────────
@@ -35,102 +37,146 @@ $posted_username = trim($_POST['username'] ?? '');
 $error   = '';
 $locked  = false;
 $lockout = 0;
+$suspended = false;
 
 if ($posted_username !== '') {
+  // Check if account is suspended
+  $stmt = $conn->prepare('SELECT is_suspended FROM admins WHERE username = ?');
+  $stmt->bind_param('s', $posted_username);
+  $stmt->execute();
+  $admin_row = $stmt->get_result()->fetch_assoc();
+  $stmt->close();
+  if ($admin_row && $admin_row['is_suspended']) {
+    $suspended = true;
+  }
+
+  // Check for failed login lockout
+  if (!$suspended) {
     $stmt = $conn->prepare('SELECT UNIX_TIMESTAMP(locked_until) AS locked_until FROM login_attempts WHERE username = ?');
     $stmt->bind_param('s', $posted_username);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if ($row && $row['locked_until'] && time() < $row['locked_until']) {
-        $locked  = true;
-        $lockout = (int)$row['locked_until'];
+      $locked  = true;
+      $lockout = (int)$row['locked_until'];
     }
+  }
 }
 
-if ($locked) {
-    $remaining = ceil(($lockout - time()) / 60);
-    $error = "Too many failed attempts. Try again in {$remaining} minute(s).";
+if ($suspended) {
+  $error = "This account has been suspended. Please contact an administrator.";
+} elseif ($locked) {
+  $remaining = ceil(($lockout - time()) / 60);
+  $error = "Too many failed attempts. Try again in {$remaining} minute(s).";
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
-    csrf_verify();
-    $username = $posted_username;
-    $password = $_POST['password'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked && !$suspended) {
+  csrf_verify();
+  $username = $posted_username;
+  $password = $_POST['password'] ?? '';
 
-    if ($username && $password) {
-        try {
-            $admin = (new Admin($conn))->login($username, $password);
-            if ($admin) {
-                // Success - clear this user's attempt record and start session
-                $del = $conn->prepare('DELETE FROM login_attempts WHERE username = ?');
-                $del->bind_param('s', $username);
-                $del->execute();
-                $del->close();
-
-                session_regenerate_id(true);
-                $_SESSION['admin_id']       = $admin['id'];
-                $_SESSION['admin_username'] = $admin['username'];
-                $_SESSION['admin_name']     = $admin['full_name'];
-                // Fail closed: an admin row with no role should get the least
-                // privilege, matching auth.php's own default for a missing session role.
-                $_SESSION['admin_role']     = $admin['role'] ?? 'viewer';
-                $_SESSION['admin_login_time'] = time();
-                try {
-                    (new ActivityLog($conn))->log(
-                        (int)$admin['id'], $admin['username'], 'login', 'Logged in',
-                        substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
-                    );
-                } catch (Throwable $e) {}
-                header('Location: index.php');
-                exit;
-            }
-        } catch (mysqli_sql_exception $e) {}
-
-        try {
+  if ($username && $password) {
+    try {
+      $admin = (new Admin($conn))->login($username, $password);
+      if ($admin) {
+        // Check if account is suspended before allowing login
+        if ((int)($admin['is_suspended'] ?? 0) === 1) {
+          try {
             (new ActivityLog($conn))->log(
-                0, $username, 'login_failed', 'Failed login attempt',
-                substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
+              (int)$admin['id'],
+              $admin['username'],
+              'login_failed',
+              'Attempted login to suspended account',
+              substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
             );
-        } catch (Throwable $e) {}
+          } catch (Throwable $e) {
+          }
+          $error = "This account has been suspended. Please contact an administrator.";
+        } else {
+          // Success - clear this user's attempt record and start session
+          $del = $conn->prepare('DELETE FROM login_attempts WHERE username = ?');
+          $del->bind_param('s', $username);
+          $del->execute();
+          $del->close();
 
-        // Failed attempt - recorded server-side, keyed by username
-        $stmt = $conn->prepare(
-            'INSERT INTO login_attempts (username, attempts, locked_until) VALUES (?, 1, NULL)
+          session_regenerate_id(true);
+          $_SESSION['admin_id']       = $admin['id'];
+          $_SESSION['admin_username'] = $admin['username'];
+          $_SESSION['admin_name']     = $admin['full_name'];
+          // Fail closed: an admin row with no role should get the least
+          // privilege, matching auth.php's own default for a missing session role.
+          $_SESSION['admin_role']     = $admin['role'] ?? 'viewer';
+          $_SESSION['admin_login_time'] = time();
+          $_SESSION['must_change_password'] = (int)($admin['must_change_password'] ?? 0);
+          try {
+            (new ActivityLog($conn))->log(
+              (int)$admin['id'],
+              $admin['username'],
+              'login',
+              'Logged in',
+              substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
+            );
+          } catch (Throwable $e) {
+          }
+          header('Location: ' . ($_SESSION['must_change_password'] ? 'force_password_change.php' : 'index.php'));
+          exit;
+        }
+      }
+    } catch (mysqli_sql_exception $e) {
+    }
+
+    try {
+      (new ActivityLog($conn))->log(
+        0,
+        $username,
+        'login_failed',
+        'Failed login attempt',
+        substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
+      );
+    } catch (Throwable $e) {
+    }
+
+    // Failed attempt - recorded server-side, keyed by username
+    $stmt = $conn->prepare(
+      'INSERT INTO login_attempts (username, attempts, locked_until) VALUES (?, 1, NULL)
              ON DUPLICATE KEY UPDATE
                attempts = attempts + 1,
                locked_until = IF(attempts + 1 >= ?, DATE_ADD(NOW(), INTERVAL ? SECOND), NULL)'
-        );
-        $stmt->bind_param('sii', $username, $MAX_ATTEMPTS, $LOCKOUT_SECS);
-        $stmt->execute();
-        $stmt->close();
+    );
+    $stmt->bind_param('sii', $username, $MAX_ATTEMPTS, $LOCKOUT_SECS);
+    $stmt->execute();
+    $stmt->close();
 
-        $stmt = $conn->prepare('SELECT attempts, UNIX_TIMESTAMP(locked_until) AS locked_until FROM login_attempts WHERE username = ?');
-        $stmt->bind_param('s', $username);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
+    // Check if we triggered a lockout
+    $stmt = $conn->prepare('SELECT attempts, UNIX_TIMESTAMP(locked_until) AS locked_until FROM login_attempts WHERE username = ?');
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-        $attempts = (int)($row['attempts'] ?? 1);
-        if ($row && $row['locked_until'] && time() < $row['locked_until']) {
-            $locked  = true;
-            $lockout = (int)$row['locked_until'];
-            $error   = "Too many failed attempts. Try again in $LOCKOUT_MINS minute(s).";
-        } else {
-            $remaining_attempts = max(0, $MAX_ATTEMPTS - $attempts);
-            $error = "Invalid username or password. {$remaining_attempts} attempt(s) remaining.";
-        }
+    if ($row && $row['locked_until'] && time() < $row['locked_until']) {
+      $locked  = true;
+      $lockout = (int)$row['locked_until'];
+      $error   = "Too many failed attempts. Try again in $LOCKOUT_MINS minute(s).";
     } else {
-        $error = 'Please enter both username and password.';
+      // Generic error message - don't reveal whether account exists or how many attempts remain
+      $error = "Invalid username or password.";
     }
+  } else {
+    $error = 'Please enter both username and password.';
+  }
 }
 
-if (!$error && ($_GET['expired'] ?? '') === '1') {
-    $error = 'Your session expired due to inactivity. Please log in again.';
+if (!$error && ($_GET['suspended'] ?? '') === '1') {
+  $error = 'This account has been suspended. Please contact an administrator.';
+} elseif (!$error && ($_GET['expired'] ?? '') === '1') {
+  $error = 'Your session expired due to inactivity. Please log in again.';
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -139,6 +185,7 @@ if (!$error && ($_GET['expired'] ?? '') === '1') {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="assets/admin.css">
 </head>
+
 <body class="login-page">
   <div class="login-card">
     <div class="login-logo">
@@ -156,37 +203,43 @@ if (!$error && ($_GET['expired'] ?? '') === '1') {
       <div class="form-group">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" required <?= $locked ? 'disabled' : 'autofocus' ?>
-               value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
-               autocomplete="username">
+          value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
+          autocomplete="username">
       </div>
       <div class="form-group">
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required <?= $locked ? 'disabled' : '' ?>
-               autocomplete="current-password">
+          autocomplete="current-password">
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;"
-              <?= $locked ? 'disabled' : '' ?>>
+      <button type="submit" class="btn btn-primary"
+        <?= $locked ? 'disabled' : '' ?>>
         Sign In
       </button>
     </form>
 
     <?php if ($locked): ?>
-    <script>
-      // Countdown on lockout
-      (function() {
-        var end = <?= $lockout ?> * 1000;
-        function tick() {
-          var left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-          if (left <= 0) { location.reload(); return; }
-          var m = Math.floor(left / 60), s = left % 60;
-          document.querySelector('.alert-error').textContent =
-            'Account locked. Try again in ' + m + ':' + (s < 10 ? '0' : '') + s + '.';
-          setTimeout(tick, 1000);
-        }
-        tick();
-      })();
-    </script>
+      <script>
+        // Countdown on lockout
+        (function() {
+          var end = <?= $lockout ?> * 1000;
+
+          function tick() {
+            var left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+            if (left <= 0) {
+              location.reload();
+              return;
+            }
+            var m = Math.floor(left / 60),
+              s = left % 60;
+            document.querySelector('.alert-error').textContent =
+              'Account locked. Try again in ' + m + ':' + (s < 10 ? '0' : '') + s + '.';
+            setTimeout(tick, 1000);
+          }
+          tick();
+        })();
+      </script>
     <?php endif; ?>
   </div>
 </body>
+
 </html>

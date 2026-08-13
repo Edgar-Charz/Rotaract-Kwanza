@@ -86,9 +86,9 @@ include __DIR__ . '/includes/header.php';
   <div class="card-header">
     <span class="card-title"><?= count($roles) ?> Team Role<?= count($roles) !== 1 ? 's' : '' ?></span>
     <?php if (has_role('editor')): ?>
-      <div style="display:flex;gap:8px">
+      <div class="flex gap-8px">
         <button class="btn btn-secondary" onclick="openModal('tiers-modal')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-15">
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
             <rect x="3" y="14" width="7" height="7" />
@@ -97,7 +97,7 @@ include __DIR__ . '/includes/header.php';
           Manage Tiers
         </button>
         <button class="btn btn-primary" onclick="openModal('add-modal')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-15">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -141,7 +141,7 @@ include __DIR__ . '/includes/header.php';
                         stroke="currentColor" stroke-width="2">
                         <path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                       </svg></button>
-                    <form id="del-r-<?= $r['id'] ?>" method="POST" style="display:inline">
+                    <form id="del-r-<?= $r['id'] ?>" method="POST" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="id" value="<?= $r['id'] ?>">
@@ -159,7 +159,8 @@ include __DIR__ . '/includes/header.php';
                 </div>
               </td>
             </tr>
-          <?php endforeach; endif; ?>
+        <?php endforeach;
+        endif; ?>
       </tbody>
     </table>
   </div>
@@ -179,7 +180,7 @@ include __DIR__ . '/includes/header.php';
         <div class="form-group mb-2"><label>Role Name *</label><input type="text" name="name"
             placeholder="e.g. Vice President" required></div>
         <div class="form-group mb-2">
-          <label>Tier <span class="text-muted" style="font-weight:400">(section heading on the public Team
+          <label>Tier <span class="text-muted fw-normal">(section heading on the public Team
               page)</span></label>
           <select name="tier_label" required>
             <?php foreach ($tiers as $t): ?>
@@ -189,9 +190,9 @@ include __DIR__ . '/includes/header.php';
         <div class="form-row">
           <div class="form-group"><label>Display Order</label><input type="number" name="display_order" value="0"
               min="0"></div>
-          <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;padding-top:22px">
-            <input type="checkbox" name="is_active" id="ar_active" checked style="width:auto">
-            <label for="ar_active" style="font-weight:400">Available when adding members</label>
+          <div class="form-group form-group-row pt-22px">
+            <input type="checkbox" name="is_active" id="ar_active" checked class="w-auto">
+            <label for="ar_active" class="fw-normal">Available when adding members</label>
           </div>
         </div>
       </div>
@@ -218,7 +219,7 @@ include __DIR__ . '/includes/header.php';
         <div class="form-group mb-2"><label>Role Name *</label><input type="text" name="name" id="er_name" required>
         </div>
         <div class="form-group mb-2">
-          <label>Tier <span class="text-muted" style="font-weight:400">(section heading on the public Team
+          <label>Tier <span class="text-muted fw-normal">(section heading on the public Team
               page)</span></label>
           <select name="tier_label" id="er_tier" required>
             <?php foreach ($tiers as $t): ?>
@@ -228,9 +229,9 @@ include __DIR__ . '/includes/header.php';
         <div class="form-row">
           <div class="form-group"><label>Display Order</label><input type="number" name="display_order" id="er_order"
               min="0"></div>
-          <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;padding-top:22px">
-            <input type="checkbox" name="is_active" id="er_active" style="width:auto">
-            <label for="er_active" style="font-weight:400">Available when adding members</label>
+          <div class="form-group form-group-row pt-22px">
+            <input type="checkbox" name="is_active" id="er_active" class="w-auto">
+            <label for="er_active" class="fw-normal">Available when adding members</label>
           </div>
         </div>
       </div>
@@ -244,18 +245,18 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Manage Tiers Modal -->
 <div class="modal fade" id="tiers-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content" style="max-width:440px">
+  <div class="modal-dialog modal-content modal-440">
     <div class="modal-header">
       <span class="modal-title">Manage Tiers</span>
       <button class="modal-close" onclick="closeModal('tiers-modal')">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="text-muted" style="font-size:12.5px;margin-bottom:14px">
+      <p class="text-muted fs-12-5 mb-14px">
         Tiers are the section headings roles get grouped under on the public Team page. Removing a tier here only stops
         it from being offered &mdash; roles already using it keep that text until re-saved.
       </p>
-      <div class="table-wrap" style="margin-bottom:16px">
-        <table style="width:100%">
+      <div class="table-wrap mb-2">
+        <table class="w-100">
           <thead>
             <tr>
               <th>Name</th>
@@ -269,8 +270,8 @@ include __DIR__ . '/includes/header.php';
                 <tr>
                   <td><?= h($t['name']) ?></td>
                   <td class="text-muted"><?= $t['display_order'] ?></td>
-                  <td style="text-align:right">
-                    <form id="del-t-<?= $t['id'] ?>" method="POST" style="display:inline">
+                  <td class="text-right">
+                    <form id="del-t-<?= $t['id'] ?>" method="POST" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                       <input type="hidden" name="action" value="delete_tier">
                       <input type="hidden" name="tier_id" value="<?= $t['id'] ?>">
@@ -286,9 +287,10 @@ include __DIR__ . '/includes/header.php';
                       </svg></button>
                   </td>
                 </tr>
-              <?php endforeach; else: ?>
+              <?php endforeach;
+            else: ?>
               <tr>
-                <td colspan="3" class="text-muted" style="text-align:center;padding:16px">No tiers yet.</td>
+                <td colspan="3" class="text-muted table-empty-sm">No tiers yet.</td>
               </tr>
             <?php endif; ?>
           </tbody>
@@ -301,7 +303,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>New Tier Name</label><input type="text" name="tier_name"
               placeholder="e.g. Advisors" required></div>
           <div class="form-group"><label>Order</label><input type="number" name="tier_order" value="0" min="0"
-              style="max-width:90px"></div>
+              class="max-w-90"></div>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary btn-sm">Add Tier</button>
@@ -315,9 +317,19 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script>
-  $(document).ready(function () {
-    $('#dt-roles').DataTable({ pageLength: 25, order: [[2, 'asc']], columnDefs: [{ orderable: false, targets: 4 }] });
+  $(document).ready(function() {
+    $('#dt-roles').DataTable({
+      pageLength: 25,
+      order: [
+        [2, 'asc']
+      ],
+      columnDefs: [{
+        orderable: false,
+        targets: 4
+      }]
+    });
   });
+
   function openEditModal(r) {
     document.getElementById('er_id').value = r.id;
     document.getElementById('er_name').value = r.name;

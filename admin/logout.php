@@ -6,10 +6,14 @@ if (isset($_SESSION['admin_id'])) {
     try {
         $conn = (new Database())->connect();
         (new ActivityLog($conn))->log(
-            (int)$_SESSION['admin_id'], $_SESSION['admin_username'] ?? 'unknown', 'logout', 'Logged out',
+            (int)$_SESSION['admin_id'],
+            $_SESSION['admin_username'] ?? 'unknown',
+            'logout',
+            'Logged out',
             substr($_SERVER['REMOTE_ADDR'] ?? '', 0, 45)
         );
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) {
+    }
 }
 $_SESSION = [];
 if (ini_get('session.use_cookies')) {

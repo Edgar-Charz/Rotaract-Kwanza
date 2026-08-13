@@ -22,16 +22,16 @@ $current_year = (int) date('Y');
 $dues_totals  = $_dues->getYearTotals($current_year);
 
 $stats = [
-    'members'    => $_member->count(),
-    'pending'    => $_member->count('pending'),
-    'approved'   => $_member->count('approved'),
-    'events'     => $_event->countByStatus('upcoming'),
-    'gallery'    => (new Gallery($conn))->countActive(),
-    'projects'   => (new Project($conn))->count(),
-    'messages'   => $_cm->count('unread'),
-    'rsvps'      => $_rsvp->count(),
-    'dues_paid'  => (float) $dues_totals['total_paid'],
-    'dues_due'   => (float) $dues_totals['total_due'],
+  'members'    => $_member->count(),
+  'pending'    => $_member->count('pending'),
+  'approved'   => $_member->count('approved'),
+  'events'     => $_event->countByStatus('upcoming'),
+  'gallery'    => (new Gallery($conn))->countActive(),
+  'projects'   => (new Project($conn))->count(),
+  'messages'   => $_cm->count('unread'),
+  'rsvps'      => $_rsvp->count(),
+  'dues_paid'  => (float) $dues_totals['total_paid'],
+  'dues_due'   => (float) $dues_totals['total_due'],
 ];
 $dues_outstanding = max(0, $stats['dues_due'] - $stats['dues_paid']);
 
@@ -52,15 +52,15 @@ include __DIR__ . '/includes/header.php';
 <div class="card mb-2">
   <div class="card-body dash-welcome">
     <div class="dash-welcome-text">
-      <div class="card-title" style="margin-bottom:2px">Welcome back, <?= h($_SESSION['admin_name'] ?? $_SESSION['admin_username'] ?? 'Admin') ?></div>
-      <div class="text-muted" style="font-size:13px">Role: <?= h($_SESSION['admin_role'] ?? 'viewer') ?></div>
+      <div class="card-title mb-2px">Welcome back, <?= h($_SESSION['admin_name'] ?? $_SESSION['admin_username'] ?? 'Admin') ?></div>
+      <div class="text-muted fs-13">Role: <?= h($_SESSION['admin_role'] ?? 'viewer') ?></div>
     </div>
     <?php if (has_role('editor')): ?>
-    <div class="dash-welcome-actions">
-      <a href="members.php?new=1" class="btn btn-sm btn-primary">+ Add Member</a>
-      <a href="events.php?new=1" class="btn btn-sm btn-secondary">+ Create Event</a>
-      <a href="announcements.php?new=1" class="btn btn-sm btn-secondary">+ Post Announcement</a>
-    </div>
+      <div class="dash-welcome-actions">
+        <a href="members.php?new=1" class="btn btn-sm btn-primary">+ Add Member</a>
+        <a href="events.php?new=1" class="btn btn-sm btn-secondary">+ Create Event</a>
+        <a href="announcements.php?new=1" class="btn btn-sm btn-secondary">+ Post Announcement</a>
+      </div>
     <?php endif; ?>
   </div>
 </div>
@@ -68,25 +68,35 @@ include __DIR__ . '/includes/header.php';
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-icon pink" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Total Members</div>
       <div class="stat-value"><?= $stats['members'] ?></div>
       <div class="stat-sub">
         <?php if ($stats['pending'] > 0 && $pending_days >= 7): ?>
-          <span style="color:var(--danger);font-weight:700"><?= $stats['pending'] ?> pending</span> (oldest <?= $pending_days ?>d) · <?= $stats['approved'] ?> approved
+          <span class="text-danger fw-bold"><?= $stats['pending'] ?> pending</span> (oldest <?= $pending_days ?>d) · <?= $stats['approved'] ?> approved
         <?php else: ?>
           <?= $stats['pending'] ?> pending · <?= $stats['approved'] ?> approved
         <?php endif; ?>
-        <?php if ($members_this_month > 0): ?> · <span style="color:var(--success)">+<?= $members_this_month ?> this month</span><?php endif; ?>
+        <?php if ($members_this_month > 0): ?> · <span class="text-success">+<?= $members_this_month ?> this month</span><?php endif; ?>
       </div>
     </div>
   </div>
 
   <div class="stat-card">
     <div class="stat-icon gold" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Upcoming Events</div>
@@ -96,7 +106,11 @@ include __DIR__ . '/includes/header.php';
 
   <div class="stat-card">
     <div class="stat-icon blue" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <polyline points="21 15 16 10 5 21" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Gallery Photos</div>
@@ -106,7 +120,10 @@ include __DIR__ . '/includes/header.php';
 
   <div class="stat-card">
     <div class="stat-icon green" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Projects</div>
@@ -116,7 +133,9 @@ include __DIR__ . '/includes/header.php';
 
   <div class="stat-card">
     <div class="stat-icon red" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Unread Messages</div>
@@ -126,26 +145,33 @@ include __DIR__ . '/includes/header.php';
 
   <div class="stat-card">
     <div class="stat-icon gold" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Dues Collected (<?= $current_year ?>)</div>
       <div class="stat-value">Tsh <?= number_format($stats['dues_paid'], 0) ?></div>
       <?php if ($dues_outstanding > 0): ?>
-        <div class="stat-sub" style="color:var(--danger)">Tsh <?= number_format($dues_outstanding, 0) ?> outstanding</div>
+        <div class="stat-sub text-danger">Tsh <?= number_format($dues_outstanding, 0) ?> outstanding</div>
       <?php endif; ?>
     </div>
   </div>
 
   <div class="stat-card">
     <div class="stat-icon blue" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <polyline points="16 11 18 13 22 9" />
+      </svg>
     </div>
     <div>
       <div class="stat-label">Total RSVPs</div>
       <div class="stat-value"><?= $stats['rsvps'] ?></div>
       <?php if ($rsvps_this_month > 0): ?>
-        <div class="stat-sub"><span style="color:var(--success)">+<?= $rsvps_this_month ?> this month</span></div>
+        <div class="stat-sub"><span class="text-success">+<?= $rsvps_this_month ?> this month</span></div>
       <?php endif; ?>
     </div>
   </div>
@@ -159,17 +185,27 @@ include __DIR__ . '/includes/header.php';
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Date</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
         <tbody>
           <?php if ($recent_members): foreach ($recent_members as $m): ?>
-          <tr>
-            <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
-            <td class="text-muted"><?= h($m['email']) ?></td>
-            <td><span class="badge badge-<?= h($m['status']) ?>"><?= h($m['status']) ?></span></td>
-            <td class="text-muted"><?= $m['created_at'] ? date('d M Y', strtotime($m['created_at'])) : '—' ?></td>
-          </tr>
-          <?php endforeach; else: ?>
-          <tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px">No applications yet.</td></tr>
+              <tr>
+                <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
+                <td class="text-muted"><?= h($m['email']) ?></td>
+                <td><span class="badge badge-<?= h($m['status']) ?>"><?= h($m['status']) ?></span></td>
+                <td class="text-muted"><?= $m['created_at'] ? date('d M Y', strtotime($m['created_at'])) : '—' ?></td>
+              </tr>
+            <?php endforeach;
+          else: ?>
+            <tr>
+              <td colspan="4" class="text-muted table-empty">No applications yet.</td>
+            </tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -183,16 +219,25 @@ include __DIR__ . '/includes/header.php';
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Event</th><th>Date</th><th>Location</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Date</th>
+            <th>Location</th>
+          </tr>
+        </thead>
         <tbody>
           <?php if ($upcoming_events): foreach ($upcoming_events as $ev): ?>
-          <tr>
-            <td class="fw-bold"><?= h($ev['title']) ?></td>
-            <td class="text-muted"><?= $ev['event_date'] ? date('d M Y', strtotime($ev['event_date'])) : '—' ?></td>
-            <td class="text-muted"><?= h($ev['location'] ?? '—') ?></td>
-          </tr>
-          <?php endforeach; else: ?>
-          <tr><td colspan="3" class="text-muted" style="text-align:center;padding:20px">No upcoming events.</td></tr>
+              <tr>
+                <td class="fw-bold"><?= h($ev['title']) ?></td>
+                <td class="text-muted"><?= $ev['event_date'] ? date('d M Y', strtotime($ev['event_date'])) : '—' ?></td>
+                <td class="text-muted"><?= h($ev['location'] ?? '—') ?></td>
+              </tr>
+            <?php endforeach;
+          else: ?>
+            <tr>
+              <td colspan="3" class="text-muted table-empty">No upcoming events.</td>
+            </tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -207,18 +252,29 @@ include __DIR__ . '/includes/header.php';
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>From</th><th>Subject</th><th>Preview</th><th>Status</th><th>Date</th></tr></thead>
+      <thead>
+        <tr>
+          <th>From</th>
+          <th>Subject</th>
+          <th>Preview</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
       <tbody>
         <?php if ($recent_messages): foreach ($recent_messages as $msg): ?>
-        <tr>
-          <td class="fw-bold"><?= h($msg['full_name']) ?></td>
-          <td><?= h($msg['subject'] ?? '—') ?></td>
-          <td class="text-muted message-preview"><?= h(mb_strimwidth($msg['message'], 0, 80, '…')) ?></td>
-          <td><span class="badge badge-<?= h($msg['status']) ?>"><?= h($msg['status']) ?></span></td>
-          <td class="text-muted"><?= $msg['created_at'] ? date('d M Y', strtotime($msg['created_at'])) : '—' ?></td>
-        </tr>
-        <?php endforeach; else: ?>
-        <tr><td colspan="5" class="text-muted" style="text-align:center;padding:20px">No messages yet.</td></tr>
+            <tr>
+              <td class="fw-bold"><?= h($msg['full_name']) ?></td>
+              <td><?= h($msg['subject'] ?? '—') ?></td>
+              <td class="text-muted message-preview"><?= h(mb_strimwidth($msg['message'], 0, 80, '…')) ?></td>
+              <td><span class="badge badge-<?= h($msg['status']) ?>"><?= h($msg['status']) ?></span></td>
+              <td class="text-muted"><?= $msg['created_at'] ? date('d M Y', strtotime($msg['created_at'])) : '—' ?></td>
+            </tr>
+          <?php endforeach;
+        else: ?>
+          <tr>
+            <td colspan="5" class="text-muted table-empty">No messages yet.</td>
+          </tr>
         <?php endif; ?>
       </tbody>
     </table>
@@ -232,17 +288,27 @@ include __DIR__ . '/includes/header.php';
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Admin</th><th>Action</th><th>Description</th><th>Date &amp; Time</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Admin</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>Date &amp; Time</th>
+        </tr>
+      </thead>
       <tbody>
         <?php if ($recent_activity): foreach ($recent_activity as $log): ?>
-        <tr>
-          <td class="fw-bold"><?= h($log['admin_username'] ?? '—') ?></td>
-          <td><span class="badge badge-upcoming"><?= h(str_replace('_', ' ', $log['action'])) ?></span></td>
-          <td class="text-muted"><?= h($log['description'] ?? '—') ?></td>
-          <td class="text-muted"><?= $log['created_at'] ? date('d M Y H:i', strtotime($log['created_at'])) : '—' ?></td>
-        </tr>
-        <?php endforeach; else: ?>
-        <tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px">No activity recorded yet.</td></tr>
+            <tr>
+              <td class="fw-bold"><?= h($log['admin_username'] ?? '—') ?></td>
+              <td><span class="badge badge-upcoming"><?= h(str_replace('_', ' ', $log['action'])) ?></span></td>
+              <td class="text-muted"><?= h($log['description'] ?? '—') ?></td>
+              <td class="text-muted"><?= $log['created_at'] ? date('d M Y H:i', strtotime($log['created_at'])) : '—' ?></td>
+            </tr>
+          <?php endforeach;
+        else: ?>
+          <tr>
+            <td colspan="4" class="text-muted table-empty">No activity recorded yet.</td>
+          </tr>
         <?php endif; ?>
       </tbody>
     </table>

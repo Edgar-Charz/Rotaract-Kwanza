@@ -7,45 +7,45 @@ require_once dirname(__DIR__) . '/classes/Member.php';
 $page_title = 'Dues Tracking';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    csrf_verify();
-    require_role('editor');
-    $action = $_POST['action'] ?? '';
+  csrf_verify();
+  require_role('editor');
+  $action = $_POST['action'] ?? '';
 
-    if ($action === 'save') {
-        $member_id    = (int)$_POST['member_id'];
-        $year         = max(2020, min((int)date('Y') + 1, (int)$_POST['year']));
-        $amount_due   = money_or_zero($_POST['amount_due'] ?? '');
-        $amount_paid  = money_or_zero($_POST['amount_paid'] ?? '');
-        $payment_date = $_POST['payment_date'] ?: '';
-        $notes        = trim($_POST['notes']);
+  if ($action === 'save') {
+    $member_id    = (int)$_POST['member_id'];
+    $year         = max(2020, min((int)date('Y') + 1, (int)$_POST['year']));
+    $amount_due   = money_or_zero($_POST['amount_due'] ?? '');
+    $amount_paid  = money_or_zero($_POST['amount_paid'] ?? '');
+    $payment_date = $_POST['payment_date'] ?: '';
+    $notes        = trim($_POST['notes']);
 
-        $status = 'unpaid';
-        if ($amount_due > 0 && $amount_paid >= $amount_due) $status = 'paid';
-        elseif ($amount_paid > 0) $status = 'partial';
+    $status = 'unpaid';
+    if ($amount_due > 0 && $amount_paid >= $amount_due) $status = 'paid';
+    elseif ($amount_paid > 0) $status = 'partial';
 
-        try {
-            (new MemberDues($conn))->save($member_id, $year, $amount_due, $amount_paid, $payment_date, $notes, $status);
-            $name = (new Member($conn))->getFullName($member_id);
-            log_activity('update_dues', "Updated dues for $name — $year — $status");
-            flash('success', 'Dues record saved.');
-        } catch (mysqli_sql_exception $e) {
-            flash('error', 'Could not save dues record.');
-        }
+    try {
+      (new MemberDues($conn))->save($member_id, $year, $amount_due, $amount_paid, $payment_date, $notes, $status);
+      $name = (new Member($conn))->getFullName($member_id);
+      log_activity('update_dues', "Updated dues for $name — $year — $status");
+      flash('success', 'Dues record saved.');
+    } catch (mysqli_sql_exception $e) {
+      flash('error', 'Could not save dues record.');
     }
+  }
 
-    if ($action === 'delete') {
-        $dues_obj = new MemberDues($conn);
-        $record   = $dues_obj->findById((int)$_POST['id']);
-        $dues_obj->delete((int)$_POST['id']);
-        if ($record) {
-            $name = (new Member($conn))->getFullName((int)$record['member_id']);
-            log_activity('delete_dues', "Deleted dues record for $name — {$record['year']}");
-        }
-        flash('success', 'Dues record deleted.');
+  if ($action === 'delete') {
+    $dues_obj = new MemberDues($conn);
+    $record   = $dues_obj->findById((int)$_POST['id']);
+    $dues_obj->delete((int)$_POST['id']);
+    if ($record) {
+      $name = (new Member($conn))->getFullName((int)$record['member_id']);
+      log_activity('delete_dues', "Deleted dues record for $name — {$record['year']}");
     }
+    flash('success', 'Dues record deleted.');
+  }
 
-    header('Location: ' . ADMIN_URL . '/dues.php?year=' . ($_POST['year'] ?? date('Y')));
-    exit;
+  header('Location: ' . ADMIN_URL . '/dues.php?year=' . ($_POST['year'] ?? date('Y')));
+  exit;
 }
 
 $year    = (int)($_GET['year'] ?? date('Y'));
@@ -53,11 +53,11 @@ $years   = range(date('Y'), 2020);
 $members = (new Member($conn))->getWithDues($year);
 
 $stats = [
-    'total'   => count($members),
-    'paid'    => count(array_filter($members, fn($m) => $m['dues_status'] === 'paid')),
-    'partial' => count(array_filter($members, fn($m) => $m['dues_status'] === 'partial')),
-    'unpaid'  => count(array_filter($members, fn($m) => $m['dues_status'] === 'unpaid')),
-    'no_rec'  => count(array_filter($members, fn($m) => $m['dues_id'] === null)),
+  'total'   => count($members),
+  'paid'    => count(array_filter($members, fn($m) => $m['dues_status'] === 'paid')),
+  'partial' => count(array_filter($members, fn($m) => $m['dues_status'] === 'partial')),
+  'unpaid'  => count(array_filter($members, fn($m) => $m['dues_status'] === 'unpaid')),
+  'no_rec'  => count(array_filter($members, fn($m) => $m['dues_id'] === null)),
 ];
 $total_due  = array_sum(array_column($members, 'amount_due'));
 $total_paid = array_sum(array_column($members, 'amount_paid'));
@@ -65,69 +65,122 @@ $total_paid = array_sum(array_column($members, 'amount_paid'));
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div class="stats-grid" style="margin-bottom:20px">
-  <div class="stat-card"><div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div><div class="stat-label">Paid</div><div class="stat-value"><?= $stats['paid'] ?></div></div></div>
-  <div class="stat-card"><div class="stat-icon warning" style="background:#fff3cd;color:#856404"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div><div class="stat-label">Partial</div><div class="stat-value"><?= $stats['partial'] ?></div></div></div>
-  <div class="stat-card"><div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><div><div class="stat-label">Unpaid / No Record</div><div class="stat-value"><?= $stats['unpaid'] + $stats['no_rec'] ?></div></div></div>
-  <div class="stat-card"><div class="stat-icon gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="stat-label">Collected / Due</div><div class="stat-value" style="font-size:18px"><?= number_format($total_paid,2) ?> / <?= number_format($total_due,2) ?></div></div></div>
+<div class="stats-grid mb-20px">
+  <div class="stat-card">
+    <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12" />
+      </svg></div>
+    <div>
+      <div class="stat-label">Paid</div>
+      <div class="stat-value"><?= $stats['paid'] ?></div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg></div>
+    <div>
+      <div class="stat-label">Partial</div>
+      <div class="stat-value"><?= $stats['partial'] ?></div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg></div>
+    <div>
+      <div class="stat-label">Unpaid / No Record</div>
+      <div class="stat-value"><?= $stats['unpaid'] + $stats['no_rec'] ?></div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg></div>
+    <div>
+      <div class="stat-label">Collected / Due</div>
+      <div class="stat-value stat-value-sm"><?= number_format($total_paid, 2) ?> / <?= number_format($total_due, 2) ?></div>
+    </div>
+  </div>
 </div>
 
 <div class="card">
   <div class="card-header">
     <span class="card-title">Dues &mdash; <?= $year ?></span>
-    <form method="GET" style="display:flex;gap:8px;align-items:center">
-      <select name="year" onchange="this.form.submit()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px">
+    <form method="GET" class="flex-row-gap8">
+      <select name="year" onchange="this.form.submit()" class="search-input-sm">
         <?php foreach ($years as $y): ?>
-        <option value="<?= $y ?>" <?= $y===$year?'selected':'' ?>><?= $y ?></option>
+          <option value="<?= $y ?>" <?= $y === $year ? 'selected' : '' ?>><?= $y ?></option>
         <?php endforeach; ?>
       </select>
     </form>
   </div>
   <div class="table-wrap">
     <table id="dt-dues">
-      <thead><tr><th>Member</th><th>Email</th><th>Amount Due</th><th>Amount Paid</th><th>Payment Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Email</th>
+          <th>Amount Due</th>
+          <th>Amount Paid</th>
+          <th>Payment Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
         <?php foreach ($members as $m): ?>
-        <tr id="member-<?= $m['id'] ?>">
-          <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
-          <td class="text-muted"><?= h($m['email']) ?></td>
-          <td><?= $m['amount_due'] ? number_format($m['amount_due'], 2) : '<span class="text-muted">—</span>' ?></td>
-          <td><?= $m['amount_paid'] ? number_format($m['amount_paid'], 2) : '<span class="text-muted">—</span>' ?></td>
-          <td class="text-muted"><?= $m['payment_date'] ? date('d M Y', strtotime($m['payment_date'])) : '—' ?></td>
-          <td>
-            <?php if ($m['dues_id']): ?>
-            <span class="badge badge-<?= $m['dues_status'] ?>"><?= $m['dues_status'] ?></span>
-            <?php else: ?>
-            <span class="text-muted" style="font-size:12px">No record</span>
-            <?php endif; ?>
-          </td>
-          <td>
-            <?php if (has_role('editor')): ?>
-            <button class="btn btn-icon btn-sm btn-info"
-              title="<?= $m['dues_id'] ? 'Edit' : 'Add' ?>" aria-label="<?= $m['dues_id'] ? 'Edit' : 'Add' ?>"
-              data-member-id="<?= $m['id'] ?>"
-              data-name="<?= h($m['first_name'].' '.$m['last_name']) ?>"
-              data-amount-due="<?= $m['amount_due'] ?? 0 ?>"
-              data-amount-paid="<?= $m['amount_paid'] ?? 0 ?>"
-              data-payment-date="<?= $m['payment_date'] ?? '' ?>"
-              data-notes="<?= h($m['notes'] ?? '') ?>"
-              onclick="openDuesModalFromBtn(this)">
-              <?= $m['dues_id']
-                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>'
-                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>' ?>
-            </button>
-            <?php if ($m['dues_id']): ?>
-            <form id="del-d-<?= $m['dues_id'] ?>" method="POST" style="display:inline">
-              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-              <input type="hidden" name="action" value="delete">
-              <input type="hidden" name="id" value="<?= $m['dues_id'] ?>">
-              <input type="hidden" name="year" value="<?= $year ?>">
-            </form>
-            <button class="btn btn-icon btn-sm btn-danger" title="Delete" aria-label="Delete" onclick="confirmDelete('del-d-<?= $m['dues_id'] ?>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
-            <?php endif; ?>
-            <?php endif; ?>
-          </td>
-        </tr>
+          <tr id="member-<?= $m['id'] ?>">
+            <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
+            <td class="text-muted"><?= h($m['email']) ?></td>
+            <td><?= $m['amount_due'] ? number_format($m['amount_due'], 2) : '<span class="text-muted">—</span>' ?></td>
+            <td><?= $m['amount_paid'] ? number_format($m['amount_paid'], 2) : '<span class="text-muted">—</span>' ?></td>
+            <td class="text-muted"><?= $m['payment_date'] ? date('d M Y', strtotime($m['payment_date'])) : '—' ?></td>
+            <td>
+              <?php if ($m['dues_id']): ?>
+                <span class="badge badge-<?= $m['dues_status'] ?>"><?= $m['dues_status'] ?></span>
+              <?php else: ?>
+                <span class="text-muted fs-12">No record</span>
+              <?php endif; ?>
+            </td>
+            <td>
+              <?php if (has_role('editor')): ?>
+                <button class="btn btn-icon btn-sm btn-info"
+                  title="<?= $m['dues_id'] ? 'Edit' : 'Add' ?>" aria-label="<?= $m['dues_id'] ? 'Edit' : 'Add' ?>"
+                  data-member-id="<?= $m['id'] ?>"
+                  data-name="<?= h($m['first_name'] . ' ' . $m['last_name']) ?>"
+                  data-amount-due="<?= $m['amount_due'] ?? 0 ?>"
+                  data-amount-paid="<?= $m['amount_paid'] ?? 0 ?>"
+                  data-payment-date="<?= $m['payment_date'] ?? '' ?>"
+                  data-notes="<?= h($m['notes'] ?? '') ?>"
+                  onclick="openDuesModalFromBtn(this)">
+                  <?= $m['dues_id']
+                    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>'
+                    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>' ?>
+                </button>
+                <?php if ($m['dues_id']): ?>
+                  <form id="del-d-<?= $m['dues_id'] ?>" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" value="<?= $m['dues_id'] ?>">
+                    <input type="hidden" name="year" value="<?= $year ?>">
+                  </form>
+                  <button class="btn btn-icon btn-sm btn-danger" title="Delete" aria-label="Delete" onclick="confirmDelete('del-d-<?= $m['dues_id'] ?>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg></button>
+                <?php endif; ?>
+              <?php endif; ?>
+            </td>
+          </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
@@ -136,7 +189,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Dues Modal -->
 <div class="modal fade" id="dues-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content" style="max-width:460px">
+  <div class="modal-dialog modal-content modal-460">
     <div class="modal-header">
       <span class="modal-title">Dues Record — <span id="dm_name"></span></span>
       <button class="modal-close" onclick="closeModal('dues-modal')">&times;</button>
@@ -152,7 +205,7 @@ include __DIR__ . '/includes/header.php';
           <div class="form-group"><label>Amount Paid</label><input type="text" inputmode="decimal" class="money-input" name="amount_paid" id="dm_amount_paid" value="0"></div>
         </div>
         <div class="form-group mb-2"><label>Payment Date</label><input type="date" name="payment_date" id="dm_payment_date"></div>
-        <div class="form-group"><label>Notes</label><textarea name="notes" id="dm_notes" style="min-height:70px"></textarea></div>
+        <div class="form-group"><label>Notes</label><textarea name="notes" id="dm_notes" class="mh-70"></textarea></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal('dues-modal')">Cancel</button>
@@ -163,26 +216,30 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script>
-$(document).ready(function() {
-  $('#dt-dues').DataTable({
-    pageLength: 25,
-    columnDefs: [{ orderable: false, targets: 6 }]
+  $(document).ready(function() {
+    $('#dt-dues').DataTable({
+      pageLength: 25,
+      columnDefs: [{
+        orderable: false,
+        targets: 6
+      }]
+    });
   });
-});
-function openDuesModalFromBtn(btn) {
-  const d = btn.dataset;
-  document.getElementById('dm_member_id').value    = d.memberId;
-  document.getElementById('dm_name').textContent   = d.name;
-  const dueEl  = document.getElementById('dm_amount_due');
-  const paidEl = document.getElementById('dm_amount_paid');
-  dueEl.value  = d.amountDue  || 0;
-  paidEl.value = d.amountPaid || 0;
-  dueEl.dispatchEvent(new Event('input'));
-  paidEl.dispatchEvent(new Event('input'));
-  document.getElementById('dm_payment_date').value = d.paymentDate || '';
-  document.getElementById('dm_notes').value        = d.notes || '';
-  openModal('dues-modal');
-}
+
+  function openDuesModalFromBtn(btn) {
+    const d = btn.dataset;
+    document.getElementById('dm_member_id').value = d.memberId;
+    document.getElementById('dm_name').textContent = d.name;
+    const dueEl = document.getElementById('dm_amount_due');
+    const paidEl = document.getElementById('dm_amount_paid');
+    dueEl.value = d.amountDue || 0;
+    paidEl.value = d.amountPaid || 0;
+    dueEl.dispatchEvent(new Event('input'));
+    paidEl.dispatchEvent(new Event('input'));
+    document.getElementById('dm_payment_date').value = d.paymentDate || '';
+    document.getElementById('dm_notes').value = d.notes || '';
+    openModal('dues-modal');
+  }
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
