@@ -222,3 +222,18 @@ document.querySelectorAll(".donate-btn-copy").forEach((btn) => {
     });
   });
 })();
+
+// Let the entire public member card open its profile without taking over the
+// separate email and social-media links inside the card.
+document.querySelectorAll("[data-profile-url]").forEach((card) => {
+  const openProfile = () => { window.location.href = card.dataset.profileUrl; };
+  card.addEventListener("click", (event) => {
+    if (!event.target.closest("a, button")) openProfile();
+  });
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openProfile();
+    }
+  });
+});
