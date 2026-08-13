@@ -1,0 +1,888 @@
+/* ==========================================================================
+   Sidebar + Topbar — collapsible/grouped admin nav chrome.
+
+   Drop-in usage in another project:
+   1. Link this file (after your own reset/base styles) and sidebar.js.
+   2. Markup shape this expects — see sidebar.php / topbar.php for a full
+      example:
+       <aside class="sidebar" id="sidebar">
+         <div class="sidebar-brand">...</div>
+         <button class="sidebar-rail-toggle" onclick="toggleSidebarRail()">...</button>
+         <nav class="sidebar-nav">
+           <a class="nav-item" href="...">...</a>
+           <div class="nav-section" data-group="slug">
+             <button class="nav-section-toggle" onclick="toggleNavGroup(this)">
+               <svg class="nav-section-icon">...</svg>
+               <span class="nav-section-label">Group</span>
+               <svg class="nav-section-chevron">...</svg>
+             </button>
+             <div class="nav-section-body">
+               <a class="nav-item" href="...">...</a>
+             </div>
+           </div>
+         </nav>
+         <div class="sidebar-footer">...</div>
+       </aside>
+       <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+       <div class="main-wrapper">
+         <header class="topbar">...</header>
+       </div>
+   3. The :root block below gives it sensible standalone defaults — override
+      any of these variables in your own stylesheet to reskin it.
+   ========================================================================== */
+
+:root {
+  --sidebar-w: 260px;
+  --sidebar-rail-w: 72px;
+  --topbar-h: 60px;
+  --primary: #c0396b;
+  --gold: #d4882a;
+  --danger: #e74c3c;
+  --sidebar-bg: #1a1730;
+  --sidebar-text: #c8c5d8;
+  --content-bg: #f0f2f8;
+  --card-bg: #ffffff;
+  --text: #2d3436;
+  --text-muted: #636e72;
+  --border: #e0e4ef;
+}
+
+/* ── Sidebar shell ────────────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary), var(--gold));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  display: block;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+}
+.brand-sub {
+  display: block;
+  color: var(--sidebar-text);
+  font-size: 11px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 12px;
+}
+
+/* ── Nav links ────────────────────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  transition: all 0.2s;
+  font-size: 13.5px;
+  position: relative;
+}
+.nav-item svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+.nav-item.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.nav-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 8px 0;
+}
+
+.nav-item:focus-visible,
+.nav-section-toggle:focus-visible,
+.sidebar-rail-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Unread/pending count next to a nav-item's label. */
+.badge-count {
+  margin-left: auto;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── Collapsible nav groups (accordion) ──────────────────────────────────
+   .nav-section holds a header button (.nav-section-toggle) plus a body of
+   .nav-item links (.nav-section-body). Toggling adds/removes .collapsed on
+   the .nav-section. The group containing the current page gets .active-group
+   from the server (see sidebar.php's nav_group_class()) so it's visually
+   distinct and stays expanded regardless of remembered collapse state. */
+.nav-section {
+  margin-top: 4px;
+}
+.nav-section:first-of-type {
+  margin-top: 0;
+}
+
+.nav-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  margin: 10px 0 2px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 0.15s;
+}
+.nav-section:first-of-type .nav-section-toggle {
+  margin-top: 0;
+}
+.nav-section-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.nav-section-toggle:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-section-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.28);
+  transition: color 0.15s;
+}
+.nav-section-toggle:hover .nav-section-icon {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.nav-section-label {
+  flex: 1;
+  display: block;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.nav-section-toggle:hover .nav-section-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.nav-section-chevron {
+  width: 13px;
+  height: 13px;
+  color: rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+  transition:
+    transform 0.2s ease,
+    color 0.15s;
+}
+.nav-section-toggle:hover .nav-section-chevron {
+  color: rgba(255, 255, 255, 0.75);
+}
+.nav-section.collapsed .nav-section-chevron {
+  transform: rotate(-90deg);
+}
+
+.nav-section.active-group .nav-section-toggle {
+  background: rgba(192, 57, 107, 0.16);
+}
+.nav-section.active-group .nav-section-toggle:hover {
+  background: rgba(192, 57, 107, 0.24);
+}
+.nav-section.active-group .nav-section-icon,
+.nav-section.active-group .nav-section-label,
+.nav-section.active-group .nav-section-chevron {
+  color: #e893b3;
+}
+
+.nav-section-body {
+  overflow: hidden;
+  max-height: 400px;
+  opacity: 1;
+  padding-left: 12px;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.2s ease;
+}
+.nav-section.collapsed .nav-section-body {
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.15s ease;
+}
+
+/* ── Footer: profile link + logout ───────────────────────────────────── */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  margin: -6px -6px 2px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.admin-info:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.admin-info:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.admin-avatar {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--primary), var(--gold));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.admin-meta {
+  min-width: 0;
+}
+.admin-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.admin-role-hint {
+  color: var(--sidebar-text);
+  font-size: 11px;
+  opacity: 0.75;
+}
+.admin-info:hover .admin-role-hint {
+  color: #fff;
+  opacity: 1;
+}
+
+.footer-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sidebar-text);
+  font-size: 12.5px;
+  text-decoration: none;
+  padding: 6px;
+  border-radius: 8px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.footer-logout svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.footer-logout:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--danger);
+}
+.footer-logout:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ── Collapsible icon-rail mode ───────────────────────────────────────────
+   Toggled via .sidebar-rail-toggle (calls toggleSidebarRail() in sidebar.js);
+   state remembered in localStorage since it's a standing layout preference.
+   Collapsed, groups shrink to one icon each — their items live in a
+   position:fixed flyout panel that sidebar.js shows on hover/focus and
+   positions next to the icon (see the comment above .nav-section-body below
+   for why it has to be JS-positioned rather than pure CSS :hover). */
+.sidebar-rail-toggle {
+  position: absolute;
+  top: 18px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  background: var(--sidebar-bg);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.sidebar-rail-toggle:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.sidebar-rail-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+.sidebar.rail .sidebar-rail-toggle svg {
+  transform: rotate(180deg);
+}
+
+.sidebar.rail {
+  width: var(--sidebar-rail-w);
+}
+.sidebar.rail ~ .main-wrapper {
+  margin-left: var(--sidebar-rail-w);
+}
+
+.sidebar.rail .sidebar-brand {
+  justify-content: center;
+  padding: 20px 0 16px;
+}
+.sidebar.rail .brand-text {
+  display: none;
+}
+
+.sidebar.rail .nav-item {
+  justify-content: center;
+  gap: 0;
+  padding: 10px;
+  font-size: 0;
+}
+.sidebar.rail .nav-item svg {
+  width: 19px;
+  height: 19px;
+}
+.sidebar.rail .nav-item .badge-count {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0;
+}
+
+.sidebar.rail .nav-section-toggle {
+  justify-content: center;
+  padding: 8px;
+  gap: 0;
+}
+.sidebar.rail .nav-section-icon {
+  width: 17px;
+  height: 17px;
+}
+.sidebar.rail .nav-section-label,
+.sidebar.rail .nav-section-chevron {
+  display: none;
+}
+
+/* .sidebar needs overflow-y:auto for its own scroll, and per the CSS
+   overflow spec that silently forces overflow-x to auto too — which clips
+   anything absolutely-positioned outside the sidebar's own width.
+   position:fixed escapes that clipping; sidebar.js sets top/left on
+   hover/focus since :hover alone can't supply coordinates for a fixed el. */
+.sidebar.rail .nav-section-body {
+  display: none;
+  position: fixed;
+  min-width: 210px;
+  padding: 8px;
+  background: var(--sidebar-bg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  z-index: 150;
+  max-height: none !important;
+  opacity: 1 !important;
+}
+.sidebar.rail .nav-section.flyout-open .nav-section-body {
+  display: block;
+}
+
+/* Items inside the flyout render like the expanded sidebar — full label,
+   normal icon size — overriding the icon-only rules above. */
+.sidebar.rail .nav-section-body .nav-item {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  font-size: 13.5px;
+}
+.sidebar.rail .nav-section-body .nav-item svg {
+  width: 17px;
+  height: 17px;
+}
+.sidebar.rail .nav-section-body .badge-count {
+  position: static;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.sidebar.rail .sidebar-footer {
+  padding: 16px 8px;
+}
+.sidebar.rail .admin-info {
+  justify-content: center;
+  margin: -6px -2px 2px;
+}
+.sidebar.rail .admin-meta {
+  display: none;
+}
+.sidebar.rail .footer-logout {
+  justify-content: center;
+}
+.sidebar.rail .footer-logout-label {
+  display: none;
+}
+
+/* Mobile drawer backdrop, shown behind .sidebar.open (see the 900px query below). */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 24, 0.55);
+  z-index: 99;
+}
+
+/* ── Page content offset ─────────────────────────────────────────────────
+   The element wrapping the topbar + page content; pushed right by the
+   sidebar's width (or the rail's, once collapsed). */
+.main-wrapper {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.2s ease;
+}
+
+/* ── Topbar ───────────────────────────────────────────────────────────── */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Mobile hamburger — hidden by default, shown under the 900px query below. */
+.sidebar-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 6px;
+  border-radius: 6px;
+  display: none;
+}
+.sidebar-toggle:hover {
+  background: var(--content-bg);
+}
+.sidebar-toggle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.topbar-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.topbar-breadcrumb {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+}
+.topbar-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.topbar-date {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Notification bell + dropdown ────────────────────────────────────── */
+.notif-wrap {
+  position: relative;
+}
+.notif-bell {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.notif-bell:hover {
+  background: var(--content-bg);
+  color: var(--text);
+}
+.notif-bell:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.notif-bell svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 10px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+.notif-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  z-index: 300;
+  overflow: hidden;
+}
+.notif-dropdown.open {
+  display: block;
+}
+.notif-dropdown-title {
+  padding: 12px 14px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.notif-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.notif-item:hover {
+  background: var(--content-bg);
+}
+.notif-item-count {
+  background: var(--content-bg);
+  color: var(--text-muted);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.notif-empty {
+  padding: 6px 14px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Topbar search + its live-results dropdown ───────────────────────── */
+.topbar-search {
+  width: 280px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.topbar-search .search-icon {
+  position: absolute;
+  left: 10px;
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.topbar .topbar-search input {
+  width: 100%;
+  padding: 7px 12px 7px 40px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  background: var(--content-bg);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+.topbar-search input:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  z-index: 300;
+  overflow: hidden;
+  max-height: 440px;
+  overflow-y: auto;
+}
+.search-dropdown.open {
+  display: block;
+}
+.sd-section {
+  border-bottom: 1px solid var(--border);
+}
+.sd-section:last-child {
+  border-bottom: none;
+}
+.sd-section-title {
+  padding: 8px 14px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted, #999);
+}
+.sd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 13px;
+  transition: background 0.12s;
+  cursor: pointer;
+}
+.sd-item:hover {
+  background: var(--content-bg, #f8f8f8);
+}
+.sd-item-main {
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-item-sub {
+  color: var(--text-muted, #888);
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+.sd-empty {
+  padding: 18px 14px;
+  color: var(--text-muted, #999);
+  font-size: 13px;
+  text-align: center;
+}
+.sd-footer {
+  display: block;
+  padding: 10px 14px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--primary, #c0396b);
+  background: var(--content-bg, #fafafa);
+  text-decoration: none;
+  border-top: 1px solid var(--border);
+}
+.sd-footer:hover {
+  background: var(--border);
+}
+.sd-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+.sd-spinner::after {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--primary, #c0396b);
+  border-radius: 50%;
+  animation: sidebar-spin 0.7s linear infinite;
+}
+@keyframes sidebar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Responsive: sidebar becomes an off-canvas drawer, topbar trims down ── */
+@media (max-width: 900px) {
+  /* Icon-rail mode is a desktop space-saving preference; it makes no sense
+     once the sidebar is already an overlay drawer, so it's neutralized here
+     regardless of what's remembered in localStorage. sidebar.js also skips
+     re-applying/removing the 'rail' class at this width on load and resize,
+     so this is really just a visual backstop for the moment of a resize. */
+  .sidebar,
+  .sidebar.rail {
+    width: var(--sidebar-w);
+    transform: translateX(-100%);
+  }
+  .sidebar.open,
+  .sidebar.rail.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.3);
+  }
+  .sidebar.open + .sidebar-backdrop {
+    display: block;
+  }
+  .main-wrapper,
+  .sidebar.rail ~ .main-wrapper {
+    margin-left: 0;
+  }
+  .sidebar-toggle {
+    display: flex;
+  }
+  .sidebar-rail-toggle {
+    display: none;
+  }
+  /* The 280px fixed-width search box doesn't fit alongside the hamburger,
+     title, and topbar-right icons once the sidebar goes off-canvas — drop
+     it and rely on the sidebar's own "Search" nav item / search.php instead. */
+  .topbar-search {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .topbar-right .btn-label {
+    display: none;
+  }
+  .topbar-right .btn {
+    padding: 7px;
+  }
+  /* The bell isn't at the topbar's right edge on mobile (View Site/Logout
+     sit to its right), so a dropdown anchored via right:0 to the bell
+     itself extends left from the wrong point and clips off-screen.
+     Anchor to the viewport instead so it always fits. */
+  .notif-dropdown {
+    position: fixed;
+    top: var(--topbar-h);
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+@media (max-width: 480px) {
+  .topbar {
+    padding: 0 14px;
+    gap: 10px;
+  }
+  .topbar-date {
+    display: none;
+  }
+  .topbar-title {
+    font-size: 15px;
+  }
+  /* Below phone-width, a fixed 260px drawer can approach the full screen
+     width with no visible backdrop — cap it so the overlay nature stays
+     obvious and a sliver of the page behind it remains visible. */
+  .sidebar,
+  .sidebar.rail {
+    width: min(var(--sidebar-w), 85vw);
+  }
+}

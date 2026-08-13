@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /assets/database/
-Disallow: /config/
-Disallow: /classes/
-Disallow: /includes/
-
-Sitemap: sitemap.php
