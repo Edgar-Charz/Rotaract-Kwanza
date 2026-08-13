@@ -5,24 +5,6 @@ require_once dirname(__DIR__, 2) . '/classes/SiteSettings.php';
 require_once dirname(__DIR__, 2) . '/includes/csrf.php';
 require_once dirname(__DIR__, 2) . '/includes/upload.php';
 
-// ── Database Migrations ───────────────────────────────────────────────────────
-// Schema migrations are run separately during deployment, never during web requests.
-if (function_exists('run_admin_password_reset_migration')) {
-    try {
-        run_admin_password_reset_migration($conn ?? (new Database())->connect());
-    } catch (Throwable $e) {
-        // Migration failed or already applied — safe to ignore
-    }
-}
-
-if (function_exists('run_admin_suspension_migration')) {
-    try {
-        run_admin_suspension_migration($conn ?? (new Database())->connect());
-    } catch (Throwable $e) {
-        // Migration failed or already applied — safe to ignore
-    }
-}
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // Compute site root URL from the current request — works on any server, no hardcoding
