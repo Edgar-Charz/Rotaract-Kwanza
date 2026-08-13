@@ -1,8 +1,12 @@
 <?php
+require_once __DIR__ . '/SmtpMailer.php';
+
 /**
- * Simple mail wrapper using PHP's built-in mail().
- * Reads from/name from site_settings if not overridden.
- * Structure mirrors PHPMailer so swapping later is easy.
+ * Mail wrapper — sends via real SMTP (classes/SmtpMailer.php) when an SMTP
+ * host is configured in Settings → Email, and falls back to PHP's built-in
+ * mail() when it isn't (e.g. a bare production box with sendmail set up in
+ * php.ini). Reads from/name/SMTP config from site_settings if not overridden.
+ * Structure mirrors PHPMailer so swapping in a real library later is easy.
  */
 class Mailer
 {
@@ -10,18 +14,51 @@ class Mailer
     private string $fromName;
     private string $siteName;
 
-    public function __construct(string $fromEmail = '', string $fromName = '', string $siteName = 'Rotaract Kwanza')
-    {
+    private string $smtpHost;
+    private int $smtpPort;
+    private string $smtpUsername;
+    private string $smtpPassword;
+    private string $smtpEncryption;
+
+    public function __construct(
+        string $fromEmail = '',
+        string $fromName = '',
+        string $siteName = 'Rotaract Kwanza',
+        string $smtpHost = '',
+        int $smtpPort = 587,
+        string $smtpUsername = '',
+        string $smtpPassword = '',
+        string $smtpEncryption = ''
+    ) {
         $strip = fn(string $v): string => str_replace(["\r", "\n"], '', $v);
         $this->fromEmail = $strip($fromEmail ?: 'noreply@rotaractkwanza.org');
         $this->fromName  = $strip($fromName  ?: $siteName);
         $this->siteName  = $strip($siteName);
+
+        $this->smtpHost       = trim($smtpHost);
+        $this->smtpPort       = $smtpPort ?: 587;
+        $this->smtpUsername   = $smtpUsername;
+        $this->smtpPassword   = $smtpPassword;
+        $this->smtpEncryption = strtolower($smtpEncryption);
     }
 
     public function send(string $to, string $toName, string $subject, string $htmlBody, string $replyTo = ''): bool
     {
         $subject = str_replace(["\r", "\n"], '', $subject);
         $strip = fn(string $v): string => str_replace(["\r", "\n"], '', $v);
+        $wrapped = $this->wrap($htmlBody);
+
+        if ($this->smtpHost !== '') {
+            try {
+                $smtp = new SmtpMailer($this->smtpHost, $this->smtpPort, $this->smtpUsername, $this->smtpPassword, $this->smtpEncryption);
+                $smtp->send($this->fromEmail, $this->fromName, $to, $toName, $subject, $wrapped, $replyTo ?: $this->fromEmail);
+                return true;
+            } catch (Throwable $e) {
+                error_log("Mailer(SMTP {$this->smtpHost}:{$this->smtpPort}): failed to send \"$subject\" to $to — " . $e->getMessage());
+                return false;
+            }
+        }
+
         $headers = implode("\r\n", [
             'MIME-Version: 1.0',
             'Content-Type: text/html; charset=UTF-8',
@@ -30,9 +67,9 @@ class Mailer
             'X-Mailer: PHP/' . phpversion(),
         ]);
 
-        $sent = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $this->wrap($htmlBody), $headers);
+        $sent = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $wrapped, $headers);
         if (!$sent) {
-            error_log("Mailer: failed to send \"$subject\" to $to (check php.ini mail/sendmail configuration)");
+            error_log("Mailer: failed to send \"$subject\" to $to (check php.ini mail/sendmail configuration, or configure SMTP in Settings → Email)");
         }
         return $sent;
     }
@@ -108,7 +145,7 @@ class Mailer
   <div style='margin-top:6px;color:#2d3436'>📅 $date$time$loc</div>
 </div>
 $cancelLine"
-            . (!$isMember ? "<p>Not a member yet? We'd love to have you — <a href='join.php'>learn how to join</a>.</p>" : '')
+            . (!$isMember ? "<p>Not a member yet? We'd love to have you — <a href='http://localhost/Rotaract_Kwanza/join.php'>learn how to join</a>.</p>" : '')
             . "<p style='color:#636e72;font-size:13px;margin-top:24px'>See you there!<br>The Rotaract Kwanza Team</p>";
 
         return $this->send($to, $name, "RSVP Confirmed: $title", $html);
@@ -133,7 +170,7 @@ $cancelLine"
 </div>
 <p>An officer will be in touch soon with details on how you can help.</p>
 $cancelLine"
-            . (!$isMember ? "<p>Enjoyed helping out? We'd love to have you as a member — <a href='join.php'>learn how to join</a>.</p>" : '')
+            . (!$isMember ? "<p>Enjoyed helping out? We'd love to have you as a member — <a href='http://localhost/Rotaract_Kwanza/join.php'>learn how to join</a>.</p>" : '')
             . "<p style='color:#636e72;font-size:13px;margin-top:24px'>Thank you for your service!<br>The Rotaract Kwanza Team</p>";
 
         return $this->send($to, $name, "Thanks for volunteering — $title", $html);
@@ -211,6 +248,25 @@ $amountLine
         return $this->send($to, $name, "Thank you for your donation — {$this->siteName}", $html);
     }
 
+    public function adminPasswordReset(string $to, string $name, string $username, string $tempPassword, string $loginUrl): bool
+    {
+        $n    = htmlspecialchars($name ?: $username);
+        $u    = htmlspecialchars($username);
+        $pw   = htmlspecialchars($tempPassword);
+        $link = htmlspecialchars($loginUrl);
+        $html = "<p>Hi <strong>$n</strong>,</p>
+<p>Your admin password for <strong>{$this->siteName}</strong> was just reset by another admin.</p>
+<div style='background:#fce4ef;border-radius:10px;padding:16px 20px;margin:16px 0'>
+  <div>Username: <strong>$u</strong></div>
+  <div>Temporary password: <strong style='letter-spacing:.5px'>$pw</strong></div>
+</div>
+<p><a href='$link'>Log in here</a> — you'll be asked to set a new password right away, and this temporary one will stop working as soon as you do.</p>
+<p>If you weren't expecting this, contact another super admin immediately.</p>
+<p style='color:#636e72;font-size:13px;margin-top:24px'>The Rotaract Kwanza Team</p>";
+
+        return $this->send($to, $name ?: $username, "Your admin password was reset — {$this->siteName}", $html);
+    }
+
     // ── Private template wrapper ──────────────────────────────────────────────
 
     private function wrap(string $content): string
@@ -248,15 +304,25 @@ HTML;
     {
         try {
             require_once dirname(__FILE__) . '/../classes/SiteSettings.php';
-            $ss        = new SiteSettings($conn);
-            $siteName  = $ss->get('site_name', 'Rotaract Kwanza');
-            $fromEmail = $ss->get('mail_from_email', '') ?: $ss->get('contact_email', 'noreply@rotaractkwanza.org');
-            $fromName  = $ss->get('mail_from_name', '') ?: $siteName;
+            $ss             = new SiteSettings($conn);
+            $siteName       = $ss->get('site_name', 'Rotaract Kwanza');
+            $fromEmail      = $ss->get('mail_from_email', '') ?: $ss->get('contact_email', 'noreply@rotaractkwanza.org');
+            $fromName       = $ss->get('mail_from_name', '') ?: $siteName;
+            $smtpHost       = $ss->get('smtp_host', '');
+            $smtpPort       = (int) $ss->get('smtp_port', '587');
+            $smtpUsername   = $ss->get('smtp_username', '');
+            $smtpPassword   = $ss->get('smtp_password', '');
+            $smtpEncryption = $ss->get('smtp_encryption', '');
         } catch (Throwable $e) {
-            $siteName  = 'Rotaract Kwanza';
-            $fromEmail = 'noreply@rotaractkwanza.org';
-            $fromName  = $siteName;
+            $siteName       = 'Rotaract Kwanza';
+            $fromEmail      = 'noreply@rotaractkwanza.org';
+            $fromName       = $siteName;
+            $smtpHost       = '';
+            $smtpPort       = 587;
+            $smtpUsername   = '';
+            $smtpPassword   = '';
+            $smtpEncryption = '';
         }
-        return new self($fromEmail, $fromName, $siteName);
+        return new self($fromEmail, $fromName, $siteName, $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption);
     }
 }

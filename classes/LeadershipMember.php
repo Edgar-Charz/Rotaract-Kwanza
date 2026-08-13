@@ -28,15 +28,16 @@ class LeadershipMember
         int $is_active = 1,
         string $linkedin_url = '',
         string $instagram_url = '',
-        int $role_id = 0
+        int $role_id = 0,
+        string $email = ''
     ): int {
         $role_name     = $this->getRoleName($role_id) ?: $role;
         $role_id_param = $role_id > 0 ? $role_id : null;
         $stmt = $this->db->prepare(
-            'INSERT INTO leadership_members (term_id, full_name, role, role_id, description, photo_path, linkedin_url, instagram_url, display_order, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO leadership_members (term_id, full_name, role, role_id, description, photo_path, email, linkedin_url, instagram_url, display_order, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('ississssii', $term_id, $full_name, $role_name, $role_id_param, $description, $photo_path, $linkedin_url, $instagram_url, $display_order, $is_active);
+        $stmt->bind_param('ississsssii', $term_id, $full_name, $role_name, $role_id_param, $description, $photo_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -121,14 +122,15 @@ class LeadershipMember
         int $is_active,
         string $linkedin_url = '',
         string $instagram_url = '',
-        int $role_id = 0
+        int $role_id = 0,
+        string $email = ''
     ): bool {
         $role_name     = $this->getRoleName($role_id) ?: $role;
         $role_id_param = $role_id > 0 ? $role_id : null;
         $stmt = $this->db->prepare(
-            'UPDATE leadership_members SET full_name=?, role=?, role_id=?, description=?, photo_path=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
+            'UPDATE leadership_members SET full_name=?, role=?, role_id=?, description=?, photo_path=?, email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
         );
-        $stmt->bind_param('ssissssiii', $full_name, $role_name, $role_id_param, $description, $photo_path, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
+        $stmt->bind_param('ssisssssiii', $full_name, $role_name, $role_id_param, $description, $photo_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
         $stmt->execute();
         $ok = $stmt->affected_rows >= 0;
         $stmt->close();
