@@ -2,6 +2,11 @@
 require_once dirname(__DIR__, 2) . '/classes/ContactMessage.php';
 require_once dirname(__DIR__, 2) . '/classes/Pledge.php';
 
+/**
+ * Database connection injected by bootstrap (see admin/includes/functions.php)
+ * @var mysqli $conn
+ */
+
 // Which nav group contains the current page — that group stays expanded by
 // default regardless of the visitor's remembered collapse state, so you're
 // never left wondering which section you're inside.
@@ -33,7 +38,7 @@ foreach ($__nav_groups as $__slug => $__pages) {
     break;
   }
 }
-function nav_group_class($slug)
+function nav_group_class(string $slug): string
 {
   global $__active_group;
   return $slug === $__active_group ? ' active-group' : '';

@@ -638,8 +638,12 @@ textarea {
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+}
+@supports (scrollbar-color: auto) {
+  .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
 }
 .modal-body::-webkit-scrollbar {
   width: 8px;

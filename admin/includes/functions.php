@@ -263,6 +263,10 @@ function sanitize_html_node(DOMNode $node, array $allowedTags): void
             continue;
         }
 
+        if (!($child instanceof DOMElement)) {
+            continue;
+        }
+
         $tag = strtolower($child->nodeName);
         if (!in_array($tag, $allowedTags, true)) {
             while ($child->firstChild) {
