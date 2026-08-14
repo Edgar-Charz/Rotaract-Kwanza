@@ -80,8 +80,22 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.isIntersecting) e.target.classList.add("visible");
       });
     },
-    { threshold: 0.12 }
+    { threshold: 0.01, rootMargin: "0px 0px -5% 0px" }
   );
+
+  // Some public pages are made from a single standalone card instead of the
+  // section/header/card pattern used on the homepage. Give those top-level
+  // blocks the same entrance animation, but never add a second animation to
+  // a block that already contains deliberately staggered reveals.
+  document
+    .querySelectorAll(
+      "main > .container > *, main > section > .container > *, .rsvp-card, .profile-shell, .profile-missing, .error-404-section"
+    )
+    .forEach((block) => {
+      if (!block.classList.contains("reveal") && !block.querySelector(".reveal")) {
+        block.classList.add("reveal");
+      }
+    });
   document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
 
   // Whole event card is clickable through to the event detail page, but clicks
@@ -234,6 +248,22 @@ document.querySelectorAll("[data-profile-url]").forEach((card) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       openProfile();
+    }
+  });
+});
+
+// Homepage spotlight cards can link as a whole while preserving their
+// individual links, such as a recipient's member profile.
+document.querySelectorAll("[data-card-url]").forEach((card) => {
+  const openCard = () => { window.location.href = card.dataset.cardUrl; };
+  card.addEventListener("click", (event) => {
+    if (!event.target.closest("a, button")) openCard();
+  });
+  card.addEventListener("keydown", (event) => {
+    if (event.target !== card) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openCard();
     }
   });
 });
