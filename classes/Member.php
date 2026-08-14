@@ -188,13 +188,32 @@ class Member
         return $ok;
     }
 
-    public function getTodaysBirthdays(): array
+    public function getTodaysBirthdays(bool $onlyUnsent = false): array
+    {
+        $sql = "SELECT id, first_name, last_name, email, birthday, last_birthday_email_sent, 'member' AS source_type FROM members
+                WHERE status = 'approved' AND birthday IS NOT NULL
+                  AND MONTH(birthday) = MONTH(CURDATE()) AND DAY(birthday) = DAY(CURDATE())";
+        if ($onlyUnsent) {
+            $sql .= " AND (last_birthday_email_sent IS NULL OR last_birthday_email_sent <> CURDATE())";
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getUpcomingBirthdays(int $daysAhead = 2): array
     {
         $stmt = $this->db->prepare(
-            "SELECT id, first_name, last_name, email FROM members
+            "SELECT id, first_name, last_name, email, birthday, last_birthday_email_sent, 'member' AS source_type FROM members
              WHERE status = 'approved' AND birthday IS NOT NULL
-               AND MONTH(birthday) = MONTH(CURDATE()) AND DAY(birthday) = DAY(CURDATE())
-               AND (last_birthday_email_sent IS NULL OR last_birthday_email_sent <> CURDATE())"
+               AND (
+                 (MONTH(birthday) = MONTH(DATE_ADD(CURDATE(), INTERVAL 1 DAY)) AND DAY(birthday) = DAY(DATE_ADD(CURDATE(), INTERVAL 1 DAY)))
+                 OR
+                 (MONTH(birthday) = MONTH(DATE_ADD(CURDATE(), INTERVAL 2 DAY)) AND DAY(birthday) = DAY(DATE_ADD(CURDATE(), INTERVAL 2 DAY)))
+               )
+             ORDER BY DAY(birthday) ASC"
         );
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

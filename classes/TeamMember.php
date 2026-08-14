@@ -64,25 +64,24 @@ class TeamMember
         int $is_active = 1,
         string $term = '',
         string $linkedin_url = '',
-        string $instagram_url = ''
+        string $instagram_url = '',
+        ?string $birthday = null
     ): int {
         $role_name = $this->getRoleName($role_id);
-        // team_roles.id is FK-constrained (ON DELETE SET NULL) — a role_id of 0
-        // (unassigned) must be written as SQL NULL, never the literal 0, which
-        // doesn't exist as a team_roles row and would violate the constraint.
         $role_id_param = $role_id > 0 ? $role_id : null;
+        $bday = !empty($birthday) ? $birthday : null;
         if ($this->hasRoleId()) {
             $stmt = $this->db->prepare(
-                'INSERT INTO team_members (full_name, role, role_id, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO team_members (full_name, role, role_id, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active, birthday)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->bind_param('ssissssssii', $full_name, $role_name, $role_id_param, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
+            $stmt->bind_param('ssissssssiis', $full_name, $role_name, $role_id_param, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $bday);
         } else {
             $stmt = $this->db->prepare(
-                'INSERT INTO team_members (full_name, role, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO team_members (full_name, role, term, description, image_path, email, linkedin_url, instagram_url, display_order, is_active, birthday)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->bind_param('ssissssssi', $full_name, $role_name, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
+            $stmt->bind_param('ssissssssis', $full_name, $role_name, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $bday);
         }
 
         $stmt->execute();
@@ -227,24 +226,24 @@ class TeamMember
         int $is_active,
         string $term = '',
         string $linkedin_url = '',
-        string $instagram_url = ''
+        string $instagram_url = '',
+        ?string $birthday = null
     ): bool {
         $role_name = $this->getRoleName($role_id);
-        // Same NULL-vs-0 rule as create(): 0 (unassigned) must be written as NULL
-        // to satisfy the team_roles FK constraint.
         $role_id_param = $role_id > 0 ? $role_id : null;
+        $bday = !empty($birthday) ? $birthday : null;
         if ($this->hasRoleId()) {
             $stmt = $this->db->prepare(
                 'UPDATE team_members SET full_name=?, role=?, role_id=?, term=?, description=?, image_path=?,
-                 email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
+                 email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=?, birthday=? WHERE id=?'
             );
-            $stmt->bind_param('ssissssssiii', $full_name, $role_name, $role_id_param, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
+            $stmt->bind_param('ssissssssiisi', $full_name, $role_name, $role_id_param, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $bday, $id);
         } else {
             $stmt = $this->db->prepare(
                 'UPDATE team_members SET full_name=?, role=?, term=?, description=?, image_path=?,
-                 email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
+                 email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=?, birthday=? WHERE id=?'
             );
-            $stmt->bind_param('ssissssssi', $full_name, $role_name, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
+            $stmt->bind_param('ssissssssisi', $full_name, $role_name, $term, $description, $image_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $bday, $id);
         }
         $stmt->execute();
         $ok = $stmt->affected_rows >= 0;
@@ -256,6 +255,49 @@ class TeamMember
     {
         $stmt = $this->db->prepare('DELETE FROM team_members WHERE id=?');
         $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $ok;
+    }
+
+    public function getTodaysBirthdays(bool $onlyUnsent = false): array
+    {
+        $sql = "SELECT id, full_name AS first_name, '' AS last_name, email, birthday, last_birthday_email_sent, 'team_member' AS source_type FROM team_members
+                WHERE is_active = 1 AND birthday IS NOT NULL
+                  AND MONTH(birthday) = MONTH(CURDATE()) AND DAY(birthday) = DAY(CURDATE())";
+        if ($onlyUnsent) {
+            $sql .= " AND (last_birthday_email_sent IS NULL OR last_birthday_email_sent <> CURDATE())";
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getUpcomingBirthdays(int $daysAhead = 2): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT id, full_name AS first_name, '' AS last_name, email, birthday, last_birthday_email_sent, 'team_member' AS source_type FROM team_members
+             WHERE is_active = 1 AND birthday IS NOT NULL
+               AND (
+                 (MONTH(birthday) = MONTH(DATE_ADD(CURDATE(), INTERVAL 1 DAY)) AND DAY(birthday) = DAY(DATE_ADD(CURDATE(), INTERVAL 1 DAY)))
+                 OR
+                 (MONTH(birthday) = MONTH(DATE_ADD(CURDATE(), INTERVAL 2 DAY)) AND DAY(birthday) = DAY(DATE_ADD(CURDATE(), INTERVAL 2 DAY)))
+               )
+             ORDER BY DAY(birthday) ASC"
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function markBirthdayEmailSent(int $id, string $date): bool
+    {
+        $stmt = $this->db->prepare('UPDATE team_members SET last_birthday_email_sent=? WHERE id=?');
+        $stmt->bind_param('si', $date, $id);
         $stmt->execute();
         $ok = $stmt->affected_rows > 0;
         $stmt->close();

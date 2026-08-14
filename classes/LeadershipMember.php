@@ -29,15 +29,17 @@ class LeadershipMember
         string $linkedin_url = '',
         string $instagram_url = '',
         int $role_id = 0,
-        string $email = ''
+        string $email = '',
+        ?string $birthday = null
     ): int {
         $role_name     = $this->getRoleName($role_id) ?: $role;
         $role_id_param = $role_id > 0 ? $role_id : null;
+        $bday          = !empty($birthday) ? $birthday : null;
         $stmt = $this->db->prepare(
-            'INSERT INTO leadership_members (term_id, full_name, role, role_id, description, photo_path, email, linkedin_url, instagram_url, display_order, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO leadership_members (term_id, full_name, role, role_id, description, photo_path, email, linkedin_url, instagram_url, display_order, is_active, birthday)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->bind_param('ississsssii', $term_id, $full_name, $role_name, $role_id_param, $description, $photo_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active);
+        $stmt->bind_param('ississsssiis', $term_id, $full_name, $role_name, $role_id_param, $description, $photo_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $bday);
         $stmt->execute();
         $id = (int) $this->db->insert_id;
         $stmt->close();
@@ -123,14 +125,16 @@ class LeadershipMember
         string $linkedin_url = '',
         string $instagram_url = '',
         int $role_id = 0,
-        string $email = ''
+        string $email = '',
+        ?string $birthday = null
     ): bool {
         $role_name     = $this->getRoleName($role_id) ?: $role;
         $role_id_param = $role_id > 0 ? $role_id : null;
+        $bday          = !empty($birthday) ? $birthday : null;
         $stmt = $this->db->prepare(
-            'UPDATE leadership_members SET full_name=?, role=?, role_id=?, description=?, photo_path=?, email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=? WHERE id=?'
+            'UPDATE leadership_members SET full_name=?, role=?, role_id=?, description=?, photo_path=?, email=?, linkedin_url=?, instagram_url=?, display_order=?, is_active=?, birthday=? WHERE id=?'
         );
-        $stmt->bind_param('ssisssssiii', $full_name, $role_name, $role_id_param, $description, $photo_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $id);
+        $stmt->bind_param('ssisssssiisi', $full_name, $role_name, $role_id_param, $description, $photo_path, $email, $linkedin_url, $instagram_url, $display_order, $is_active, $bday, $id);
         $stmt->execute();
         $ok = $stmt->affected_rows >= 0;
         $stmt->close();
@@ -141,6 +145,49 @@ class LeadershipMember
     {
         $stmt = $this->db->prepare('DELETE FROM leadership_members WHERE id = ?');
         $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $ok = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $ok;
+    }
+
+    public function getTodaysBirthdays(bool $onlyUnsent = false): array
+    {
+        $sql = "SELECT id, full_name AS first_name, '' AS last_name, email, birthday, last_birthday_email_sent, 'leadership_member' AS source_type FROM leadership_members
+                WHERE is_active = 1 AND birthday IS NOT NULL
+                  AND MONTH(birthday) = MONTH(CURDATE()) AND DAY(birthday) = DAY(CURDATE())";
+        if ($onlyUnsent) {
+            $sql .= " AND (last_birthday_email_sent IS NULL OR last_birthday_email_sent <> CURDATE())";
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getUpcomingBirthdays(int $daysAhead = 2): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT id, full_name AS first_name, '' AS last_name, email, birthday, last_birthday_email_sent, 'leadership_member' AS source_type FROM leadership_members
+             WHERE is_active = 1 AND birthday IS NOT NULL
+               AND (
+                 (MONTH(birthday) = MONTH(DATE_ADD(CURDATE(), INTERVAL 1 DAY)) AND DAY(birthday) = DAY(DATE_ADD(CURDATE(), INTERVAL 1 DAY)))
+                 OR
+                 (MONTH(birthday) = MONTH(DATE_ADD(CURDATE(), INTERVAL 2 DAY)) AND DAY(birthday) = DAY(DATE_ADD(CURDATE(), INTERVAL 2 DAY)))
+               )
+             ORDER BY DAY(birthday) ASC"
+        );
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function markBirthdayEmailSent(int $id, string $date): bool
+    {
+        $stmt = $this->db->prepare('UPDATE leadership_members SET last_birthday_email_sent=? WHERE id=?');
+        $stmt->bind_param('si', $date, $id);
         $stmt->execute();
         $ok = $stmt->affected_rows > 0;
         $stmt->close();
