@@ -48,8 +48,8 @@ $page_description = 'All the community service and impact initiatives run by the
       </div>
 
       <form method="GET" class="projects-search-form reveal">
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search projects…"
-          class="projects-search-input">
+        <input type="search" name="q" value="<?= e($search) ?>" placeholder="Search projects…"
+          class="projects-search-input" autocomplete="off">
         <button type="submit" class="projects-search-btn">Search</button>
       </form>
 

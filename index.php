@@ -413,13 +413,11 @@ if ($hero_image) $page_image = img_url($hero_image);
         ?>
             <div class="gallery-item <?= $gc ?>">
               <?php if ($photo['image_path']): ?>
-                <div class="gallery-inner gallery-inner--home"
-                  style="height:<?= $gi === 0 ? '100%' : '200px' ?>">
+                <div class="gallery-inner gallery-inner--home">
                   <img src="<?= e(img_url($photo['image_path'])) ?>" alt="<?= e($photo['title']) ?>">
                 </div>
               <?php else: ?>
-                <div class="gallery-inner gallery-inner--home gallery-inner--placeholder"
-                  style="height:<?= $gi === 0 ? '100%' : '200px' ?>">
+                <div class="gallery-inner gallery-inner--home gallery-inner--placeholder">
                   <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
                     <rect x="10" y="10" width="40" height="40" rx="4" fill="rgba(255,255,255,0.2)" />
                     <circle cx="22" cy="22" r="5" fill="rgba(255,255,255,0.4)" />

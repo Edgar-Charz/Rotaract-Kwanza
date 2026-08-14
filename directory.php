@@ -42,8 +42,8 @@ $page_description = 'Browse members of the Rotaract Club of Kwanza directory.';
       </div>
 
       <form method="GET" class="dir-search-bar reveal">
-        <input type="text" name="q" value="<?= e($search) ?>"
-          placeholder="Search by name or profession…" autofocus>
+        <input type="search" name="q" value="<?= e($search) ?>"
+          placeholder="Search by name or profession…" autocomplete="off" autofocus>
         <button type="submit">Search</button>
       </form>
 

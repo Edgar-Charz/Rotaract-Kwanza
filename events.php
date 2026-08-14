@@ -61,8 +61,8 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
       </div>
 
       <form method="GET" class="events-search-form reveal reveal-delay-3">
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search upcoming events…"
-          class="events-search-input">
+        <input type="search" name="q" value="<?= e($search) ?>" placeholder="Search upcoming events…"
+          class="events-search-input" autocomplete="off">
         <button type="submit" class="events-search-btn">Search</button>
       </form>
 
@@ -106,7 +106,7 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
         <?php if ($upcoming): ?>
           <div class="events-grid">
             <?php foreach ($upcoming as $i => $ev): ?>
-              <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . $i % 3 : '' ?> event-card--clickable" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
+              <div class="event-card reveal<?= ($i % 3 > 0) ? ' reveal-delay-' . ($i % 3) : '' ?> event-card--clickable" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
                 <?php if ($ev['image_path'] ?? ''): ?>
                   <div class="event-card-img event-card-img--flush">
                     <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>">
@@ -171,7 +171,7 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
             <h3 class="section-title section-title--gallery reveal">Past <em>Events</em></h3>
             <div class="events-grid">
               <?php foreach ($past as $i => $ev): ?>
-                <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . ($i % 3) : '' ?> event-card--clickable event-card--past" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
+                <div class="event-card reveal<?= ($i % 3 > 0) ? ' reveal-delay-' . ($i % 3) : '' ?> event-card--clickable event-card--past" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
                   <?php if ($ev['image_path'] ?? ''): ?>
                     <div class="event-card-img event-card-img--flush event-card-img--gray">
                       <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>">
@@ -224,71 +224,45 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
     var calInit = false;
     var calObj = null;
 
-    function revealVisibleEventContent() {
-      document.querySelectorAll('#events .reveal').forEach(function(element) {
-        if (element.getBoundingClientRect().top <= window.innerHeight * 0.95) {
-          element.classList.add('visible');
-        }
-      });
-    }
-
     function switchView(mode) {
       var isList = mode === 'list';
       var listView = document.getElementById('list-view');
       var calendarWrap = document.getElementById('calendar-wrap');
       listView.classList.toggle('hidden', !isList);
       calendarWrap.classList.toggle('active', !isList);
-      (isList ? listView : calendarWrap).querySelectorAll('.reveal').forEach(function(element) {
-        element.classList.add('visible');
-      });
-      if (!isList) calendarWrap.classList.add('visible');
       document.getElementById('btn-list').classList.toggle('active', isList);
       document.getElementById('btn-calendar').classList.toggle('active', !isList);
 
-      if (!isList && !calInit) {
-        calInit = true;
-        calObj = new FullCalendar.Calendar(document.getElementById('calendar'), {
-          initialView: 'dayGridMonth',
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,listMonth'
-          },
-          events: calEvents,
-          height: 'auto',
-          eventClick: function(info) {
-            if (info.event.url && info.event.url !== '#') {
-              info.jsEvent.preventDefault();
-              window.location.href = info.event.url;
+      if (!isList) {
+        calendarWrap.classList.add('visible');
+        if (!calInit) {
+          calInit = true;
+          calObj = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,listMonth'
+            },
+            events: calEvents,
+            height: 'auto',
+            eventClick: function(info) {
+              if (info.event.url && info.event.url !== '#') {
+                info.jsEvent.preventDefault();
+                window.location.href = info.event.url;
+              }
+            },
+            eventDidMount: function(info) {
+              var loc = info.event.extendedProps.location;
+              if (loc) info.el.title = info.event.title + '\n📍 ' + loc;
             }
-          },
-          eventDidMount: function(info) {
-            var loc = info.event.extendedProps.location;
-            if (loc) info.el.title = info.event.title + '\n📍 ' + loc;
-          }
-        });
-        calObj.render();
-      }
-      revealVisibleEventContent();
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      // The shared observer can mark above-the-fold cards visible before the
-      // browser has painted their hidden state. Reset those cards briefly,
-      // then reveal them after the first frame so upcoming and past events
-      // use the same visible entrance animation.
-      document.querySelectorAll('#events .reveal').forEach(function(element) {
-        if (element.getBoundingClientRect().top <= window.innerHeight * 0.95) {
-          element.classList.remove('visible');
+          });
+          calObj.render();
+        } else if (calObj) {
+          calObj.updateSize();
         }
-      });
-      requestAnimationFrame(function() {
-        requestAnimationFrame(revealVisibleEventContent);
-      });
-    });
-    window.addEventListener('scroll', revealVisibleEventContent, {
-      passive: true
-    });
+      }
+    }
   </script>
 </body>
 
