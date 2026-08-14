@@ -283,9 +283,11 @@ include __DIR__ . '/includes/header.php';
                     </svg>
                   </a>
                   <?php if (has_role('editor')): ?>
-                    <button class="btn btn-icon btn-sm btn-info" title="Edit Term" aria-label="Edit Term" onclick="openEditTermModal(<?= h(json_encode($t)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="btn btn-icon btn-sm btn-info" title="Edit Term" aria-label="Edit Term" onclick="openEditTermModal(<?= h(json_encode($t)) ?>)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                      </svg></button>
+                      </svg>
+                    </button>
                     <button class="btn btn-icon btn-sm btn-secondary" title="Duplicate Term" aria-label="Duplicate Term" onclick="openDuplicateModal(<?= (int) $t['id'] ?>, <?= h(json_encode($t['term_label'])) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2" />
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
@@ -295,13 +297,15 @@ include __DIR__ . '/includes/header.php';
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="id" value="<?= $t['id'] ?>">
                     </form>
-                    <button class="btn btn-icon btn-sm btn-danger" title="Delete Term" aria-label="Delete Term" onclick="if(confirm('Delete this term and all its officers? This cannot be undone.')) document.getElementById('del-term-<?= $t['id'] ?>').submit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="btn btn-icon btn-sm btn-danger" title="Delete Term" aria-label="Delete Term" onclick="if(confirm('Delete this term and all its officers? This cannot be undone.')) document.getElementById('del-term-<?= $t['id'] ?>').submit()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                         <path d="M10 11v6" />
                         <path d="M14 11v6" />
                         <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                      </svg></button>
+                      </svg>
+                    </button>
                   <?php endif; ?>
                 </div>
               </td>

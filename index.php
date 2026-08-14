@@ -10,6 +10,7 @@ require_once __DIR__ . '/classes/Member.php';
 require_once __DIR__ . '/classes/SiteSettings.php';
 require_once __DIR__ . '/classes/ClubValue.php';
 require_once __DIR__ . '/classes/MembershipPerk.php';
+require_once __DIR__ . '/classes/MonthlyRecognition.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $db = new Database();
@@ -27,9 +28,12 @@ $projects = (new Project($conn))->getAllExcludingCancelled(3);
 $team = array_slice((new TeamMember($conn))->getActive(), 0, 3);
 $gallery = array_slice((new Gallery($conn))->getActive(), 0, 6);
 $announcements = (new Announcement($conn))->getPublished(3);
-$dir_members   = array_slice((new Member($conn))->getApprovedForDirectory(), 0, 6);
+$dir_members   = array_slice((new Member($conn))->getApprovedForDirectory(), 0, 5);
 $club_values   = (new ClubValue($conn))->getActive();
 $perks         = (new MembershipPerk($conn))->getActive();
+$published_recognitions = (new MonthlyRecognition($conn))->getPublished();
+$published_recognitions = array_values(array_filter($published_recognitions, static fn(array $recognition): bool => !empty($recognition['members'])));
+$monthly_recognition = $published_recognitions[0] ?? false;
 
 $settings = new SiteSettings($conn);
 $stat_members = $settings->get('hero_stats_members', '120+');
@@ -50,7 +54,8 @@ $about_image = $settings->get('about_image', '');
 $founding_year = $settings->get('founding_year', '2012');
 $hero_badge_year  = $settings->get('hero_badge_year', '2025');
 $hero_badge_label = $settings->get('hero_badge_label', 'Outstanding Club Award');
-$hero_pill_text   = $settings->get('hero_pill_text', 'Service in Action');
+$hero_pill_text   = $settings->get('hero_pill_text', 'Service In Action');
+$hero_pill_label  = mb_strtoupper($hero_pill_text, 'UTF-8');
 $brand_initials          = $settings->get('brand_initials', 'RK');
 $contact_hours           = $settings->get('contact_hours', 'Mon – Fri, 8:00 AM – 5:00 PM');
 $hero_eyebrow            = $settings->get('hero_eyebrow', 'Rotaract International · Kwanza');
@@ -99,9 +104,11 @@ if ($hero_image) $page_image = img_url($hero_image);
       <div class="hero-blob hero-blob-3"></div>
     </div>
     <div class="hero-grid container">
+      <a class="hero-recognition-callout hero-recognition-callout--desktop" href="recognitions.php"><span class="hero-recognition-callout-icon" aria-hidden="true">★</span><span><small>Member spotlight</small>Rotaractor of the Month</span><b aria-hidden="true">&rarr;</b></a>
       <div class="hero-content">
-        <div class="hero-eyebrow"><span class="dot"></span><?= e($hero_eyebrow) ?></div>
-        <div class="hero-pill-mobile"><span class="pill-dot"></span><?= e($hero_pill_text) ?></div>
+        <div class="hero-eyebrow-row"><div class="hero-eyebrow"><span class="dot"></span><?= e($hero_eyebrow) ?></div><div class="floating-pill hero-pill-desktop"><span class="pill-dot"></span><?= e($hero_pill_label) ?></div></div>
+        <div class="hero-pill-mobile"><span class="pill-dot"></span><?= e($hero_pill_label) ?></div>
+        <a class="hero-recognition-callout hero-recognition-callout--mobile" href="recognitions.php"><span class="hero-recognition-callout-icon" aria-hidden="true">★</span><span><small>Member spotlight</small>Rotaractor of the Month</span><b aria-hidden="true">&rarr;</b></a>
         <h1 class="hero-title"><?= e($hero_title) ?></h1>
         <p class="hero-subtitle"><?= e($hero_subtitle) ?></p>
         <p class="hero-desc"><?= e($hero_description) ?></p>
@@ -137,8 +144,7 @@ if ($hero_image) $page_image = img_url($hero_image);
           </div>
         </div>
       </div>
-      <div class="hero-visual">
-        <div class="floating-pill"><span class="pill-dot"></span><?= e($hero_pill_text) ?></div>
+        <div class="hero-visual">
         <div class="hero-card-main">
           <?php if ($hero_image): ?>
             <img src="<?= e(img_url($hero_image)) ?>" alt="Rotaract Club of Kwanza" class="hero-card-img">
@@ -220,7 +226,7 @@ if ($hero_image) $page_image = img_url($hero_image);
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
-          <a href="about.php" class="btn-secondary btn-secondary--inline-mt24">Learn
+          <a href="about.php" class="btn-secondary btn-secondary--inline-mt24 reveal reveal-delay-4">Learn
             More &rarr;</a>
         </div>
       </div>
@@ -403,7 +409,7 @@ if ($hero_image) $page_image = img_url($hero_image);
       <div class="gallery-grid">
         <?php if ($gallery):
           foreach ($gallery as $gi => $photo):
-            $gc = $gallery_classes[$gi] ?? 'reveal';
+            $gc = $gallery_classes[$gi] ?? 'reveal'; 
         ?>
             <div class="gallery-item <?= $gc ?>">
               <?php if ($photo['image_path']): ?>
@@ -492,7 +498,7 @@ if ($hero_image) $page_image = img_url($hero_image);
   <?php endif; ?>
 
   <!-- MEMBER DIRECTORY PREVIEW -->
-  <section id="directory">
+  <section id="directory" class="directory-preview">
     <div class="container">
       <div class="dir-preview-header">
         <div>
@@ -531,6 +537,47 @@ if ($hero_image) $page_image = img_url($hero_image);
       <?php endif; ?>
     </div>
   </section>
+
+  <?php if ($monthly_recognition && $monthly_recognition['members']): ?>
+    <!-- ROTARACTOR OF THE MONTH -->
+    <section id="monthly-recognition" class="monthly-recognition-section">
+      <div class="container">
+        <div class="monthly-recognition-slider reveal" data-recognition-slider>
+          <?php foreach ($published_recognitions as $recognition_index => $recognition_item): ?>
+          <article class="monthly-recognition monthly-recognition-slide<?= $recognition_index === 0 ? ' is-active' : '' ?>" data-recognition-slide data-card-url="recognitions.php" aria-hidden="<?= $recognition_index === 0 ? 'false' : 'true' ?>" tabindex="0" role="link" aria-label="View all Rotaractors of the Month">
+          <div class="monthly-recognition-intro">
+            <div class="monthly-recognition-kicker">★ Rotaractor of the Month</div>
+            <h2><?= e(date('F Y', strtotime($recognition_item['recognition_month']))) ?> <em>Spotlight</em></h2>
+            <?php if ($recognition_item['citation']): ?><p><?= e($recognition_item['citation']) ?></p><?php endif; ?>
+            <a class="monthly-recognition-archive-link" href="recognitions.php">View all Rotaractors of the Month <span aria-hidden="true">&rarr;</span></a>
+          </div>
+          <div class="monthly-recognition-members">
+            <?php foreach ($recognition_item['members'] as $recipient):
+              $initials = strtoupper(substr($recipient['first_name'], 0, 1) . substr($recipient['last_name'], 0, 1));
+            ?>
+              <a class="monthly-recipient" href="member.php?source=directory&id=<?= (int) $recipient['id'] ?>">
+                <?php if ($recipient['photo_path']): ?>
+                  <img src="<?= e(img_url($recipient['photo_path'])) ?>" alt="<?= e($recipient['first_name'] . ' ' . $recipient['last_name']) ?>">
+                <?php else: ?>
+                  <span class="monthly-recipient-initials"><?= e($initials) ?></span>
+                <?php endif; ?>
+                <span class="monthly-recipient-name"><?= e($recipient['first_name'] . ' ' . $recipient['last_name']) ?></span>
+                <?php if ($recipient['occupation']): ?><span class="monthly-recipient-role"><?= e($recipient['occupation']) ?></span><?php endif; ?>
+                <?php if ($recipient['citation']): ?><span class="monthly-recipient-citation"><?= e($recipient['citation']) ?></span><?php endif; ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+          </article>
+          <?php endforeach; ?>
+          <?php if (count($published_recognitions) > 1): ?>
+            <button type="button" class="monthly-recognition-slider-button monthly-recognition-slider-button--previous" data-recognition-prev aria-label="Show previous month">&larr;</button>
+            <button type="button" class="monthly-recognition-slider-button monthly-recognition-slider-button--next" data-recognition-next aria-label="Show next month">&rarr;</button>
+            <div class="monthly-recognition-slider-status" data-recognition-status aria-live="polite">1 of <?= count($published_recognitions) ?></div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </section>
+  <?php endif; ?>
 
   <!-- JOIN CTA -->
   <section id="join">
@@ -658,6 +705,29 @@ if ($hero_image) $page_image = img_url($hero_image);
   <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
   <script src="assets/js/scripts.js"></script>
+  <script>
+    document.querySelectorAll('[data-recognition-slider]').forEach(function (slider) {
+      var slides = Array.prototype.slice.call(slider.querySelectorAll('[data-recognition-slide]'));
+      var previous = slider.querySelector('[data-recognition-prev]');
+      var next = slider.querySelector('[data-recognition-next]');
+      var status = slider.querySelector('[data-recognition-status]');
+      var activeIndex = 0;
+      function showSlide(index) {
+        activeIndex = Math.max(0, Math.min(index, slides.length - 1));
+        slides.forEach(function (slide, slideIndex) {
+          var isActive = slideIndex === activeIndex;
+          slide.classList.toggle('is-active', isActive);
+          slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        });
+        if (status) status.textContent = (activeIndex + 1) + ' of ' + slides.length;
+        if (previous) previous.disabled = activeIndex === slides.length - 1;
+        if (next) next.disabled = activeIndex === 0;
+      }
+      if (previous) previous.addEventListener('click', function () { showSlide(activeIndex + 1); });
+      if (next) next.addEventListener('click', function () { showSlide(activeIndex - 1); });
+      showSlide(activeIndex);
+    });
+  </script>
 </body>
 
 </html>

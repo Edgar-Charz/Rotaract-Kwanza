@@ -43,83 +43,6 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
 <head>
   <?php require __DIR__ . '/includes/public_head.php'; ?>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css">
-  <style>
-    /* ── View toggle ─────────────────────────── */
-    .view-toggle {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 28px;
-    }
-
-    .view-btn {
-      padding: 8px 22px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      border: 1.5px solid var(--border);
-      background: #fff;
-      cursor: pointer;
-      color: var(--text);
-      font-family: inherit;
-      transition: all .2s;
-    }
-
-    .view-btn.active,
-    .view-btn:hover {
-      background: var(--pink-700);
-      color: #fff;
-      border-color: var(--pink-700);
-    }
-
-    /* ── Calendar wrapper ────────────────────── */
-    #calendar-wrap {
-      background: #fff;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 2px 14px rgba(0, 0, 0, .07);
-      margin-bottom: 40px;
-      display: none;
-    }
-
-    #calendar-wrap.active {
-      display: block;
-    }
-
-    /* FullCalendar overrides */
-    .fc .fc-toolbar-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.4rem;
-    }
-
-    .fc .fc-button-primary {
-      background: var(--pink-700);
-      border-color: var(--pink-700);
-    }
-
-    .fc .fc-button-primary:hover {
-      background: var(--pink-800);
-      border-color: var(--pink-800);
-    }
-
-    .fc .fc-button-primary:not(:disabled).fc-button-active,
-    .fc .fc-button-primary:not(:disabled):active {
-      background: var(--pink-900);
-      border-color: var(--pink-900);
-    }
-
-    .fc-event {
-      cursor: pointer;
-    }
-
-    /* ── List view ───────────────────────────── */
-    #list-view {
-      display: block;
-    }
-
-    #list-view.hidden {
-      display: none;
-    }
-  </style>
 </head>
 
 <body>
@@ -137,18 +60,18 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
         </div>
       </div>
 
-      <form method="GET" class="events-search-form">
+      <form method="GET" class="events-search-form reveal reveal-delay-3">
         <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search upcoming events…"
           class="events-search-input">
         <button type="submit" class="events-search-btn">Search</button>
       </form>
 
       <?php if ($search): ?>
-        <p class="events-results-count"><?= count($upcoming) ?> result<?= count($upcoming) !== 1 ? 's' : '' ?> for "<?= e($search) ?>" &middot; <a href="events.php" class="link-pink">Clear</a></p>
+        <p class="events-results-count reveal"><?= count($upcoming) ?> result<?= count($upcoming) !== 1 ? 's' : '' ?> for "<?= e($search) ?>" &middot; <a href="events.php" class="link-pink">Clear</a></p>
       <?php endif; ?>
 
       <!-- View toggle -->
-      <div class="view-toggle">
+      <div class="view-toggle reveal reveal-delay-4">
         <button class="view-btn active" id="btn-list" onclick="switchView('list')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
             class="icon-va">
@@ -174,7 +97,7 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
       </div>
 
       <!-- Calendar view -->
-      <div id="calendar-wrap">
+      <div id="calendar-wrap" class="reveal">
         <div id="calendar"></div>
       </div>
 
@@ -226,7 +149,7 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
             <?php endforeach; ?>
           </div>
         <?php else: ?>
-          <div class="gallery-empty">
+          <div class="gallery-empty reveal">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
               <rect x="3" y="4" width="18" height="18" rx="2" />
               <line x1="16" y1="2" x2="16" y2="6" />
@@ -245,10 +168,10 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
 
         <?php if ($past): ?>
           <div class="mt-60">
-            <h3 class="section-title section-title--gallery">Past <em>Events</em></h3>
+            <h3 class="section-title section-title--gallery reveal">Past <em>Events</em></h3>
             <div class="events-grid">
               <?php foreach ($past as $i => $ev): ?>
-                <div class="event-card reveal event-card--clickable event-card--past" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
+                <div class="event-card reveal<?= $i > 0 ? ' reveal-delay-' . ($i % 3) : '' ?> event-card--clickable event-card--past" data-href="event.php?id=<?= $ev['id'] ?>" tabindex="0" role="link" aria-label="View details for <?= e($ev['title']) ?>">
                   <?php if ($ev['image_path'] ?? ''): ?>
                     <div class="event-card-img event-card-img--flush event-card-img--gray">
                       <img src="<?= e(img_url($ev['image_path'])) ?>" alt="<?= e($ev['title']) ?>">
@@ -301,10 +224,24 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
     var calInit = false;
     var calObj = null;
 
+    function revealVisibleEventContent() {
+      document.querySelectorAll('#events .reveal').forEach(function(element) {
+        if (element.getBoundingClientRect().top <= window.innerHeight * 0.95) {
+          element.classList.add('visible');
+        }
+      });
+    }
+
     function switchView(mode) {
       var isList = mode === 'list';
-      document.getElementById('list-view').classList.toggle('hidden', !isList);
-      document.getElementById('calendar-wrap').classList.toggle('active', !isList);
+      var listView = document.getElementById('list-view');
+      var calendarWrap = document.getElementById('calendar-wrap');
+      listView.classList.toggle('hidden', !isList);
+      calendarWrap.classList.toggle('active', !isList);
+      (isList ? listView : calendarWrap).querySelectorAll('.reveal').forEach(function(element) {
+        element.classList.add('visible');
+      });
+      if (!isList) calendarWrap.classList.add('visible');
       document.getElementById('btn-list').classList.toggle('active', isList);
       document.getElementById('btn-calendar').classList.toggle('active', !isList);
 
@@ -332,7 +269,26 @@ $page_description = 'Upcoming service days, leadership forums, and fellowship ce
         });
         calObj.render();
       }
+      revealVisibleEventContent();
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // The shared observer can mark above-the-fold cards visible before the
+      // browser has painted their hidden state. Reset those cards briefly,
+      // then reveal them after the first frame so upcoming and past events
+      // use the same visible entrance animation.
+      document.querySelectorAll('#events .reveal').forEach(function(element) {
+        if (element.getBoundingClientRect().top <= window.innerHeight * 0.95) {
+          element.classList.remove('visible');
+        }
+      });
+      requestAnimationFrame(function() {
+        requestAnimationFrame(revealVisibleEventContent);
+      });
+    });
+    window.addEventListener('scroll', revealVisibleEventContent, {
+      passive: true
+    });
   </script>
 </body>
 

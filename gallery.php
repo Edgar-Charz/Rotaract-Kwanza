@@ -81,7 +81,7 @@ $page_description = $gallery_intro;
       </div>
 
       <?php if ($categories): ?>
-        <div class="gal-filters">
+        <div class="gal-filters reveal">
           <a href="gallery.php" class="gal-filter-btn <?= $cat === '' ? 'active' : '' ?>">All</a>
           <?php foreach ($categories as $catOption): ?>
             <a href="?cat=<?= urlencode($catOption) ?>" class="gal-filter-btn <?= $cat === $catOption ? 'active' : '' ?>"><?= e($catOption) ?></a>

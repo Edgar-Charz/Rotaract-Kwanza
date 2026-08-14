@@ -57,21 +57,22 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
   <?php require_once __DIR__ . '/includes/flash_toast.php'; ?>
 
-  <div class="news-hero">
+  <section id="news" class="pt-100">
     <div class="container">
-      <div class="section-eyebrow section-eyebrow--hero-dark">Club Updates</div>
-      <h1 class="news-hero-title">News &amp; <em>Announcements</em></h1>
-      <p class="news-hero-lead"><?= e($news_intro) ?></p>
-    </div>
-  </div>
+      <div class="projects-header">
+        <div>
+      <div class="section-eyebrow section-eyebrow--hero-dark reveal">Club Updates</div>
+          <h2 class="section-title reveal reveal-delay-1">News &amp; <em>Announcements</em></h2>
+          <p class="section-lead reveal reveal-delay-2 section-lead--white"><?= e($news_intro) ?></p>
+        </div>
+      </div>
 
-  <div class="container news-section news-section--tight">
     <?php if ($slug): ?>
       <?php if (!$post): ?>
-        <p class="news-post-not-found">Post not found. <a href="news.php">Back to News</a></p>
+        <p class="news-post-not-found reveal">Post not found. <a href="news.php">Back to News</a></p>
       <?php else: ?>
-        <a href="news.php<?= $cat ? '?cat=' . $cat : '' ?>" class="back-link">&#8592; Back to News</a>
-        <div class="single-post">
+        <a href="news.php<?= $cat ? '?cat=' . $cat : '' ?>" class="back-link reveal">&#8592; Back to News</a>
+        <div class="single-post reveal">
           <?php if ($post['image_path']): ?>
             <div class="single-post-img"><img src="<?= e(img_url($post['image_path'])) ?>" alt="<?= e($post['title']) ?>"></div>
           <?php endif; ?>
@@ -86,7 +87,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
       <?php endif; ?>
 
     <?php else: ?>
-      <div class="cat-filters">
+      <div class="cat-filters reveal">
         <a href="news.php" class="cat-btn <?= !$cat ? 'active' : '' ?>">All</a>
         <?php foreach ($cat_labels as $k => $label): ?>
           <a href="news.php?cat=<?= $k ?>" class="cat-btn <?= $cat === $k ? 'active' : '' ?>"><?= $label ?></a>
@@ -94,7 +95,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
         <a href="rss.php" class="cat-btn cat-btn--rss" title="Subscribe via RSS">&#128225; RSS</a>
       </div>
 
-      <div id="subscribe" class="subscribe-box">
+      <div id="subscribe" class="subscribe-box reveal reveal-delay-1">
         <div>
           <p class="subscribe-title">Prefer email over RSS?</p>
           <p class="subscribe-text">Get notified whenever we post news, minutes, or announcements.</p>
@@ -111,7 +112,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
       <?php if ($posts): ?>
         <div class="news-grid">
           <?php foreach ($posts as $item): ?>
-            <a href="news.php?slug=<?= e($item['slug']) ?>" class="news-card">
+            <a href="news.php?slug=<?= e($item['slug']) ?>" class="news-card reveal">
               <div class="news-card-img">
                 <?php if ($item['image_path']): ?>
                   <img src="<?= e(img_url($item['image_path'])) ?>" alt="<?= e($item['title']) ?>">
@@ -135,7 +136,7 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
         </div>
 
         <?php if ($pages > 1): ?>
-          <div class="pagination-pub">
+          <div class="pagination-pub reveal">
             <a href="?page=<?= $page - 1 ?>&cat=<?= $cat ?>" class="page-btn <?= $page <= 1 ? 'disabled' : '' ?>">‹ Prev</a>
             <?php for ($i = 1; $i <= $pages; $i++): ?>
               <a href="?page=<?= $i ?>&cat=<?= $cat ?>" class="page-btn <?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
@@ -145,13 +146,14 @@ $page_image = ($slug && $post && $post['image_path']) ? img_url($post['image_pat
         <?php endif; ?>
 
       <?php else: ?>
-        <div class="gallery-empty">
+        <div class="gallery-empty reveal">
           <p class="gallery-empty-title">No posts yet</p>
           <p class="mt-8">Check back soon for club news and announcements.</p>
         </div>
       <?php endif; ?>
     <?php endif; ?>
   </div>
+  </section>
 
   <?php require_once __DIR__ . '/includes/footer.php'; ?>
 

@@ -44,7 +44,11 @@ $page_description = 'Meet the passionate leaders driving community service at Ro
       height: 360px;
       margin: 32px auto 0;
     }
-    .team-page-actions { margin-top: 24px; text-align: center; }
+
+    .team-page-actions {
+      margin-top: 24px;
+      text-align: center;
+    }
 
     @media (max-width: 640px) {
       .team-photo-slider {

@@ -38,7 +38,7 @@ $page_description = 'All the community service and impact initiatives run by the
   <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
   <section id="projects" class="pt-100">
-    <div class="container">
+    <div class="container"> 
       <div class="projects-header">
         <div>
           <div class="section-eyebrow reveal">Our Impact</div>
@@ -47,7 +47,7 @@ $page_description = 'All the community service and impact initiatives run by the
         </div>
       </div>
 
-      <form method="GET" class="projects-search-form">
+      <form method="GET" class="projects-search-form reveal">
         <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search projects…"
           class="projects-search-input">
         <button type="submit" class="projects-search-btn">Search</button>
