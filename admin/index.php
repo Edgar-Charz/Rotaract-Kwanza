@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once dirname(__DIR__) . '/classes/BirthdayManager.php';
 require_once dirname(__DIR__) . '/classes/Member.php';
 require_once dirname(__DIR__) . '/classes/Event.php';
 require_once dirname(__DIR__) . '/classes/Gallery.php';
@@ -9,6 +10,29 @@ require_once dirname(__DIR__) . '/classes/ContactMessage.php';
 require_once dirname(__DIR__) . '/classes/MemberDues.php';
 require_once dirname(__DIR__) . '/classes/EventRSVP.php';
 require_once dirname(__DIR__) . '/classes/ActivityLog.php';
+
+// Process Birthday Wish form submission directly on dashboard
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_birthday_email') {
+    csrf_verify();
+    $id          = (int)($_POST['id'] ?? 0);
+    $source_type = trim($_POST['source_type'] ?? 'member');
+
+    if ($id > 0) {
+        $bm = new BirthdayManager($conn);
+        try {
+            $ok = $bm->sendBirthdayWish($id, $source_type);
+            if ($ok) {
+                flash('success', 'Happy Birthday email sent successfully!');
+            } else {
+                flash('error', 'Failed to send birthday email. Please check mail settings.');
+            }
+        } catch (Throwable $e) {
+            flash('error', 'Error sending email: ' . $e->getMessage());
+        }
+    }
+    header('Location: ' . ADMIN_URL . '/index.php');
+    exit;
+}
 
 $page_title = 'Dashboard';
 
@@ -64,6 +88,99 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </div>
 </div>
+
+<?php
+$birthdayData = check_and_auto_send_birthdays($conn);
+$todaysBirthdays   = $birthdayData['today'];
+$upcomingBirthdays = $birthdayData['upcoming'];
+?>
+
+<?php if (!empty($todaysBirthdays) || !empty($upcomingBirthdays)): ?>
+<div class="card mb-2 border-gold" style="background: linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(227,24,55,0.05) 100%); border-left: 4px solid var(--gold, #d4af37);">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-2">
+      <span style="font-size:1.4rem;">🎂</span>
+      <div>
+        <span class="card-title fw-bold">Birthday &amp; Celebration Center</span>
+        <div class="text-muted fs-12">Automated greetings &amp; upcoming birthday alerts for members &amp; leaders</div>
+      </div>
+    </div>
+    <span class="badge badge-approved fs-11">Auto-Check Active</span>
+  </div>
+  <div class="card-body pt-0">
+    <?php if (!empty($todaysBirthdays)): ?>
+      <div class="mb-3">
+        <div class="fw-bold text-danger mb-2 d-flex align-items-center gap-1">
+          <span>🎉</span> <span>Celebrating Today!</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <?php foreach ($todaysBirthdays as $b): ?>
+            <?php 
+              $bName = h(trim($b['first_name'] . ' ' . ($b['last_name'] ?? '')));
+              $isSent = !empty($b['last_birthday_email_sent']) && $b['last_birthday_email_sent'] === date('Y-m-d');
+            ?>
+            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-white border flex-grow-1" style="min-width: 280px; max-width: 450px;">
+              <div>
+                <div class="fw-bold fs-13"><?= $bName ?></div>
+                <div class="text-muted fs-11"><?= h($b['email'] ?: 'No email on file') ?> &middot; <span class="text-capitalize"><?= str_replace('_', ' ', $b['source_type']) ?></span></div>
+              </div>
+              <div>
+                <?php if ($isSent): ?>
+                  <span class="badge badge-approved fs-11">Email Sent ✅</span>
+                <?php else: ?>
+                  <form method="POST" action="index.php" class="d-inline">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="send_birthday_email">
+                    <input type="hidden" name="id" value="<?= $b['id'] ?>">
+                    <input type="hidden" name="source_type" value="<?= h($b['source_type']) ?>">
+                    <button type="submit" class="btn btn-sm btn-primary py-1 px-2 fs-11">🎁 Send Wish</button>
+                  </form>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <?php if (!empty($upcomingBirthdays)): ?>
+      <div>
+        <div class="fw-bold text-dark mb-2 d-flex align-items-center gap-1">
+          <span>⏳</span> <span>Upcoming Birthdays (Next 24–48 Hours)</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <?php foreach ($upcomingBirthdays as $ub): ?>
+            <?php 
+              $ubName = h(trim($ub['first_name'] . ' ' . ($ub['last_name'] ?? '')));
+              $bDateFormatted = date('d M', strtotime($ub['birthday']));
+              $isUbSent = !empty($ub['last_birthday_email_sent']) && $ub['last_birthday_email_sent'] === date('Y-m-d');
+            ?>
+            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-white border flex-grow-1" style="min-width: 280px; max-width: 450px;">
+              <div>
+                <div class="fw-bold fs-13"><?= $ubName ?></div>
+                <div class="text-muted fs-11">Birthday: <strong class="text-primary"><?= $bDateFormatted ?></strong> &middot; <?= h($ub['email']) ?></div>
+              </div>
+              <div>
+                <?php if ($isUbSent): ?>
+                  <span class="badge badge-approved fs-11">Email Sent ✅</span>
+                <?php else: ?>
+                  <form method="POST" action="index.php" class="d-inline">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="send_birthday_email">
+                    <input type="hidden" name="id" value="<?= $ub['id'] ?>">
+                    <input type="hidden" name="source_type" value="<?= h($ub['source_type']) ?>">
+                    <button type="submit" class="btn btn-sm btn-secondary py-1 px-2 fs-11">Send Early Wish</button>
+                  </form>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="stats-grid">
   <div class="stat-card">

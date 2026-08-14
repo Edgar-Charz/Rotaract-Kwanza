@@ -12,14 +12,14 @@ require_once dirname(__DIR__, 2) . '/classes/Pledge.php';
 // never left wondering which section you're inside.
 $__current_page = basename($_SERVER['PHP_SELF']);
 $__nav_groups = [
-  'overview'       => ['index.php', 'reports.php'],
-  'membership'     => ['members.php', 'dues.php', 'recognitions.php', 'recognition_recipients.php', 'recognition_photos.php'],
-  'events'         => ['events.php', 'rsvps.php'],
-  'projects'       => ['projects.php', 'project_signups.php', 'pledges.php', 'payment_accounts.php'],
+  'overview'       => ['index.php', 'reports.php', 'export_report.php'],
+  'membership'     => ['members.php', 'import_members.php', 'member_details.php', 'export_members.php', 'dues.php', 'recognitions.php', 'recognition_recipients.php', 'recognition_photos.php'],
+  'events'         => ['events.php', 'event_details.php', 'event_photos.php', 'rsvps.php', 'export_rsvps.php'],
+  'projects'       => ['projects.php', 'project_details.php', 'project_photos.php', 'project_signups.php', 'export_project_signups.php', 'pledges.php', 'payment_accounts.php'],
   'team'           => ['team.php', 'roles.php', 'team_photos.php', 'leadership_history.php', 'leadership_term.php', 'leadership_term_photos.php'],
   'content'        => ['gallery.php', 'categories.php', 'values.php', 'perks.php'],
-  'communications' => ['messages.php', 'announcements.php', 'newsletter.php'],
-  'system'         => ['settings.php', 'activity_log.php', 'backup.php'],
+  'communications' => ['messages.php', 'export_messages.php', 'announcements.php', 'newsletter.php'],
+  'system'         => ['settings.php', 'activity_log.php', 'export_activity_log.php', 'backup.php'],
 ];
 $__nav_group_labels = [
   'overview'       => 'Overview',
@@ -132,7 +132,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
           </svg>
           Dashboard
         </a>
-        <a href="reports.php" class="nav-item <?= active_nav('reports.php') ?>" title="Reports & Analytics">
+        <a href="reports.php" class="nav-item <?= active_nav(['reports.php', 'export_report.php']) ?>" title="Reports & Analytics">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10" />
             <line x1="12" y1="20" x2="12" y2="4" />
@@ -158,7 +158,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
         </svg>
       </button>
       <div class="nav-section-body">
-        <a href="members.php" class="nav-item <?= active_nav('members.php') ?>" title="Members">
+        <a href="members.php" class="nav-item <?= active_nav(['members.php', 'member_details.php', 'import_members.php', 'export_members.php']) ?>" title="Members">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
@@ -174,8 +174,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
           </svg>
           Dues
         </a>
-        <a href="recognitions.php" class="nav-item <?= in_array(basename($_SERVER['PHP_SELF']), ['recognitions.php', 'recognition_recipients.php', 'recognition_photos.php'], true) ? 'active' : '' ?>" title="Rotaractor of the Month">
-          <!-- <a href="recognitions.php" class="nav-item <?= active_nav('recognitions.php') ?>" title="Rotaractor of the Month"> -->
+        <a href="recognitions.php" class="nav-item <?= active_nav(['recognitions.php', 'recognition_recipients.php', 'recognition_photos.php']) ?>" title="Rotaractor of the Month">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="m12 2 2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.29l-5.2 2.73.99-5.8-4.21-4.1 5.82-.85L12 2Z" />
           </svg>
@@ -198,7 +197,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
         </svg>
       </button>
       <div class="nav-section-body">
-        <a href="events.php" class="nav-item <?= active_nav('events.php') ?>" title="Events">
+        <a href="events.php" class="nav-item <?= active_nav(['events.php', 'event_details.php', 'event_photos.php']) ?>" title="Events">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
             <line x1="16" y1="2" x2="16" y2="6" />
@@ -207,7 +206,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
           </svg>
           Events
         </a>
-        <a href="rsvps.php" class="nav-item <?= active_nav('rsvps.php') ?>" title="RSVPs">
+        <a href="rsvps.php" class="nav-item <?= active_nav(['rsvps.php', 'export_rsvps.php']) ?>" title="RSVPs">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
@@ -230,14 +229,14 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
         </svg>
       </button>
       <div class="nav-section-body">
-        <a href="projects.php" class="nav-item <?= active_nav('projects.php') ?>" title="Projects">
+        <a href="projects.php" class="nav-item <?= active_nav(['projects.php', 'project_details.php', 'project_photos.php']) ?>" title="Projects">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
           Projects
         </a>
-        <a href="project_signups.php" class="nav-item <?= active_nav('project_signups.php') ?>" title="Get Involved Sign-Ups">
+        <a href="project_signups.php" class="nav-item <?= active_nav(['project_signups.php', 'export_project_signups.php']) ?>" title="Get Involved Sign-Ups">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
@@ -297,7 +296,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
           </svg>
           Team Photos
         </a>
-        <a href="leadership_history.php" class="nav-item <?= in_array(basename($_SERVER['PHP_SELF']), ['leadership_history.php', 'leadership_term.php', 'leadership_term_photos.php'], true) ? 'active' : '' ?>" title="Leadership History">
+        <a href="leadership_history.php" class="nav-item <?= active_nav(['leadership_history.php', 'leadership_term.php', 'leadership_term_photos.php']) ?>" title="Leadership History">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3L2 9l10 6 10-6-10-6z" />
             <path d="M2 15l10 6 10-6" />
@@ -363,7 +362,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
         </svg>
       </button>
       <div class="nav-section-body">
-        <a href="messages.php" class="nav-item <?= active_nav('messages.php') ?>" title="Messages">
+        <a href="messages.php" class="nav-item <?= active_nav(['messages.php', 'export_messages.php']) ?>" title="Messages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
@@ -408,7 +407,7 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
           </svg>
           Settings
         </a>
-        <a href="activity_log.php" class="nav-item <?= active_nav('activity_log.php') ?>" title="Activity Log">
+        <a href="activity_log.php" class="nav-item <?= active_nav(['activity_log.php', 'export_activity_log.php']) ?>" title="Activity Log">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>

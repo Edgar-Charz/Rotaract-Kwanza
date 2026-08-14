@@ -49,7 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           clean_url($_POST['linkedin_url'] ?? ''),
           clean_url($_POST['instagram_url'] ?? ''),
           $role_id,
-          trim($_POST['email'] ?? '')
+          trim($_POST['email'] ?? ''),
+          trim($_POST['birthday'] ?? '') ?: null
         );
         log_activity('add_leadership_member', "Added officer $full_name to term {$term['term_label']}");
         if (!isset($_SESSION['flash'])) flash('success', 'Officer added.');
@@ -96,7 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             clean_url($_POST['linkedin_url'] ?? ''),
             clean_url($_POST['instagram_url'] ?? ''),
             $role_id,
-            trim($_POST['email'] ?? '')
+            trim($_POST['email'] ?? ''),
+            trim($_POST['birthday'] ?? '') ?: null
           );
           if ($img !== $oldImg && $oldImg) delete_image($oldImg);
           log_activity('edit_leadership_member', "Edited officer ID $id: $full_name");
@@ -309,7 +311,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Add Officer Modal -->
 <div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Add Officer — <?= h($term['term_label']) ?></span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -337,6 +339,7 @@ include __DIR__ . '/includes/header.php';
         <div class="form-group mb-2"><label>Description</label><textarea name="description"></textarea></div>
         <div class="form-row">
           <div class="form-group"><label>Email <span class="text-muted fw-normal">(optional)</span></label><input type="email" name="email"></div>
+          <div class="form-group"><label>Birthday <span class="text-muted fw-normal">(optional)</span></label><input type="date" name="birthday" max="<?= date('Y-m-d') ?>"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>LinkedIn URL <span class="text-muted fw-normal">(optional)</span></label><input type="text" name="linkedin_url" placeholder="https://linkedin.com/in/..."></div>
@@ -375,7 +378,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Edit Officer Modal -->
 <div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Edit Officer</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -404,6 +407,7 @@ include __DIR__ . '/includes/header.php';
         <div class="form-group mb-2"><label>Description</label><textarea name="description" id="em_desc"></textarea></div>
         <div class="form-row">
           <div class="form-group"><label>Email <span class="text-muted fw-normal">(optional)</span></label><input type="email" name="email" id="em_email"></div>
+          <div class="form-group"><label>Birthday <span class="text-muted fw-normal">(optional)</span></label><input type="date" name="birthday" id="em_birthday" max="<?= date('Y-m-d') ?>"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>LinkedIn URL <span class="text-muted fw-normal">(optional)</span></label><input type="text" name="linkedin_url" id="em_linkedin" placeholder="https://linkedin.com/in/..."></div>
@@ -512,6 +516,7 @@ include __DIR__ . '/includes/header.php';
     document.getElementById('em_order').value = m.display_order || 0;
     document.getElementById('em_desc').value = m.description || '';
     document.getElementById('em_email').value = m.email || '';
+    document.getElementById('em_birthday').value = m.birthday ? m.birthday.substring(0, 10) : '';
     document.getElementById('em_linkedin').value = m.linkedin_url || '';
     document.getElementById('em_instagram').value = m.instagram_url || '';
     document.getElementById('em_active').checked = m.is_active == 1;

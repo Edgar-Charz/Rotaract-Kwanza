@@ -252,10 +252,10 @@ include __DIR__ . '/includes/header.php';
               <td class="text-muted"><?= $p['created_at'] ? date('d M Y', strtotime($p['created_at'])) : '—' ?></td>
               <td>
                 <div class="table-actions">
-                  <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <a href="project_details.php?id=<?= (int) $p['id'] ?>" class="btn btn-icon btn-sm btn-secondary" title="View project details" aria-label="View project details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
-                    </svg></button>
+                    </svg></a>
                   <?php if (has_role('editor')): ?>
                     <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit" onclick="openEditModal(<?= h(json_encode($p)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -294,7 +294,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Add Modal -->
 <div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Add New Project</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -370,7 +370,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Edit Modal -->
 <div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Edit Project</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -446,54 +446,7 @@ include __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<!-- View Modal -->
-<div class="modal fade" id="view-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content modal-520">
-    <div class="modal-header">
-      <span class="modal-title">Project Details</span>
-      <button class="modal-close" onclick="closeModal('view-modal')">&times;</button>
-    </div>
-    <div class="modal-body" id="view-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('view-modal')">Close</button>
-    </div>
-  </div>
-</div>
-
 <script>
-  function openViewModal(p) {
-    document.getElementById('view-body').innerHTML = `
-    ${p.image_path ? `<img src="${esc(p.image_path)}" class="view-cover-img">` : ''}
-    <div class="view-avatar-row">
-      <div>
-        <div class="view-name">${esc(p.title)}</div>
-        <div class="tag-row">
-          <span class="badge badge-${esc(p.status)}">${esc(p.status)}</span>
-          ${p.is_featured == 1 ? '<span class="badge badge-featured">Featured</span>' : ''}
-        </div>
-      </div>
-    </div>
-    <div class="view-dl">
-      <div><div class="view-dt">Impact</div><div class="view-dd">${esc(p.impact_stat) || '—'}</div></div>
-      <div><div class="view-dt">Impact Label</div><div class="view-dd">${esc(p.impact_label) || '—'}</div></div>
-      <div><div class="view-dt">Start Date</div><div class="view-dd">${p.start_date ? esc(p.start_date) : '—'}</div></div>
-      <div><div class="view-dt">End Date</div><div class="view-dd">${p.end_date ? esc(p.end_date) : (p.start_date ? 'Ongoing' : '—')}</div></div>
-      <div><div class="view-dt">Funding Goal</div><div class="view-dd">${p.funding_goal ? esc(p.funding_goal) : 'Not seeking sponsorship'}</div></div>
-      <div><div class="view-dt">Status</div><div class="view-dd">${esc(p.status)}</div></div>
-      <div><div class="view-dt">Created</div><div class="view-dd">${esc(p.created_at ? p.created_at.substring(0,10) : '')}</div></div>
-    </div>
-    <div class="view-full">
-      <div class="view-dt">Description</div>
-      <div class="view-dd">${esc(p.description) || '—'}</div>
-    </div>
-    <div class="view-dl">
-      <div><div class="view-dt">Instagram</div><div class="view-dd">${p.instagram_url ? `<a href="${esc(p.instagram_url)}" target="_blank" rel="noopener">${esc(p.instagram_url)}</a>` : '—'}</div></div>
-      <div><div class="view-dt">TikTok</div><div class="view-dd">${p.tiktok_url ? `<a href="${esc(p.tiktok_url)}" target="_blank" rel="noopener">${esc(p.tiktok_url)}</a>` : '—'}</div></div>
-      <div><div class="view-dt">X</div><div class="view-dd">${p.x_url ? `<a href="${esc(p.x_url)}" target="_blank" rel="noopener">${esc(p.x_url)}</a>` : '—'}</div></div>
-    </div>`;
-    openModal('view-modal');
-  }
-
   $(document).ready(function() {
     $('#dt-projects').DataTable({
       pageLength: 25,

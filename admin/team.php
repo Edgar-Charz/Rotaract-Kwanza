@@ -37,7 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           isset($_POST['is_active']) ? 1 : 0,
           trim($_POST['term'] ?? ''),
           clean_url($_POST['linkedin_url'] ?? ''),
-          clean_url($_POST['instagram_url'] ?? '')
+          clean_url($_POST['instagram_url'] ?? ''),
+          trim($_POST['birthday'] ?? '') ?: null
         );
         log_activity('add_team', "Added team member: $full_name");
         if (!isset($_SESSION['flash'])) flash('success', 'Team member added.');
@@ -80,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           isset($_POST['is_active']) ? 1 : 0,
           trim($_POST['term'] ?? ''),
           clean_url($_POST['linkedin_url'] ?? ''),
-          clean_url($_POST['instagram_url'] ?? '')
+          clean_url($_POST['instagram_url'] ?? ''),
+          trim($_POST['birthday'] ?? '') ?: null
         );
         if ($img !== $oldImg && $oldImg) delete_image($oldImg);
         log_activity('edit_team', "Edited team member ID $id: $full_name");
@@ -539,7 +541,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Add Modal -->
 <div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Add Team Member</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -585,6 +587,7 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-row">
           <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+          <div class="form-group"><label>Birthday</label><input type="date" name="birthday" max="<?= date('Y-m-d') ?>"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>LinkedIn URL</label><input type="text" name="linkedin_url" placeholder="https://linkedin.com/in/..."></div>
@@ -606,7 +609,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Edit Modal -->
 <div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Edit Team Member</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -654,6 +657,7 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="form-row">
           <div class="form-group"><label>Email</label><input type="email" name="email" id="et_email"></div>
+          <div class="form-group"><label>Birthday</label><input type="date" name="birthday" id="et_birthday" max="<?= date('Y-m-d') ?>"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>LinkedIn URL</label><input type="text" name="linkedin_url" id="et_linkedin" placeholder="https://linkedin.com/in/..."></div>
@@ -778,6 +782,7 @@ include __DIR__ . '/includes/header.php';
     document.getElementById('et_name').value = t.full_name;
     document.getElementById('et_role').value = t.role_id || '';
     document.getElementById('et_email').value = t.email || '';
+    document.getElementById('et_birthday').value = t.birthday ? t.birthday.substring(0, 10) : '';
     document.getElementById('et_term').value = t.term || '';
     document.getElementById('et_linkedin').value = t.linkedin_url || '';
     document.getElementById('et_instagram').value = t.instagram_url || '';

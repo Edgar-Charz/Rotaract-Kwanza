@@ -319,7 +319,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Add Term Modal -->
 <div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Add Leadership Term</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -370,7 +370,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Edit Term Modal -->
 <div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Edit Leadership Term</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>

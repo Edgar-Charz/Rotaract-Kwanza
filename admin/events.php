@@ -3,7 +3,6 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/Event.php';
 require_once dirname(__DIR__) . '/classes/EventPhoto.php';
-require_once dirname(__DIR__) . '/classes/EventRSVP.php';
 require_once dirname(__DIR__) . '/classes/Category.php';
 
 $page_title = 'Events';
@@ -169,12 +168,6 @@ $events          = (new Event($conn))->getAll($filter, $category_filter);
 
 $form_categories = (new Category($conn))->getActive('event');
 
-$rsvp_obj   = new EventRSVP($conn);
-$guest_map  = [];
-foreach ($events as $e) {
-  $guest_map[$e['id']] = $rsvp_obj->getGuestCount((int) $e['id']);
-}
-
 include __DIR__ . '/includes/header.php';
 ?>
 
@@ -231,15 +224,11 @@ include __DIR__ . '/includes/header.php';
         <tr>
           <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
           <th>Title</th>
-          <th>Image</th>
           <th>Date</th>
-          <th>Time</th>
           <th>Location</th>
           <th>Category</th>
           <th>RSVPs</th>
-          <th>Capacity</th>
           <th>Status</th>
-          <th>Featured</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -248,15 +237,7 @@ include __DIR__ . '/includes/header.php';
             <tr>
               <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $e['id'] ?>" onchange="updateBulkBar()"></td><?php endif; ?>
               <td class="fw-bold"><?= h($e['title']) ?></td>
-              <td>
-                <?php if ($e['image_path'] ?? ''): ?>
-                  <img src="<?= h($e['image_path']) ?>" class="event-thumb">
-                <?php else: ?>
-                  <span class="text-muted fs-11">No image</span>
-                <?php endif; ?>
-              </td>
               <td><?= $e['event_date'] ? date('d M Y', strtotime($e['event_date'])) : '—' ?></td>
-              <td class="text-muted"><?= h($e['event_time'] ?? '—') ?></td>
               <td><?= h($e['location'] ?? '—') ?></td>
               <td><?= h($e['category'] ?? '—') ?></td>
               <td>
@@ -264,22 +245,13 @@ include __DIR__ . '/includes/header.php';
                   <a href="rsvps.php?event=<?= $e['id'] ?>" class="link-primary-bold"><?= $e['rsvp_count'] ?></a>
                 <?php else: ?><span class="text-muted">0</span><?php endif; ?>
               </td>
-              <td>
-                <?php if ($e['capacity'] !== null): $used = $guest_map[$e['id']] ?? 0;
-                  $cap = (int)$e['capacity']; ?>
-                  <span class="<?= $used >= $cap ? 'text-danger fw-bold' : 'text-muted' ?> fs-12-5"><?= $used ?> / <?= $cap ?></span>
-                <?php else: ?>
-                  <span class="text-muted fs-12">Unlimited</span>
-                <?php endif; ?>
-              </td>
               <td><span class="badge badge-<?= h($e['status']) ?>"><?= h($e['status']) ?></span></td>
-              <td><?= $e['is_featured'] ? '<span class="badge badge-featured">Yes</span>' : '<span class="text-muted">No</span>' ?></td>
               <td>
                 <div class="table-actions">
-                  <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View" onclick="openViewModal(<?= h(json_encode($e)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <a href="event_details.php?id=<?= (int) $e['id'] ?>" class="btn btn-icon btn-sm btn-secondary" title="View event details" aria-label="View event details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
-                    </svg></button>
+                    </svg></a>
                   <?php if (has_role('editor')): ?>
                     <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit" onclick="openEditModal(<?= h(json_encode($e)) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 3a2.85 2.86 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -288,11 +260,6 @@ include __DIR__ . '/includes/header.php';
                         <rect x="9" y="9" width="13" height="13" rx="2" />
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                       </svg></button>
-                    <a href="event_photos.php?event=<?= $e['id'] ?>" class="btn btn-icon btn-sm btn-secondary" title="Manage Photos" aria-label="Manage Photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg></a>
                     <form id="del-e-<?= $e['id'] ?>" method="POST" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                       <input type="hidden" name="action" value="delete">
@@ -318,7 +285,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Add Modal -->
 <div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Add New Event</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -393,7 +360,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Edit Modal -->
 <div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Edit Event</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -468,20 +435,6 @@ include __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<!-- View Modal -->
-<div class="modal fade" id="view-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content modal-md">
-    <div class="modal-header">
-      <span class="modal-title">Event Details</span>
-      <button class="modal-close" onclick="closeModal('view-modal')">&times;</button>
-    </div>
-    <div class="modal-body" id="view-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('view-modal')">Close</button>
-    </div>
-  </div>
-</div>
-
 <script>
   function openViewModal(e) {
     document.getElementById('view-body').innerHTML = `
@@ -520,7 +473,7 @@ include __DIR__ . '/includes/header.php';
     $('#dt-events').DataTable({
       pageLength: 25,
       order: [
-        [<?= has_role('editor') ? 3 : 2 ?>, 'desc']
+        [<?= has_role('editor') ? 2 : 1 ?>, 'desc']
       ],
       columnDefs: [{
           orderable: false,

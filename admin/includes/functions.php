@@ -618,9 +618,13 @@ function admin_search(mysqli $conn, string $q, int $limit = 8): array
 
 // ── Misc ──────────────────────────────────────────────────────────────────────
 
-function active_nav(string $page): string
+function active_nav(string|array $pages): string
 {
-    return basename($_SERVER['PHP_SELF']) === $page ? 'active' : '';
+    $current = basename($_SERVER['PHP_SELF'] ?? '');
+    if (is_array($pages)) {
+        return in_array($current, $pages, true) ? 'active' : '';
+    }
+    return $current === $pages ? 'active' : '';
 }
 
 // Cached per request: without this, a page like settings.php (~50 keys) or
@@ -709,4 +713,15 @@ function slugify(string $text): string
     $text = preg_replace('/[^a-z0-9\s-]/', '', $text);
     $text = preg_replace('/[\s-]+/', '-', $text);
     return trim($text, '-') ?: 'post-' . time();
+}
+
+/**
+ * Automatically checks for birthdays today across members, current team officers,
+ * and past leadership, dispatches Happy Birthday emails, updates last_birthday_email_sent,
+ * and gathers upcoming birthdays (next 48h) for admin visibility.
+ */
+function check_and_auto_send_birthdays(mysqli $conn): array
+{
+    require_once SITE_ROOT . '/classes/BirthdayManager.php';
+    return (new BirthdayManager($conn))->checkAndAutoSendBirthdays();
 }

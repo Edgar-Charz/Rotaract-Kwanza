@@ -345,16 +345,13 @@ include __DIR__ . '/includes/header.php';
       <thead>
         <tr>
           <?php if (has_role('editor')): ?><th><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th><?php endif; ?>
-          <th>#</th>
+          <th>Photo</th>
           <th>Name</th>
           <th>Email</th>
           <th>Phone</th>
-          <th>Occupation</th>
           <th>Year</th>
           <th>Status</th>
-          <th>Dues (<?= $dues_year ?>)</th>
           <th>Directory</th>
-          <th>Applied</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -362,11 +359,16 @@ include __DIR__ . '/includes/header.php';
         <?php if ($members): foreach ($members as $m): ?>
             <tr>
               <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $m['id'] ?>" <?= in_array((int) $m['id'], $selected_recipient_ids, true) ? 'checked' : '' ?> onchange="updateBulkBar()"></td><?php endif; ?>
-              <td class="text-muted"><?= $m['id'] ?></td>
+              <td>
+                <?php if (!empty($m['photo_path'])): ?>
+                  <img src="<?= h('../' . $m['photo_path']) ?>" alt="<?= h($m['first_name'] . ' ' . $m['last_name']) ?>" class="team-avatar-img">
+                <?php else: ?>
+                  <div class="team-avatar-init"><?= h(strtoupper(substr($m['first_name'], 0, 1))) ?></div>
+                <?php endif; ?>
+              </td>
               <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
               <td><?= h($m['email']) ?></td>
               <td><?= h($m['phone'] ?? '—') ?></td>
-              <td><?= h($m['occupation'] ?? '—') ?></td>
               <td><?= h($m['year_of_study'] ?? '—') ?></td>
               <td>
                 <span class="badge badge-<?= h($m['status']) ?>"><?= h($m['status']) ?></span>
@@ -380,13 +382,6 @@ include __DIR__ . '/includes/header.php';
                     </form>
                     <button type="submit" form="resend-<?= $m['id'] ?>" class="btn btn-sm btn-secondary fs-11" title="Resend notification email">Resend</button>
                   <?php endif; ?>
-                <?php endif; ?>
-              </td>
-              <td>
-                <?php if ($m['dues_status']): ?>
-                  <a href="dues.php?year=<?= $dues_year ?>#member-<?= $m['id'] ?>" class="badge badge-<?= h($m['dues_status']) ?> no-underline"><?= h($m['dues_status']) ?></a>
-                <?php else: ?>
-                  <a href="dues.php?year=<?= $dues_year ?>#member-<?= $m['id'] ?>" class="text-muted fs-11">No record</a>
                 <?php endif; ?>
               </td>
               <td>
@@ -404,14 +399,12 @@ include __DIR__ . '/includes/header.php';
                   <span class="badge <?= ($m['show_in_directory'] ?? 0) ? 'badge-approved' : 'badge-rejected' ?> fs-11"><?= ($m['show_in_directory'] ?? 0) ? 'Listed' : 'Hidden' ?></span>
                 <?php endif; ?>
               </td>
-              <td class="text-muted"><?= $m['created_at'] ? date('d M Y', strtotime($m['created_at'])) : '—' ?></td>
               <td>
                 <div class="table-actions">
-                  <button class="btn btn-icon btn-sm btn-secondary" title="View" aria-label="View"
-                    onclick="openViewModal(<?= htmlspecialchars(json_encode($m), ENT_QUOTES) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <a href="member_details.php?id=<?= (int) $m['id'] ?>" class="btn btn-icon btn-sm btn-secondary" title="View member details" aria-label="View member details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
-                    </svg></button>
+                    </svg></a>
                   <?php if (has_role('editor')): ?>
                     <button class="btn btn-icon btn-sm btn-info" title="Edit" aria-label="Edit"
                       onclick="openEditModal(<?= htmlspecialchars(json_encode($m), ENT_QUOTES) ?>)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -451,7 +444,7 @@ include __DIR__ . '/includes/header.php';
     $('#dt-members').DataTable({
       pageLength: 25,
       order: [
-        [<?= has_role('editor') ? 10 : 9 ?>, 'desc']
+        [<?= has_role('editor') ? 2 : 1 ?>, 'asc']
       ],
       columnDefs: [{
           orderable: false,
@@ -550,7 +543,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Add Modal -->
 <div class="modal fade" id="add-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Add New Member</span>
       <button class="modal-close" onclick="closeModal('add-modal')">&times;</button>
@@ -632,7 +625,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Edit Modal -->
 <div class="modal fade" id="edit-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content">
+  <div class="modal-dialog modal-content modal-xl">
     <div class="modal-header">
       <span class="modal-title">Edit Member</span>
       <button class="modal-close" onclick="closeModal('edit-modal')">&times;</button>
@@ -742,20 +735,6 @@ include __DIR__ . '/includes/header.php';
         <button type="submit" class="btn btn-primary">Update</button>
       </div>
     </form>
-  </div>
-</div>
-
-<!-- View Modal -->
-<div class="modal fade" id="view-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-content modal-md">
-    <div class="modal-header">
-      <span class="modal-title">Member Details</span>
-      <button class="modal-close" onclick="closeModal('view-modal')">&times;</button>
-    </div>
-    <div class="modal-body" id="view-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('view-modal')">Close</button>
-    </div>
   </div>
 </div>
 
