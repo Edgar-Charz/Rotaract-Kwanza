@@ -1,3 +1,4 @@
+document.documentElement.classList.add("js");
 document.body.classList.add("js");
 
 // Progress Bar + Scroll Spy + Back-to-top visibility
@@ -77,7 +78,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((e) => {
-        if (e.isIntersecting) e.target.classList.add("visible");
+        if (e.isIntersecting) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              e.target.classList.add("visible");
+            });
+          });
+        }
       });
     },
     { threshold: 0.01, rootMargin: "0px 0px -5% 0px" }
@@ -267,3 +274,93 @@ document.querySelectorAll("[data-card-url]").forEach((card) => {
     }
   });
 });
+
+// In-Page Instant Live Filter & Auto-Clear for search forms (input[name="q"])
+(function () {
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('form input[name="q"]').forEach((input) => {
+      const form = input.form;
+      if (!form) return;
+
+      // Find target search cards/items on the current page
+      const cards = document.querySelectorAll(
+        ".project-card, .event-card, .dir-card, .team-card, .news-card, .gallery-item, .history-term-block, table.admin-table tbody tr"
+      );
+      if (!cards.length) return;
+
+      const countEl = document.querySelector(
+        ".dir-count, .events-results-count, .projects-results-count"
+      );
+      const initialCountText = countEl ? countEl.textContent : "";
+
+      // Dynamic empty state element when 0 cards match the typed query
+      let noResultsEl = document.getElementById("search-no-results-live");
+      if (!noResultsEl && cards[0] && cards[0].parentElement) {
+        noResultsEl = document.createElement("div");
+        noResultsEl.id = "search-no-results-live";
+        noResultsEl.className = "gallery-empty reveal visible";
+        noResultsEl.style.display = "none";
+        noResultsEl.style.textAlign = "center";
+        noResultsEl.style.padding = "60px 20px";
+        noResultsEl.innerHTML = `
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--text-soft)" stroke-width="1.5" style="margin-bottom:12px;opacity:0.5;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <p class="fs-110 fw-700" style="margin-bottom:6px;">No matching results found</p>
+          <p class="text-soft fs-95">Try typing a different keyword or clear the search field.</p>
+        `;
+        const cardContainer = cards[0].parentElement;
+        if (cardContainer.parentElement) {
+          cardContainer.parentElement.appendChild(noResultsEl);
+        }
+      }
+
+      function filterItems() {
+        const query = input.value.toLowerCase().trim();
+        let matchCount = 0;
+
+        cards.forEach((card) => {
+          const text = card.textContent.toLowerCase();
+          const matches = query === "" || text.includes(query);
+          if (matches) {
+            card.style.display = "";
+            card.classList.add("visible");
+            matchCount++;
+          } else {
+            card.style.display = "none";
+          }
+        });
+
+        // Update count text live
+        if (countEl) {
+          if (query !== "") {
+            countEl.textContent = `${matchCount} result${matchCount !== 1 ? "s" : ""} matching "${input.value.trim()}"`;
+          } else {
+            countEl.textContent = initialCountText;
+          }
+        }
+
+        // Toggle in-page empty state message
+        if (noResultsEl) {
+          noResultsEl.style.display = matchCount === 0 && query !== "" ? "block" : "none";
+        }
+      }
+
+      // Filter instantly on every keystroke
+      input.addEventListener("input", filterItems);
+      input.addEventListener("search", filterItems);
+
+      // Prevent page reload on form submit
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        filterItems();
+      });
+
+      // Filter immediately if field contains initial text
+      if (input.value.trim() !== "") {
+        filterItems();
+      }
+    });
+  });
+})();
