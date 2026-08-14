@@ -31,6 +31,7 @@ $__image_url = match (true) {
 };
 ?>
 <meta charset="UTF-8">
+<script>document.documentElement.classList.add('js');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($__page_title) ?></title>
 <?php if ($__description !== ''): ?>
