@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once dirname(__DIR__) . '/classes/Member.php';
+require_once dirname(__DIR__) . '/classes/MonthlyRecognition.php';
 
 $page_title = 'Members';
 
@@ -163,6 +164,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flash('success', "$count member(s) updated.");
   }
 
+  if ($action === 'mark_rotaractors') {
+    $month = trim($_POST['recognition_month'] ?? '');
+    $ids = array_unique(array_map('intval', $_POST['ids'] ?? []));
+    if (!preg_match('/^\d{4}-\d{2}$/', $month) || $month > date('Y-m') || !$ids) {
+      flash('error', 'Choose the current month or an earlier month, and at least one member.');
+    } else {
+      $eligibleIds = [];
+      foreach ($ids as $id) {
+        $member = $m->findById($id);
+        if ($member && $member['status'] === 'approved') $eligibleIds[] = $id;
+      }
+      if (!$eligibleIds) {
+        flash('error', 'Only approved members can be named Rotaractors of the Month.');
+      } else {
+        $recognitions = new MonthlyRecognition($conn);
+        $existing = $recognitions->findByMonth($month . '-01');
+        $recognitions->save($month . '-01', $existing['citation'] ?? '', true, $eligibleIds);
+        log_activity('save_monthly_recognition', 'Selected ' . count($eligibleIds) . ' Rotaractor(s) of the Month for ' . $month);
+        flash('success', 'Rotaractor of the Month recipients saved and published.');
+        $savedRecognition = $recognitions->findByMonth($month . '-01');
+        if ($savedRecognition) {
+          header('Location: ' . ADMIN_URL . '/recognition_recipients.php?id=' . (int) $savedRecognition['id']);
+          exit;
+        }
+      }
+    }
+  }
+
   if ($action === 'status') {
     $status = $_POST['status'] ?? 'pending';
     if (in_array($status, ['pending', 'approved', 'rejected'])) {
@@ -219,6 +248,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   exit;
 }
 
+$recognition_month = $_GET['recognition_month'] ?? '';
+$recognition_month = preg_match('/^\d{4}-\d{2}$/', $recognition_month) ? $recognition_month : '';
+$selected_recipient_ids = [];
+if ($recognition_month) {
+  $current_recognition = (new MonthlyRecognition($conn))->findByMonth($recognition_month . '-01');
+  $selected_recipient_ids = $current_recognition ? array_map('intval', array_column($current_recognition['members'], 'id')) : [];
+}
 $filter  = $_GET['status'] ?? '';
 $members = (new Member($conn))->getAll(
   ($filter && in_array($filter, ['pending', 'approved', 'rejected'])) ? $filter : ''
@@ -284,6 +320,9 @@ include __DIR__ . '/includes/header.php';
     <div class="card-header bulk-bar" id="bulk-bar">
       <span id="bulk-count" class="text-muted fs-13 fw-600"></span>
       <div class="flex-gap8-wrap">
+        <?php if ($recognition_month): ?>
+          <button type="button" class="btn btn-sm btn-primary" onclick="markRotaractors()">Mark as Rotaractors — <?= h(date('F Y', strtotime($recognition_month . '-01'))) ?></button>
+        <?php endif; ?>
         <button type="button" class="btn btn-sm btn-success" onclick="bulkApprove()">Approve Selected</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="bulkReject()">Reject Selected</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="submitDirectoryBulk('1')">Show in Directory</button>
@@ -296,6 +335,7 @@ include __DIR__ . '/includes/header.php';
       <input type="hidden" name="action" id="bulk-action-field" value="">
       <input type="hidden" name="bulk_status" id="bulk-status-field" value="">
       <input type="hidden" name="bulk_directory" id="bulk-directory-field" value="">
+      <input type="hidden" name="recognition_month" value="<?= h($recognition_month) ?>">
       <div id="bulk-ids-container"></div>
     </form>
   <?php endif; ?>
@@ -321,7 +361,7 @@ include __DIR__ . '/includes/header.php';
       <tbody>
         <?php if ($members): foreach ($members as $m): ?>
             <tr>
-              <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $m['id'] ?>" onchange="updateBulkBar()"></td><?php endif; ?>
+              <?php if (has_role('editor')): ?><td><input type="checkbox" class="row-check" value="<?= $m['id'] ?>" <?= in_array((int) $m['id'], $selected_recipient_ids, true) ? 'checked' : '' ?> onchange="updateBulkBar()"></td><?php endif; ?>
               <td class="text-muted"><?= $m['id'] ?></td>
               <td class="fw-bold"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></td>
               <td><?= h($m['email']) ?></td>
@@ -420,6 +460,7 @@ include __DIR__ . '/includes/header.php';
         <?= has_role('editor') ? ", { orderable: false, targets: 0 }" : '' ?>
       ]
     });
+    <?php if ($recognition_month): ?>updateBulkBar();<?php endif; ?>
   });
 
   function getCheckedMemberIds() {
@@ -471,6 +512,22 @@ include __DIR__ . '/includes/header.php';
   function bulkDelete() {
     var ids = getCheckedMemberIds();
     if (ids.length && confirm('Permanently delete ' + ids.length + ' selected member(s)? This cannot be undone.')) submitBulk('bulk_delete');
+  }
+
+  function markRotaractors() {
+    var ids = getCheckedMemberIds();
+    if (!ids.length) return;
+    Swal.fire({
+      title: 'Confirm monthly recognition',
+      text: 'Mark ' + ids.length + ' selected member(s) as Rotaractor of the Month?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, mark recipients',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#c0396b'
+    }).then(function(result) {
+      if (result.isConfirmed) submitBulk('mark_rotaractors');
+    });
   }
 
   function submitDirectoryBulk(visible) {

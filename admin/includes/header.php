@@ -17,6 +17,7 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     $.extend($.fn.dataTable.defaults, {
       dom: '<"dt-top-bar"f>rt<"dt-bottom-bar"<"dt-bottom-left"li><"dt-bottom-right"p>>',

@@ -13,7 +13,7 @@ require_once dirname(__DIR__, 2) . '/classes/Pledge.php';
 $__current_page = basename($_SERVER['PHP_SELF']);
 $__nav_groups = [
   'overview'       => ['index.php', 'reports.php'],
-  'membership'     => ['members.php', 'dues.php'],
+  'membership'     => ['members.php', 'dues.php', 'recognitions.php', 'recognition_recipients.php', 'recognition_photos.php'],
   'events'         => ['events.php', 'rsvps.php'],
   'projects'       => ['projects.php', 'project_signups.php', 'pledges.php', 'payment_accounts.php'],
   'team'           => ['team.php', 'roles.php', 'team_photos.php', 'leadership_history.php', 'leadership_term.php', 'leadership_term_photos.php'],
@@ -173,6 +173,13 @@ $__badge_total = $__badge_messages + $__badge_signups + $__badge_pledges;
             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
           </svg>
           Dues
+        </a>
+        <a href="recognitions.php" class="nav-item <?= in_array(basename($_SERVER['PHP_SELF']), ['recognitions.php', 'recognition_recipients.php', 'recognition_photos.php'], true) ? 'active' : '' ?>" title="Rotaractor of the Month">
+          <!-- <a href="recognitions.php" class="nav-item <?= active_nav('recognitions.php') ?>" title="Rotaractor of the Month"> -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m12 2 2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.29l-5.2 2.73.99-5.8-4.21-4.1 5.82-.85L12 2Z" />
+          </svg>
+          Rotaractor of the Month
         </a>
       </div>
     </div>

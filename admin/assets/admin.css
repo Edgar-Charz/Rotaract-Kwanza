@@ -2535,3 +2535,11 @@ div.dataTables_wrapper div.dataTables_processing {
   font-weight: 700;
   margin-bottom: 4px;
 }
+
+.recognition-month-form { display: flex; align-items: flex-end; gap: 12px; }
+.recognition-month-form .form-group { width: 210px; margin-bottom: 0; }
+.recognition-month-form input[type="month"] { min-height: 38px; }
+@media (max-width: 600px) {
+  .recognition-month-form { display: block; }
+  .recognition-month-form .form-group { width: 100%; margin-bottom: 12px; }
+}
